@@ -1099,13 +1099,6 @@ void CursorSurface::ReassertPresentation() {
   }
 
   RefreshPresentationMode();
-
-  if (!visible_ || ShouldRenderSoftwareCursor()) {
-
-    return;
-  }
-
-  SDL_SetCursor(nullptr);
 }
 
 void CursorSurface::SuppressNativeCursor() {
