@@ -1374,6 +1374,7 @@ void TooltipSystem::BindWorldSession(openwow::game::WorldSession* session) {
 void TooltipSystem::SetOwner(const std::string &frameName, const std::string &anchor) {
   Hide();
   ClearLines();
+  CommitLayoutState();
   owner_ = frameName;
   anchor_ = frameName.empty() ? "ANCHOR_NONE" : anchor;
   MarkPresentationChanged();
@@ -1599,6 +1600,7 @@ void TooltipSystem::Reset() {
   force_min_width_ = false;
   padding_ = 0.0f;
   textures_.clear();
+  CommitLayoutState();
 }
 
 void TooltipSystem::ResetPendingItemTemplateRefresh() {
@@ -2267,8 +2269,21 @@ std::uint64_t TooltipSystem::GetLayoutRevision() const {
   return layout_revision_;
 }
 
+std::size_t TooltipSystem::GetCommittedLineCount() const {
+  return committed_line_count_;
+}
+
+std::size_t TooltipSystem::GetCommittedTextureCount() const {
+  return committed_texture_count_;
+}
+
 void TooltipSystem::CommitLayoutState() noexcept {
   ++layout_revision_;
+  committed_line_count_ = lines_.size();
+  committed_texture_count_ = textures_.size();
+  committed_min_width_ = min_width_;
+  committed_force_min_width_ = force_min_width_;
+  committed_padding_ = padding_;
 }
 
 void TooltipSystem::MarkPresentationChanged() noexcept {
@@ -2289,6 +2304,14 @@ bool TooltipSystem::IsForceMinWidth() const {
   return force_min_width_;
 }
 
+float TooltipSystem::GetCommittedMinimumWidth() const {
+  return committed_min_width_;
+}
+
+bool TooltipSystem::IsCommittedForceMinWidth() const {
+  return committed_force_min_width_;
+}
+
 void TooltipSystem::SetPadding(float p) {
   padding_ = p;
   MarkPresentationChanged();
@@ -2296,6 +2319,10 @@ void TooltipSystem::SetPadding(float p) {
 
 float TooltipSystem::GetPadding() const {
   return padding_;
+}
+
+float TooltipSystem::GetCommittedPadding() const {
+  return committed_padding_;
 }
 
 std::string TooltipSystem::GetLineText(int line) const {

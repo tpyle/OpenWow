@@ -203,7 +203,6 @@ std::string ResolveWowIniArchiveLocale(const std::string& locale_token,
   g_current_locale.country = read_wow_ini("Country");
 
   if (g_current_locale.language.empty() || g_current_locale.country.empty()) {
-
     g_current_locale.locale_index = FindWowLocaleIndex(locale_token);
     return locale_token;
   }

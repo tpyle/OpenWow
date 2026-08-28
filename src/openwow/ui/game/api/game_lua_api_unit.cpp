@@ -263,13 +263,13 @@ ResolveFactionGroupStrings(const openwow::data::dbc::DbcLoader &dbc,
     if ((faction_template.faction_group & faction_group_mask) == 0u) {
       continue;
     }
-    if (entry.name.empty()) {
+    if (entry.internal_name.empty()) {
       continue;
     }
 
     return {
         .token = entry.internal_name,
-        .localized_name = entry.name,
+        .localized_name = entry.name.empty() ? entry.internal_name : entry.name,
         .valid = true,
     };
   }

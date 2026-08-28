@@ -118,6 +118,22 @@ void InitializeRuntimeMetadata(UiFrame& frame) {
   frame.runtime_state_initialized = true;
 }
 
+void ApplyImplicitAuthoredTextureGeometry(UiFrame& frame) {
+  if (openwow::ui::framexml::DeriveUiFrameRuntimeKind(frame.kind) !=
+          openwow::ui::framexml::UiFrame::RuntimeKind::Texture ||
+      frame.set_all_points || frame.set_all_points_explicit ||
+      !frame.anchors.empty() || frame.width.has_value() ||
+      frame.height.has_value() || frame.rel_width.has_value() ||
+      frame.rel_height.has_value()) {
+    return;
+  }
+
+  // Build 12340 makes an authored Texture with no explicit geometry fill its
+  // owner. Stock FrameXML relies on this for ItemButton icon regions and many
+  // other textures whose file is assigned later from Lua.
+  frame.set_all_points = true;
+}
+
 void LinkToParent(lua_State* state, int frame, int parent) {
   frame = lua_absindex(state, frame);
   parent = lua_absindex(state, parent);
@@ -526,6 +542,9 @@ int FrameMaterializer::InstantiateFrameTree(UiFrame root,
   auto plan = BuildExpandedFramePlan(std::move(root), std::move(local_children),
                                      templates_, parent_scope);
   if (plan.frames.empty()) return LUA_NOREF;
+  for (auto& frame : plan.frames) {
+    ApplyImplicitAuthoredTextureGeometry(frame);
+  }
   ++metrics_.tree_plans;
   metrics_.tree_source_nodes += plan.source_nodes;
   metrics_.tree_inherited_nodes += plan.inherited_nodes;

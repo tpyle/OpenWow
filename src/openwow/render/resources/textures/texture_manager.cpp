@@ -1254,6 +1254,12 @@ std::size_t TextureManager::PumpPreparedUploads(
     if (!source_rows_->IsCurrent(identity)) {
       continue;
     }
+    diagnostics::Log(
+        diagnostics::LogLevel::kWarn,
+        "TextureManager: asynchronous texture preparation failed for " +
+            identity.path + " — " +
+            (ready->error.empty() ? "unknown preparation failure"
+                                  : ready->error));
     source_rows_->MarkTerminalFailure(identity);
     if (failure_policy == TextureLoadFailurePolicy::kCheckerPlaceholder) {
       std::lock_guard lock(cache_mutex_);
