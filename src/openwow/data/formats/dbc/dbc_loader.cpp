@@ -168,6 +168,18 @@ int DbcLoader::LoadAll(const openwow::vfs::VirtualFileSystem &vfs,
           "' localized_slot=" +
           std::to_string(static_cast<std::uint32_t>(active_locale)));
 
+  for (const char *const localized_path : {
+           "DBFilesClient/Faction.dbc",
+           "DBFilesClient/SkillLine.dbc",
+           "DBFilesClient/Spell.dbc",
+       }) {
+    const auto source = vfs.Resolve(localized_path);
+    Log(source.has_value() ? LogLevel::kInfo : LogLevel::kError,
+        std::string("DBC localized source: path=") + localized_path +
+            " source=" +
+            (source.has_value() ? source->string() : std::string("<missing>")));
+  }
+
   const auto load = [&](auto &store, const RetailDbcDescriptor &descriptor) {
     if (LoadOne(store, vfs, BuildVfsPath(dbc_root_path, descriptor), descriptor)) {
       ++loaded;

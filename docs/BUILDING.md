@@ -55,8 +55,8 @@ the runnable application bundle. After the compile step, create the normal
 development/validation bundle with:
 
 ```sh
-cmake --install build/release --component client --prefix build/release/bundle
-# the app is build/release/bundle/OpenWoW.app
+cmake --install build/release --component client --prefix build/macos-app
+# the app is build/macos-app/OpenWoW.app
 ```
 
 The bundle continues to resolve the configured local content root or an
