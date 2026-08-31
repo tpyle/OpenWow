@@ -2862,7 +2862,8 @@ bool GameLoop::HasLocalPlayerForWorldUi() const {
 }
 
 bool GameLoop::PrepareLocalPlayerForWorldUi() {
-  return game_ui_.is_initialized() && event_bridge_.SynchronizePlayerUnitToken();
+  return game_ui_.is_initialized() &&
+         event_bridge_.PublishInitialPlayerUnitState();
 }
 
 void GameLoop::RunPreEnterLocalPlayerWorldUiSetup() {
