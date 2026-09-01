@@ -3,6 +3,7 @@
 
 #include "openwow/render/api/math/render_matrix_math.h"
 #include "openwow/render/resources/fonts/text_layout.h"
+#include "openwow/foundation/diagnostics/logging.h"
 
 #include <algorithm>
 #include <cmath>
@@ -98,7 +99,15 @@ bool UnitNameRenderer::EnsureFont() {
       return true;
     }
   }
-  return text_renderer_.Init(kBaseFontPixelHeight);
+  if (!font_failure_reported_) {
+    openwow::diagnostics::Log(
+        openwow::diagnostics::LogLevel::kError,
+        "UnitNameRenderer: locale font initialization failed path=" +
+            font_path_ + " source=" +
+            (file_loader_ ? "active-vfs" : "registered-sfile"));
+    font_failure_reported_ = true;
+  }
+  return false;
 }
 
 void UnitNameRenderer::ConsumePresentation(
