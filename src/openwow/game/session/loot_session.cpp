@@ -362,7 +362,7 @@ void WorldSession::HandleLootMoneyNotify(const net::wotlk::WorldPacket &pkt) {
                            nullptr, 0, 0, 0, 0, 0, nullptr);
 }
 
-void WorldSession::HandleLootClearMoney(const net::wotlk::WorldPacket & ) {
+void WorldSession::HandleLootClearMoney(const net::wotlk::WorldPacket &) {
   const auto result = loot_.HandleLootClearMoney();
   if (!result.cleared_gold) {
     return;
