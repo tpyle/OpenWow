@@ -62,14 +62,41 @@ void UnitNameRenderer::Shutdown() {
   initialized_ = false;
 }
 
+void UnitNameRenderer::SetFontPath(std::string path) {
+  if (font_path_ == path) {
+    return;
+  }
+  text_renderer_.Shutdown();
+  line_layout_cache_.clear();
+  font_failure_reported_ = false;
+  font_path_ = std::move(path);
+}
+
+void UnitNameRenderer::SetFileLoader(
+    std::function<std::vector<std::uint8_t>(const std::string&)> loader) {
+  text_renderer_.Shutdown();
+  line_layout_cache_.clear();
+  font_failure_reported_ = false;
+  file_loader_ = std::move(loader);
+}
+
 bool UnitNameRenderer::EnsureFont() {
   if (text_renderer_.is_ready()) {
     return true;
   }
 
-  if (text_renderer_.InitFromVirtualPath(kUnitNameFontPath,
-                                         kBaseFontPixelHeight)) {
-    return true;
+  if (!font_path_.empty()) {
+    if (file_loader_) {
+      auto font_bytes = file_loader_(font_path_);
+      if (!font_bytes.empty() &&
+          text_renderer_.InitFromMemory(font_path_, std::move(font_bytes),
+                                        kBaseFontPixelHeight)) {
+        return true;
+      }
+    } else if (text_renderer_.InitFromVirtualPath(font_path_,
+                                                  kBaseFontPixelHeight)) {
+      return true;
+    }
   }
   return text_renderer_.Init(kBaseFontPixelHeight);
 }

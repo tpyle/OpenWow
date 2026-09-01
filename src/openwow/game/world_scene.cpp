@@ -2199,6 +2199,8 @@ void WorldScene::SetObjectRendererFileLoader(
   const auto font_path = openwow::platform::BuildFontPath(
       openwow::core::LocaleSystem::GetFontForLocale(locale.GetLocale()));
 
+  unit_name_renderer_.SetFontPath(font_path);
+  unit_name_renderer_.SetFileLoader(loader);
   chat_bubble_presenter_.SetFontPath(font_path);
   chat_bubble_presenter_.SetFileLoader(loader);
   world_presentation_scene_.SetFileLoader(loader);
