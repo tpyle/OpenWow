@@ -4535,6 +4535,7 @@ void GameLoop::TickInWorld(float dt) {
             layout.viewport_height(), layout.root_scale()));
       }
     }
+    minimap_.PrepareMarkerPresentation();
     if (stock_frame_xml_loaded) {
       minimap_.RenderToTexture(ui_offscreen_view);
       game_ui_.SetMinimapSurfaceSubmitter(minimap_.surface_submitter());
