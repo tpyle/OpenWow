@@ -5,6 +5,7 @@
 #include "openwow/render/backend/bgfx/renderer_context_services.h"
 #include "openwow/render/world/terrain/distant_terrain.h"
 #include "openwow/render/world/doodads/doodad_renderer.h"
+#include "openwow/render/world/detail_doodads/detail_doodad_renderer.h"
 #include "openwow/world/coordinates/frustum.h"
 #include "openwow/render/scene/shadow_presentation_runtime.h"
 #include "openwow/render/world/environment/sky_renderer.h"
@@ -77,6 +78,7 @@ bool WorldPresentationScene::Initialize() {
   weather_renderer_ = std::make_unique<WeatherRenderer>(texture_manager_);
   water_ = std::make_unique<WaterRenderer>(texture_manager_);
   doodads_ = std::make_unique<DoodadRenderer>(m2_system_);
+  detail_doodads_ = std::make_unique<DetailDoodadRenderer>(texture_manager_);
   doodads_->BindWmoDoodadM2EventSink(wmo_doodad_m2_event_sink_);
   distant_ = std::make_unique<DistantTerrainRenderer>();
   portal_fills_ = std::make_unique<WmoPortalFillRenderer>();
@@ -85,7 +87,7 @@ bool WorldPresentationScene::Initialize() {
   initialized_ = terrain_->Initialize() && shadows_->Initialize() &&
                  sky_->Initialize() &&
                  weather_renderer_->Initialize() && water_->Initialize() &&
-                 doodads_->Initialize();
+                 doodads_->Initialize() && detail_doodads_->Initialize();
   static_cast<void>(distant_->Initialize());
 
   if (openwow::render::IsRendererContextActive()) {
@@ -136,6 +138,7 @@ void WorldPresentationScene::ResetMap() {
   models_.clear();
   instances_.clear();
   if (doodads_) doodads_->Clear();
+  if (detail_doodads_) detail_doodads_->Clear();
   if (terrain_) terrain_->ClearTerrain();
   if (shadows_) shadows_->ResetMap();
   if (water_) water_->ClearSurfaces();
@@ -359,12 +362,13 @@ void WorldPresentationScene::Shutdown() {
   distant_->Shutdown();
   if (portal_fills_) portal_fills_->Shutdown();
   doodads_->Shutdown();
+  detail_doodads_->Shutdown();
   water_->Shutdown();
   weather_renderer_->Shutdown();
   sky_->Shutdown();
   shadows_->Shutdown();
   terrain_->Shutdown();
-  distant_.reset(); doodads_.reset(); water_.reset();
+  distant_.reset(); detail_doodads_.reset(); doodads_.reset(); water_.reset();
   weather_renderer_.reset(); sky_.reset(); shadows_.reset(); terrain_.reset();
   portal_fills_.reset();
   initialized_ = false;
@@ -374,6 +378,7 @@ void WorldPresentationScene::SetFileLoader(LoadFileCallback callback) {
   load_file_ = std::move(callback);
   if (sky_) sky_->SetFileLoader(load_file_);
   if (doodads_) doodads_->SetFileLoader(load_file_);
+  if (detail_doodads_) detail_doodads_->SetFileLoader(load_file_);
 }
 
 void WorldPresentationScene::SetPrefixFileLoader(
@@ -385,6 +390,9 @@ void WorldPresentationScene::SetPrefixFileLoader(
 
 void WorldPresentationScene::BindDbc(const data::dbc::DbcLoader* dbc) {
   dbc_ = dbc;
+  if (detail_doodads_) {
+    detail_doodads_->BindDbc(dbc_);
+  }
   if (water_) {
     water_->SetLiquidStores(
         [this](const std::uint32_t id) {
@@ -454,12 +462,16 @@ world::WorldPresentationAcknowledgment WorldPresentationScene::Consume(
         }
         if (doodads_ && value.adt)
           doodads_->LoadFromAdt(*value.adt, value.tile_x, value.tile_y);
+        if (detail_doodads_ && value.adt)
+          detail_doodads_->LoadFromAdt(value.adt, value.tile_x, value.tile_y);
         if (water_ && value.liquids)
           water_->ReplaceOwnedWaterHeightfields(value.owner, *value.liquids);
         if (distant_) distant_->SetDetailedTile(value.tile_x, value.tile_y, true);
       } else if constexpr (std::is_same_v<T, world::RemoveTerrainTileCommand>) {
         if (terrain_) terrain_->RemoveAdt(value.tile_x, value.tile_y);
         if (doodads_) doodads_->UnloadTile(value.tile_x, value.tile_y);
+        if (detail_doodads_)
+          detail_doodads_->UnloadTile(value.tile_x, value.tile_y);
         if (water_) water_->RemoveOwnedWaterHeightfields(value.owner);
         if (distant_) distant_->SetDetailedTile(value.tile_x, value.tile_y, false);
       } else if constexpr (std::is_same_v<T, world::BeginWorldModelCommand>) {
@@ -599,6 +611,7 @@ void WorldPresentationScene::Update(const float dt,
 
   doodads_->UpdateLoading();
   doodads_->Update(dt);
+  detail_doodads_->Update(position);
 }
 
 void WorldPresentationScene::Render(
@@ -663,6 +676,12 @@ void WorldPresentationScene::Render(
   bgfx::setViewTransform(views.alpha, matrices.bgfx_view().data(),
                          matrices.bgfx_projection().data());
   bgfx::setViewClear(views.alpha, BGFX_CLEAR_NONE);
+
+  bgfx::setViewMode(views.detail_doodads, bgfx::ViewMode::Sequential);
+  bgfx::setViewRect(views.detail_doodads, 0, 0, screen_width, screen_height);
+  bgfx::setViewTransform(views.detail_doodads, matrices.bgfx_view().data(),
+                         matrices.bgfx_projection().data());
+  bgfx::setViewClear(views.detail_doodads, BGFX_CLEAR_NONE);
 
   const auto& sky_rect = snapshot.environment.sky_clip_rect;
   const float capture_w = static_cast<float>(screen_width);
@@ -860,6 +879,14 @@ void WorldPresentationScene::Render(
                      m2::M2RenderPassScope::kTransparentOnly, &alpha_draw_order);
   };
 
+  const auto encode_detail_doodads = [&] {
+    if (render_terrain) {
+      detail_doodads_->Render(
+          views.detail_doodads, gpu.view.data(), gpu.projection.data(),
+          &terrain_frustum, pos, env.models);
+    }
+  };
+
   const auto encode_water_and_weather = [&] {
 
     water_->SetTransientWaterHeightfields(visible_wmo_liquids_scratch_);
@@ -882,6 +909,7 @@ void WorldPresentationScene::Render(
     resolve_wmo_placements();
     encode_wmo(nullptr);
     encode_doodad_opaque();
+    encode_detail_doodads();
     encode_doodad_alpha();
     encode_water_and_weather();
     return;
@@ -944,6 +972,8 @@ void WorldPresentationScene::Render(
   }
   render_sky();
   encode_doodad_opaque();
+
+  encode_detail_doodads();
 
   encode_doodad_alpha();
 
