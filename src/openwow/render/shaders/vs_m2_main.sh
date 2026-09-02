@@ -106,9 +106,11 @@ void main()
     vec4 viewPosition = M2_MODEL_TO_VIEW(localPos);
     gl_Position = mul(u_proj, viewPosition);
 
+    vec3 worldPosition = M2_MODEL_TO_WORLD(localPos).xyz;
+    v_worldPos = worldPosition;
+
 #if OPENWOW_M2_VS_LIGHTING_ENABLED
     vec3 worldNormal = safeNormalizeM2(M2_MODEL_TO_WORLD(vec4(localNrm, 0.0)).xyz);
-    vec3 worldPosition = M2_MODEL_TO_WORLD(localPos).xyz;
 #endif
 
 #if OPENWOW_M2_VS_TEXGEN_ENV_ENABLED

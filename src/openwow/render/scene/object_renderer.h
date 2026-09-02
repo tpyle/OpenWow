@@ -530,6 +530,10 @@ public:
                          float screen_w, float screen_h, std::span<const std::uint64_t> entity_ids,
                          m2::M2TransparentDrawOrder &transparent_draw_order);
 
+  void RenderShadowCasters(std::uint8_t view_id, const float* view_mtx,
+                           const float* proj_mtx, float shadow_map_size,
+                           std::span<const std::uint64_t> entity_ids);
+
   void SetCameraPosition(float x, float y, float z) {
     camera_x_ = x;
     camera_y_ = y;
@@ -545,6 +549,11 @@ public:
   void RenderMounts(std::uint8_t view_id, const float *view_mtx, const float *proj_mtx,
                     const game::ObjectPresentationSnapshot &objects,
                     m2::M2TransparentDrawOrder &transparent_draw_order);
+
+  void RenderMountShadowCasters(
+      std::uint8_t view_id, const float* view_mtx, const float* proj_mtx,
+      const game::ObjectPresentationSnapshot& objects,
+      std::span<const std::uint64_t> entity_ids);
 
   [[nodiscard]] DisplayInfoResolver &display_info() {
     return display_info_;
@@ -771,7 +780,8 @@ private:
   void RenderPass(std::uint8_t view_id, const float *view_mtx, const float *proj_mtx,
                   float screen_w, float screen_h, m2::M2RenderPassScope pass_scope,
                   std::span<const std::uint64_t> entity_ids,
-                  m2::M2TransparentDrawOrder *transparent_draw_order);
+                  m2::M2TransparentDrawOrder *transparent_draw_order,
+                  bool configure_view = true);
 
   void ReserveTransparentDrawOrdinals(m2::M2TransparentDrawOrder &order);
 
