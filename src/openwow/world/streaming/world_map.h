@@ -388,6 +388,8 @@ public:
   [[nodiscard]] std::uint32_t ResolveTerrainGroundTypeAtPosition(float x, float y) const;
   [[nodiscard]] AreaEnvironmentContext ResolveAreaEnvironmentContextAtPosition(
       float x, float y, float z) const;
+  [[nodiscard]] AreaEnvironmentContext ResolveZoneUiAreaContextAtPosition(
+      float x, float y, float z) const;
 
   [[nodiscard]] MoverWmoSoundContext ResolveWmoSoundContextAtPosition(
       float x, float y, float z) const;
