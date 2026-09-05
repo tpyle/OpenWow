@@ -1074,7 +1074,7 @@ void UnitInteractionRuntime::OnNPCInteractionFlagsChanged(
   if ((changed & 0x2000) != 0) {
     if ((new_flags & 0x2000) == 0) {
       if (GetTaxiMapFrameNpcGuid(session.taxi()) == my_guid) {
-        TaxiMapFrame_Close(session.taxi());
+        TaxiMapFrame_Close(session);
       }
     }
   }
