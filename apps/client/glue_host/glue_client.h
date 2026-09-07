@@ -299,6 +299,7 @@ class GlueClient {
   bool layout_dirty_{true};
   std::string last_window_title_;
   bool window_focused_{false};
+  bool application_active_{true};
   bool running_{false};
   bool trace_input_{false};
   bool simple_ui_fast_path_enabled_{true};

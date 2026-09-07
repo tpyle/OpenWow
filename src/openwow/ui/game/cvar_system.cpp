@@ -28,6 +28,7 @@
 #include "openwow/ui/game/secure_execution.h"
 #include "openwow/platform/filesystem/filesystem.h"
 #include "openwow/foundation/diagnostics/logging.h"
+#include "openwow/foundation/diagnostics/performance_logging.h"
 #include "openwow/foundation/text/ascii.h"
 
 #include <algorithm>
@@ -1973,6 +1974,20 @@ void CVarSystem::RegisterDefaults() {
       "Enable/Disable use of nvvp3 and nvfp2 shaders. Only relevant when using the GLL gxApi.");
   register_gx_fallback("fixedFunction", "0", pending_display,
                        "Force fixed function rendering");
+
+  RegisterNativeCVar(
+      "performanceLog", "0",
+      F::Archive, "Release performance logging (0=off, 1=on)",
+      [](const std::string&, const std::string&, const std::string& value) {
+        if (value != "0" && value != "1") {
+          openwow::diagnostics::Log(openwow::diagnostics::LogLevel::kWarn,
+              "CVar validation: performanceLog expects 0 or 1");
+          return false;
+        }
+        openwow::diagnostics::SetPerformanceLoggingEnabled(value == "1");
+        return true;
+      }, 0.0f, 1.0f);
+
 
   RegisterCVar("farclip", "350", F::Archive, "View distance");
   RegisterCVar("nearclip", "0.2", F::Archive, "Near clip plane distance");
