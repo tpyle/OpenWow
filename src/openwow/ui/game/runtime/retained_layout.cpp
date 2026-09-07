@@ -502,6 +502,7 @@ struct RetainedLayout::Impl {
   openwow::ui::TransparentStringMap<ScrollFrameRanges> scroll_frame_ranges;
 
   std::uint64_t scroll_frame_ranges_generation{0};
+  bool scroll_frame_ranges_dirty{true};
   std::unordered_map<std::string, std::vector<std::string>> dependencies;
   std::unordered_map<std::string, std::vector<std::string>> dependents;
   std::vector<std::string> pending_names;
@@ -545,6 +546,7 @@ struct RetainedLayout::Impl {
       bool populated{false};
     };
 
+    scroll_frame_ranges_dirty = false;
     scroll_frame_ranges.clear();
     ++scroll_frame_ranges_generation;
     openwow::ui::TransparentStringMap<PresentedBounds> bounds_by_owner;
@@ -641,6 +643,14 @@ struct RetainedLayout::Impl {
     const std::string name(key);
     if (const auto previous = dependencies.find(name); previous != dependencies.end()) {
       for (const auto& dependency : previous->second) {
+        // A reparented region may no longer carry scroll-child membership.
+        // Preserve the old owner's range invalidation before replacing edges.
+        if (const auto* owner = frames.FindFrame(dependency);
+            owner != nullptr &&
+            (owner->scroll_child_content ||
+             openwow::text::EqualsIgnoreCaseAscii(owner->kind, "ScrollFrame"))) {
+          scroll_frame_ranges_dirty = true;
+        }
         if (auto it = dependents.find(dependency); it != dependents.end()) {
           std::erase(it->second, name);
           if (it->second.empty()) dependents.erase(it);
@@ -1050,6 +1060,7 @@ void RetainedLayout::Clear() {
   x.lua = nullptr;
   x.rects.clear(); ++x.rects_generation;
   x.scroll_frame_ranges.clear(); ++x.scroll_frame_ranges_generation;
+  x.scroll_frame_ranges_dirty = true;
   x.dependencies.clear(); x.dependents.clear();
   x.pending_names.clear(); x.pending_members.clear();
   x.natural_size_pending.clear();
@@ -1202,7 +1213,7 @@ void RetainedLayout::SolveIfDirty() {
     ++x.metrics.incremental_resolves;
     x.metrics.last_resolve_candidates = solve_frames.size();
 
-    bool scroll_ranges_may_have_changed = false;
+    bool scroll_ranges_may_have_changed = x.scroll_frame_ranges_dirty;
     for (std::size_t index = 0; index < affected_count; ++index) {
       const auto* const frame = solve_frames[index];
       if (frame->scroll_child_content ||
