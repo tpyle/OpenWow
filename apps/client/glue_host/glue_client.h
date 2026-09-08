@@ -207,6 +207,7 @@ class GlueClient {
   void UpdateHoverState();
 
   void ApplyWindowFocusChange(bool focused);
+  void ApplyApplicationActiveChange(bool active);
 
   void ReconcileWindowFocus();
   void UpdateOnUpdateScripts(double elapsed_sec);

@@ -272,6 +272,33 @@ void GlueClient::ApplyWindowFocusChange(const bool focused) {
   UpdateTextInputState();
 }
 
+void GlueClient::ApplyApplicationActiveChange(const bool active) {
+  if (application_active_ == active) {
+    return;
+  }
+
+  application_active_ = active;
+  openwow::diagnostics::Log(
+      openwow::diagnostics::LogLevel::kInfo,
+      active ? "Application entered foreground" : "Application entered background");
+  if (!active) {
+    (void)game_loop_.PersistRuntimeConfiguration();
+    (void)openwow::core::ida::CVar_FlushToFile();
+#if defined(OPENWOW_PLATFORM_IOS)
+    texture_manager_.ClearCache();
+    sound_runtime_.ClearSoundKitProviderCaches();
+    game_loop_.post_process().ReleaseTransientEffectFramebuffers();
+#endif
+    ApplyWindowFocusChange(false);
+    return;
+  }
+
+  present_pacer_.Reset();
+  layout_dirty_ = true;
+  ReconcileWindowFocus();
+}
+
+
 void GlueClient::ReconcileWindowFocus() {
   if (window_ == nullptr) {
     return;
