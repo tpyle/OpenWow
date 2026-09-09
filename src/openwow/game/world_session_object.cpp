@@ -2281,11 +2281,6 @@ void WorldSession::OnFieldsChanged(const WorldObject &obj, const FieldUpdateBatc
     }
 
     if (obj.GetTypeId() == TypeID::kPlayer &&
-        (is_create || HasUpdatedField(updates, UNIT_FIELD_HEALTH))) {
-      EvaluateActivePlayerLifeLevel(false);
-    }
-
-    if (obj.GetTypeId() == TypeID::kPlayer &&
         (is_create || HasUpdatedField(updates, PLAYER_FLAGS))) {
       constexpr std::uint32_t kPlayerFlagsGhost = 0x10u;
       const bool is_ghost_now =
@@ -2294,10 +2289,6 @@ void WorldSession::OnFieldsChanged(const WorldObject &obj, const FieldUpdateBatc
         ResetAndRequeryCorpsePosition();
       }
       active_player_was_ghost_ = is_ghost_now;
-
-      if (!is_create) {
-        EvaluateActivePlayerLifeLevel(false);
-      }
     }
 
     if (obj.GetTypeId() == TypeID::kPlayer &&
@@ -2419,6 +2410,16 @@ void WorldSession::OnFieldsChanged(const WorldObject &obj, const FieldUpdateBatc
   }
 
   DescriptorCallbackRegistry::Get().Dispatch(obj, updates, is_create);
+
+  // Health callbacks prepare the release timer and death side effects before
+  // publishing PLAYER_DEAD. A level check before them consumes the transition
+  // while Lua still sees the initial zero release time and hides the popup.
+  if (obj.GetGuid() == objects().GetLocalPlayerGuid() &&
+      obj.GetTypeId() == TypeID::kPlayer &&
+      (is_create || HasUpdatedField(updates, UNIT_FIELD_HEALTH) ||
+       HasUpdatedField(updates, PLAYER_FLAGS))) {
+    EvaluateActivePlayerLifeLevel(false);
+  }
 
   if (!is_create) {
     DispatchLocalPlayerVisibleItemCombatEvents(obj, updates, objects().GetLocalPlayerGuid(),
