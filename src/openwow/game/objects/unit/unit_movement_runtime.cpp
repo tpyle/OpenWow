@@ -4845,6 +4845,7 @@ void UnitMovementRuntime::Cleanup() {
   ground_projection_anchor_ = {};
   ground_projection_position_ = {};
   ground_projection_failed_ = false;
+  last_ground_discontinuity_log_tick_.reset();
   ground_aligned_matrix_memo_.valid = false;
   model_ground_normal_.reset();
 }
@@ -4865,6 +4866,7 @@ void UnitMovementRuntime::ResetState() noexcept {
   ground_projection_anchor_ = {};
   ground_projection_position_ = {};
   ground_projection_failed_ = false;
+  last_ground_discontinuity_log_tick_.reset();
   ground_aligned_matrix_memo_.valid = false;
   model_ground_normal_.reset();
 }
