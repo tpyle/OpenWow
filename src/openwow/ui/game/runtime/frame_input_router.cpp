@@ -7,6 +7,7 @@
 #include <lua.hpp>
 #include <utility>
 
+#include "openwow/foundation/diagnostics/performance_logging.h"
 #include "openwow/foundation/text/ascii.h"
 #include "openwow/game/actions/bindings/adapters/lua/binding_script_executor.h"
 #include "openwow/input/input_manager.h"
