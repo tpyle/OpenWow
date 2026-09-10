@@ -15,6 +15,7 @@
 #include "openwow/render/m2/m2_system.h"
 #include "openwow/render/models/characters/bowstring_renderer.h"
 #include "openwow/render/models/animation/model_instance_transform.h"
+#include "openwow/render/models/animation/m2_attachment_transform.h"
 #include "openwow/render/resources/textures/texture_manager.h"
 #include "openwow/render/scene/m2_instance_render_cost.h"
 #include "openwow/render/scene/occlusion/occlusion_depth_buffer.h"
@@ -94,28 +95,42 @@ constexpr std::array<std::uint32_t, 4> kCharacterReplaceableTextureTypes{
     kCharacterHairReplaceableTextureType,
     kCharacterExtraSkinReplaceableTextureType};
 
-[[nodiscard]] std::uint32_t ResolvePresentationAnimationDurationMs(
+[[nodiscard]] m2::M2InstanceAnimationInfoQuery ResolvePresentationAnimationInfo(
     const m2::M2System& system, const RenderInstance& instance) {
-
   if (instance.m2_instance_id != 0u) {
-    const auto info =
-        system.QueryInstanceAnimationInfo(instance.m2_instance_id);
+    const auto info = system.QueryInstanceAnimationInfo(instance.m2_instance_id);
+    if (m2::IsTerminalM2ResultStatus(info.status)) {
+      return info;
+    }
     if (info.status == m2::M2ResultStatus::kReady &&
         info.info.requested_animation_id == instance.animation.current_anim() &&
-        info.info.sequence_index != m2::kInvalidM2AnimationSequenceIndex &&
-        info.info.duration_ms != 0u) {
-      return info.info.duration_ms;
+        info.info.sequence_index != m2::kInvalidM2AnimationSequenceIndex) {
+      return info;
     }
   }
-  if (instance.m2_model_id != 0u) {
-    const auto sequence = system.QueryModelAnimationSequence(
-        instance.m2_model_id, instance.animation.current_anim());
-    if (sequence.status == m2::M2ResultStatus::kReady &&
-        sequence.has_sequence) {
-      return sequence.sequence.duration_ms;
-    }
+  if (instance.m2_model_id == 0u) {
+    return {};
   }
-  return 0u;
+  const auto sequence = system.QueryModelAnimationSequence(
+      instance.m2_model_id, instance.animation.current_anim());
+  if (sequence.status != m2::M2ResultStatus::kReady) {
+    return {.status = sequence.status, .reason = sequence.reason,
+            .detail = sequence.detail};
+  }
+  if (!sequence.has_sequence) {
+    return {.status = m2::M2ResultStatus::kReady};
+  }
+  return {.status = m2::M2ResultStatus::kReady,
+          .info = {.requested_animation_id = instance.animation.current_anim(),
+                   .resolved_animation_id = sequence.sequence.animation_id,
+                   .sequence_index = sequence.sequence.sequence_index,
+                   .duration_ms = sequence.sequence.duration_ms,
+                   .sequence_flags = sequence.sequence.flags}};
+}
+
+[[nodiscard]] std::uint32_t ResolvePresentationAnimationDurationMs(
+    const m2::M2System& system, const RenderInstance& instance) {
+  return ResolvePresentationAnimationInfo(system, instance).info.duration_ms;
 }
 
 [[nodiscard]] std::uint32_t ResolveModelAnimationDurationMs(
@@ -316,12 +331,9 @@ void ReconcileItemVisualChildren(m2::M2System &m2_system, ModelAttachmentBinding
   return path;
 }
 
-[[nodiscard]] RenderMatrix4x4 BuildM2InstanceModelMatrix(const RenderInstance &inst,
-                                                         const MountRenderer &mount_renderer) {
-  if (inst.has_explicit_world_transform) {
-    return inst.world_transform;
-  }
-
+[[nodiscard]] RenderMatrix4x4 BuildM2InstanceModelMatrix(
+    const RenderInstance &inst, const MountRenderer &mount_renderer,
+    const m2::M2System &system) {
   float render_x = inst.position[0];
   float render_y = inst.position[1];
   float render_z = inst.position[2];
@@ -337,8 +349,33 @@ void ReconcileItemVisualChildren(m2::M2System &m2_system, ModelAttachmentBinding
     }
   }
 
-  return BuildM2ModelInstanceTransform(render_x, render_y, render_z,
-                                       inst.orientation, inst.scale);
+  auto matrix = inst.has_explicit_world_transform
+                    ? inst.world_transform
+                    : BuildM2ModelInstanceTransform(render_x, render_y, render_z,
+                                                    inst.orientation, inst.scale);
+  if (inst.ground_contact_normal.has_value()) {
+    // Resolve against the body request and sample time that this query will
+    // install, including requests published before the next animation update.
+    const auto animation_info = ResolvePresentationAnimationInfo(system, inst);
+    if (animation_info.status == m2::M2ResultStatus::kReady) {
+      inst.ground_alignment_failure_reported = false;
+      const float alignment = M2SequenceGroundAlignmentWeight(
+          animation_info.info.sequence_flags, inst.animation.current_time_ms(),
+          animation_info.info.duration_ms, inst.animation_playback_rate);
+      ApplyM2SequenceGroundAlignment(
+          matrix, inst.orientation, inst.scale,
+          RenderVec3View{*inst.ground_contact_normal}, alignment);
+    } else if (m2::IsTerminalM2ResultStatus(animation_info.status) &&
+               !inst.ground_alignment_failure_reported) {
+      inst.ground_alignment_failure_reported = true;
+      diagnostics::Log(diagnostics::LogLevel::kWarn,
+          "unit ground alignment stage=model-transform source=M2-sequence guid=" +
+              inst.guid.ToString() + " model=" + inst.model_path +
+              " animation=" + std::to_string(inst.animation.current_anim()) +
+              " reason=" + animation_info.detail);
+    }
+  }
+  return matrix;
 }
 
 [[nodiscard]] bool HasPathSuffix(const std::string &path, const std::string_view suffix) {
@@ -1266,7 +1303,7 @@ bool ObjectRenderer::QueryAreaScenePresentationState(
   }
 
   *out = {};
-  out->world_transform = BuildM2InstanceModelMatrix(instance, mount_renderer_);
+  out->world_transform = BuildM2InstanceModelMatrix(instance, mount_renderer_, m2_system_);
   out->uniform_scale = std::sqrt(
       out->world_transform[0] * out->world_transform[0] +
       out->world_transform[1] * out->world_transform[1] +
@@ -1447,7 +1484,7 @@ bool ObjectRenderer::PrepareM2InstanceSpatialQuery(
       inst.has_destructible_area_scene_states
           ? BuildDestructibleM2StateModelMatrix(
                 inst, inst.destructible_area_scene_active_state)
-          : BuildM2InstanceModelMatrix(inst, mount_renderer_);
+          : BuildM2InstanceModelMatrix(inst, mount_renderer_, m2_system_);
   if (system.SetWorldTransformMatrix(inst.m2_instance_id, model_matrix) !=
       m2::M2ResultStatus::kReady) {
     return false;
@@ -1486,7 +1523,7 @@ m2::M2InstanceFrameSpatialRequest ObjectRenderer::BuildM2FrameSpatialRequest(
         inst.has_destructible_area_scene_states
             ? BuildDestructibleM2StateModelMatrix(
                   inst, inst.destructible_area_scene_active_state)
-            : BuildM2InstanceModelMatrix(inst, mount_renderer_);
+            : BuildM2InstanceModelMatrix(inst, mount_renderer_, m2_system_);
   }
   return {.instance_id = inst.m2_instance_id,
           .model_id = inst.m2_model_id,
@@ -1774,6 +1811,7 @@ void ObjectRenderer::InitializeInstance(RenderInstance &inst,
   inst.scale = projection.scale;
   inst.world_transform = projection.world_transform;
   inst.has_explicit_world_transform = projection.has_explicit_world_transform;
+  inst.ground_contact_normal = projection.ground_contact_normal;
 
   inst.display_id = projection.display_id;
   inst.visible = projection.visible;
@@ -1945,6 +1983,7 @@ void ObjectRenderer::ApplyProjection(RenderInstance &inst, ObjectProjection &&pr
   inst.scale = projection.scale;
   inst.world_transform = projection.world_transform;
   inst.has_explicit_world_transform = projection.has_explicit_world_transform;
+  inst.ground_contact_normal = projection.ground_contact_normal;
   inst.display_id = projection.display_id;
   if (destructible_block_relevant) {
     inst.area_scene_additional_doodad_sets = projection.area_scene_additional_doodad_sets;
@@ -3036,7 +3075,7 @@ void ObjectRenderer::SynchronizeInactiveDestructibleM2StateBindings(
 
 RenderMatrix4x4 ObjectRenderer::BuildDestructibleM2StateModelMatrix(
     const RenderInstance& inst, const std::uint8_t state_index) const {
-  RenderMatrix4x4 matrix = BuildM2InstanceModelMatrix(inst, mount_renderer_);
+  RenderMatrix4x4 matrix = BuildM2InstanceModelMatrix(inst, mount_renderer_, m2_system_);
   if (state_index < inst.destructible_m2_state_runtime.size()) {
     matrix[14] -= inst.destructible_m2_state_runtime[state_index].vertical_offset_down;
   }
