@@ -21,6 +21,7 @@
 #include "openwow/ui/game/api/game_lua_api_movement.h"
 #include "openwow/ui/lua_call_helpers.h"
 #include "openwow/foundation/diagnostics/logging.h"
+#include "openwow/foundation/diagnostics/performance_logging.h"
 #include "openwow/foundation/text/utf8.h"
 
 extern "C" {
@@ -311,6 +312,80 @@ void GlueClient::ReconcileWindowFocus() {
 }
 
 void GlueClient::HandleEvent(const SDL_Event &event) {
+  if (event.type == SDL_APP_WILLENTERBACKGROUND ||
+      event.type == SDL_APP_DIDENTERBACKGROUND) {
+    ApplyApplicationActiveChange(false);
+    return;
+  }
+  if (event.type == SDL_APP_DIDENTERFOREGROUND) {
+    ApplyApplicationActiveChange(true);
+    return;
+  }
+  if (event.type == SDL_APP_LOWMEMORY) {
+    const auto before_bytes = texture_manager_.GetMemoryUsage();
+    const auto before_count = texture_manager_.CachedCount();
+    const openwow::diagnostics::PerformanceTimer performance;
+    openwow::diagnostics::Log(openwow::diagnostics::LogLevel::kWarn,
+                              "Application received a low-memory warning");
+    texture_manager_.ClearCache();
+    sound_runtime_.ClearSoundKitProviderCaches();
+    auto* world_lua = game_loop_.game_ui().lua_state();
+    openwow::diagnostics::Log(openwow::diagnostics::LogLevel::kWarn,
+        "Application low-memory cache release: texture_bytes_before=" +
+            std::to_string(before_bytes) + " texture_bytes_after=" +
+            std::to_string(texture_manager_.GetMemoryUsage()) +
+            " texture_count_before=" + std::to_string(before_count) +
+            " texture_count_after=" + std::to_string(texture_manager_.CachedCount()) +
+            " world_lua_kb=" + std::to_string(world_lua != nullptr
+                ? lua_gc(world_lua, LUA_GCCOUNT, 0) : 0));
+    static openwow::diagnostics::PerformanceLogSite performance_site;
+    openwow::diagnostics::LogPerformanceDuration(
+        performance_site, "memory.release_caches", performance, "SDL_APP_LOWMEMORY");
+    return;
+  }
+
+#if defined(OPENWOW_PLATFORM_IOS)
+  if (mobile::IsLogExportActive() &&
+      (event.type == SDL_FINGERDOWN || event.type == SDL_FINGERMOTION ||
+       event.type == SDL_FINGERUP || event.type == SDL_MOUSEBUTTONDOWN ||
+       event.type == SDL_MOUSEBUTTONUP || event.type == SDL_MOUSEMOTION ||
+       event.type == SDL_MOUSEWHEEL || event.type == SDL_KEYDOWN ||
+       event.type == SDL_KEYUP || event.type == SDL_TEXTINPUT ||
+       event.type == SDL_TEXTEDITING || event.type == SDL_JOYAXISMOTION ||
+       event.type == SDL_CONTROLLERAXISMOTION ||
+       event.type == SDL_CONTROLLERBUTTONDOWN || event.type == SDL_CONTROLLERBUTTONUP)) {
+    return;
+  }
+  if (event.type == SDL_FINGERDOWN || event.type == SDL_FINGERMOTION ||
+      event.type == SDL_FINGERUP) {
+    HandleMobileFingerEvent(event.tfinger);
+    return;
+  }
+  const bool is_touch_emulated_mouse =
+      (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP)
+          ? event.button.which == SDL_TOUCH_MOUSEID
+          : event.type == SDL_MOUSEMOTION
+                ? event.motion.which == SDL_TOUCH_MOUSEID
+                : event.type == SDL_MOUSEWHEEL &&
+                      event.wheel.which == SDL_TOUCH_MOUSEID;
+  if (is_touch_emulated_mouse) {
+    return;
+  }
+  const bool physical_mouse_event =
+      (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP)
+          ? event.button.which != kMobileVirtualMouseId
+          : event.type == SDL_MOUSEMOTION && event.motion.which != kMobileVirtualMouseId;
+  if (physical_mouse_event &&
+      openwow::platform::WindowManager::Get().HasVirtualCursorPosition()) {
+    CancelMobileMouse();
+    openwow::platform::WindowManager::Get().ClearVirtualCursorPosition();
+    if (game_loop_.game_ui().is_initialized()) {
+      (void)openwow::ui::CallLuaGlobalIfFunction(game_loop_.game_ui().lua_state(),
+                                               "OpenWoWMobile_SetMouseShown", false);
+    }
+  }
+#endif
+
   const std::uint32_t mouse_button_flag =
       (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP)
           ? WowMouseButtonBitmaskFromSdlButton(event.button.button)

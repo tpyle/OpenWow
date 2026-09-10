@@ -750,7 +750,7 @@ bool FrameInputRouter::HandleMouseButtonDownByFlag(float x, float y, std::uint32
   if (pressed_hyperlink != nullptr) {
     hit = pressed_hyperlink->frame_name;
   }
-  TracePointerEvent("down", hit, x, y, button_flag, touch);
+  TracePointerEvent("down", hit, x, y, button_flag, false);
 
   if (!hit.empty()) {
     if (const auto *frame = frames_.FindFrame(hit); frame != nullptr && FrameIsEditBox(*frame)) {
@@ -878,7 +878,7 @@ bool FrameInputRouter::HandleMouseButtonUpByFlag(float x, float y, std::uint32_t
   bool handled = false;
   const auto* release_capture = FindCapture(button_flag);
   TracePointerEvent("up", release_capture != nullptr ? release_capture->frame_name : "",
-                     x, y, button_flag, touch);
+                     x, y, button_flag, false);
 
   if (active_move_sizing_.active) {
     (void)StopFrameMoveSizing(active_move_sizing_.frame_name);
@@ -1039,7 +1039,7 @@ bool FrameInputRouter::HandleMouseMove(float x, float y) {
       continue;
     }
     if (!capture.drag_threshold_reported && openwow::diagnostics::IsPerformanceLoggingEnabled()) {
-      TracePointerEvent("drag-threshold", capture.frame_name, x, y, capture.button_flag, touch);
+      TracePointerEvent("drag-threshold", capture.frame_name, x, y, capture.button_flag, false);
       capture.drag_threshold_reported = true;
     }
     std::uint32_t drag_mask = 0;

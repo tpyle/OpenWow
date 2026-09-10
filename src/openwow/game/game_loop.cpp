@@ -4875,7 +4875,8 @@ bool GameLoop::TryCompleteLoadingScreenWorldEntry() {
              << " doodad_uploads=" << world_scene_.IsDoodadWorldEntryLoadDrained()
              << " transport_required=" << gate->requires_transport_assets
              << " transport_present=" << gate->has_transport_object
-             << " transport_assets=" << gate->transport_assets_ready;
+             << " transport_assets=" << gate->transport_assets_ready
+             << ' ' << world_scene_.world_map().DescribeStreamingProgress();
     }
     openwow::diagnostics::LogPerformanceEvent("world.wait", detail.str());
   };
