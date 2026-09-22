@@ -684,14 +684,23 @@ void WorldPresentationScene::Render(
   const bool sky_scissor_covers_viewport =
       sky_scissor_x == 0u && sky_scissor_y == 0u &&
       sky_scissor_right >= screen_width && sky_scissor_bottom >= screen_height;
-  if (sky_scissor_covers_viewport || sky_scissor_empty) {
-    bgfx::setViewScissor(views.sky, 0, 0, 0, 0);
-  } else {
-    bgfx::setViewScissor(
-        views.sky, sky_scissor_x, sky_scissor_y,
-        static_cast<std::uint16_t>(sky_scissor_right - sky_scissor_x),
-        static_cast<std::uint16_t>(sky_scissor_bottom - sky_scissor_y));
-  }
+  // Deliberately NOT applied as a view-level scissor (bgfx::setViewScissor)
+  // on views.sky: that view is also the designated clear view for the whole
+  // SceneOpaque pass group (see BuildWorldSceneFramebufferViewList /
+  // PostProcess::BindSceneFramebufferToViews -- views.sky is
+  // view_ids.front(), the only one of the group that actually clears color
+  // and depth; scene/wmo/alpha/objects/etc. all pass BGFX_CLEAR_NONE and
+  // rely on that shared clear). bgfx view state (scissor, clear, rect) is
+  // last-write-wins per view ID for the frame, and this scissor is computed
+  // and set well after that shared clear is configured, so a narrow
+  // view-level scissor here silently narrowed the clear itself to the
+  // sky-visible aperture -- i.e. whenever a doorway/portal was in frame --
+  // leaving the rest of the previous frame's contents (walls, doodads,
+  // characters, everything in the SceneOpaque group) never cleared and
+  // redrawn on top each frame, which is what looked like unrelated content
+  // being "drawn over and over again" near a portal. Applied instead as a
+  // per-draw scissor around just the sky draw calls below, which does not
+  // touch the view's clear.
 
   const DrawSortDepth terrain_sort_depth{.camera_position = snapshot.camera.position,
                                          .far_clip = snapshot.camera.far_clip};
@@ -749,9 +758,26 @@ void WorldPresentationScene::Render(
       return;
     }
 
+    // Per-draw scissor (consumed by the next submit() only, unlike a view
+    // scissor) so a narrow sky aperture can't affect views.sky's shared
+    // clear -- see the comment above sky_scissor_covers_viewport. Skipped
+    // entirely when the aperture already covers the full viewport, matching
+    // prior behavior of disabling the scissor in that case.
+    if (!sky_scissor_covers_viewport) {
+      bgfx::setScissor(
+          sky_scissor_x, sky_scissor_y,
+          static_cast<std::uint16_t>(sky_scissor_right - sky_scissor_x),
+          static_cast<std::uint16_t>(sky_scissor_bottom - sky_scissor_y));
+    }
     sky_->Render(views.sky, gpu.view.data(), gpu.projection.data(),
                  pos[0], pos[1], pos[2]);
 
+    if (!sky_scissor_covers_viewport) {
+      bgfx::setScissor(
+          sky_scissor_x, sky_scissor_y,
+          static_cast<std::uint16_t>(sky_scissor_right - sky_scissor_x),
+          static_cast<std::uint16_t>(sky_scissor_bottom - sky_scissor_y));
+    }
     sky_->RenderZoneSkybox(views.sky, gpu.view.data(), gpu.projection.data(),
                            pos[0], pos[1], pos[2]);
   };
