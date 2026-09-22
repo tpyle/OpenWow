@@ -2191,8 +2191,31 @@ WorldMap::ResolveAreaEnvironmentAtPosition(
         .valid = true,
     };
 
-    if (probe == AreaEnvironmentProbe::kCameraRoom && room_query_incomplete &&
-        !best_is_wmo && last_named_camera_room_.valid) {
+    // kCameraRoom deliberately uses a short, precise ray (unlike other
+    // probes, which retry with an extended segment on a miss -- see the
+    // `!camera_room_probe` guard above -- a longer ray here risks picking a
+    // room from a different floor in a multi-story building). That
+    // precision means it can legitimately find nothing for an instant while
+    // standing at/near a portal threshold: the ray passes through the
+    // doorway gap without crossing either room's floor/ceiling geometry.
+    // room_query_incomplete alone doesn't catch this -- it's only set when
+    // a candidate group's data hasn't finished streaming in -- so a
+    // threshold miss produced an all-nullopt result, and
+    // world_presentation_snapshot.cpp's camera-lane traversal had nothing
+    // to seed with for that frame: only the separate exterior lane (which
+    // discovers rooms via portals visible from outside) could still see
+    // the room the camera was actually standing in, giving it a
+    // window-sized clip rect instead of a full-viewport one. Retaining
+    // last_named_camera_room_ here too -- whenever the spatial index still
+    // has WMO candidates at this position, even though this exact ray
+    // missed -- covers that case, while candidates == nullptr (genuinely
+    // no WMO nearby) still falls through and correctly resolves as
+    // outdoors instead of getting stuck on a stale indoor room.
+    const bool near_wmo_but_missed =
+        !best_is_wmo && candidates != nullptr && !candidates->empty();
+    if (probe == AreaEnvironmentProbe::kCameraRoom &&
+        (room_query_incomplete || near_wmo_but_missed) && !best_is_wmo &&
+        last_named_camera_room_.valid) {
       auto retained = entry;
 
       retained.resolution = last_named_camera_room_.resolution;
