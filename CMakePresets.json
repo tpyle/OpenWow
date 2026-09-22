@@ -95,6 +95,21 @@
       }
     },
     {
+      "name": "ci-linux-gcc-asan",
+      "displayName": "Diagnostic: Linux GCC + AddressSanitizer",
+      "description": "Not a CI/release lane. For chasing a heap-corruption/use-after-free report: our own targets are built with -fsanitize=address so ASan aborts with an exact stack trace at the bad access, instead of glibc detecting the damage later (as 'malloc(): ... corrupted') at an unrelated, unhelpful call site. ThinLTO is off to keep symbolization simple and to avoid combining two things that change codegen in one diagnostic build. vcpkg's own ports are NOT rebuilt with ASan -- unnecessary, since ASan intercepts malloc/free process-wide regardless of who calls them, so it still catches misuse of vcpkg-allocated memory by our code. Links with lld (-fuse-ld=lld): GNU ld's memory use for the final link of ~1950 ASan-instrumented, debug-info-carrying translation units is high enough to get OOM-killed on a memory-constrained host; lld handles the same link in a fraction of the memory.",
+      "inherits": [
+        "ci-linux-gcc"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "OPENWOW_ENABLE_THINLTO": "OFF",
+        "CMAKE_C_FLAGS": "-fsanitize=address -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address -fuse-ld=lld"
+      }
+    },
+    {
       "name": "ci-linux-clang",
       "displayName": "CI Linux Clang (native x86_64 / aarch64)",
       "inherits": [
@@ -212,6 +227,10 @@
     {
       "name": "ci-linux-gcc",
       "configurePreset": "ci-linux-gcc"
+    },
+    {
+      "name": "ci-linux-gcc-asan",
+      "configurePreset": "ci-linux-gcc-asan"
     },
     {
       "name": "ci-linux-clang",

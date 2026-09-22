@@ -7,6 +7,25 @@ not install them by hand.
 
 You need a C++20 toolchain and CMake 3.24 or newer.
 
+## 0. Container build (Docker/Podman, no local tooling)
+
+`packaging/linux/Dockerfile` builds a Linux AppImage end to end -- system
+packages, vcpkg, configure, build, and `packaging/linux/build-appimage.sh` --
+inside a container, so the only thing you need on the host is Docker or
+Podman:
+
+```sh
+docker build -f packaging/linux/Dockerfile -t openwow-appimage-builder .
+id=$(docker create openwow-appimage-builder)
+docker cp "$id":/dist ./dist
+docker rm "$id" >/dev/null
+```
+
+(`podman` in place of `docker` works the same way.) See the Dockerfile's
+header comment for what each step does and how long a cold build takes. The
+rest of this document covers building directly on the host, which the
+Dockerfile mirrors step for step.
+
 ## 1. vcpkg bootstrap
 
 The presets expect a vcpkg checkout at `.vcpkg` (git-ignored) at the repository

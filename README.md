@@ -78,12 +78,15 @@ You need your own legitimate copy of the original game data (the `Data/`
 directory containing the MPQ archives). **None of it ships here**, and the
 client will not run without it.
 
-Building requires a C++20 toolchain, CMake 3.24+, and vcpkg for dependencies.
+Building requires a C++20 toolchain, CMake 3.24+, and vcpkg for dependencies —
+or, for a Linux AppImage, nothing but Docker or Podman (see
+`packaging/linux/Dockerfile`).
 
 ## Building
 
 See **[docs/BUILDING.md](docs/BUILDING.md)** for the full instructions,
-toolchain versions and platform notes, including the LTO and PGO presets.
+toolchain versions and platform notes, including the LTO and PGO presets, and
+its "Container build" section for the Docker/Podman route.
 
 Short version:
 

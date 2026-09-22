@@ -22,3 +22,6 @@ compile_commands.json
 *.log
 /logs/
 /artifacts/
+
+# packaging/linux/Dockerfile's default output location.
+/dist/

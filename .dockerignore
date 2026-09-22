@@ -1,0 +1,18 @@
+# Keeps the packaging/linux/Dockerfile build context small. Mirrors
+# .gitignore's build-output entries; .git is excluded separately since none
+# of the container build steps need repository history.
+.git/
+/build/
+.vcpkg/
+vcpkg_installed/
+.cache/
+compile_commands.json
+
+.DS_Store
+*.swp
+*~
+
+*.log
+/logs/
+/artifacts/
+/dist/
