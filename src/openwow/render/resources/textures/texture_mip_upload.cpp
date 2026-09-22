@@ -1,11 +1,14 @@
 #include "openwow/render/resources/textures/texture_mip_upload.h"
 
+#include "openwow/data/blp/blp_mip.h"
+
 #include <bgfx/bgfx.h>
 
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstddef>
+#include <cstring>
 #include <limits>
 #include <optional>
 
@@ -164,6 +167,55 @@ void AppendRgbaMipChain(const data::BLPTextureData& blp,
   }
 }
 
+// BLP1 doesn't store an explicit mip count: AppendRgbaMipChain()/
+// AppendBlockMipChain() stop as soon as the file's own mip table runs out
+// (a zero offset/size slot), which for many real assets is short of the
+// width/height-derived retail_mip_count -- BLP1 mip chains aren't always
+// authored all the way down to 1x1. bgfx::createTexture2D()'s _hasMips is a
+// bool, not an explicit level count: it's the full theoretical chain or a
+// single level, nothing in between, so BuildBlpRgbaMipUpload() previously
+// left every such texture with no mip chain at all once the caller saw
+// complete_mip_chain == false, which is exactly what makes a wall viewed at
+// an angle/distance alias into fine repeating stripes -- no mipmapping to
+// fall back to. This synthesizes the remaining levels from the last decoded
+// one with the same box filter already used for BuildRetailTgaMipUpload()'s
+// (always-synthesized) chain, so a short source chain still ends up
+// complete.
+void SynthesizeMissingRgbaMips(const std::uint32_t width,
+                               const std::uint32_t height,
+                               const std::uint8_t target_mip_count,
+                               BlpRgbaMipUpload& upload) {
+  while (upload.decoded_mip_count < target_mip_count &&
+         !upload.mip_sizes.empty()) {
+    const auto level =
+        static_cast<std::uint8_t>(upload.decoded_mip_count - 1u);
+    const auto [src_width, src_height] =
+        data::BLPTextureLoader::GetMipDimensions(width, height, level);
+    if (src_width == 1u && src_height == 1u) {
+      break;
+    }
+
+    const std::uint32_t next_width = std::max(src_width >> 1u, 1u);
+    const std::uint32_t next_height = std::max(src_height >> 1u, 1u);
+    std::vector<std::uint32_t> next_pixels(
+        static_cast<std::size_t>(next_width) * next_height);
+    data::BlpMip_BoxFilterDownsample(
+        next_pixels.data(), next_width, next_height,
+        upload.bytes.data() + upload.mip_offsets.back(), src_width,
+        src_height);
+
+    const auto next_size = static_cast<std::uint32_t>(
+        next_pixels.size() * sizeof(std::uint32_t));
+    upload.mip_offsets.push_back(static_cast<std::uint32_t>(upload.bytes.size()));
+    upload.mip_sizes.push_back(next_size);
+    const std::size_t insert_at = upload.bytes.size();
+    upload.bytes.resize(insert_at + next_size);
+    std::memcpy(upload.bytes.data() + insert_at, next_pixels.data(), next_size);
+    upload.decoded_mip_count =
+        static_cast<std::uint8_t>(upload.decoded_mip_count + 1u);
+  }
+}
+
 }
 
 std::optional<std::uint32_t> BlpUploadMipSize(
@@ -279,6 +331,27 @@ BlpRgbaMipUpload BuildBlpRgbaMipUpload(
     upload.decoded_mip_count = 0u;
     upload.format = BlpUploadFormat::kRgba8;
     AppendRgbaMipChain(blp, requested_mips, upload);
+  }
+
+  if (source_has_mips && upload.decoded_mip_count > 0u &&
+      upload.decoded_mip_count < upload.retail_mip_count) {
+    if (upload.format != BlpUploadFormat::kRgba8) {
+      // Can't box-filter-downsample compressed blocks directly. Re-decode as
+      // RGBA (more GPU memory than the BC format this texture would
+      // otherwise use, but only for the minority of textures whose source
+      // chain is short -- a real mip chain is worth more than the
+      // compression ratio here).
+      upload.bytes.clear();
+      upload.mip_offsets.clear();
+      upload.mip_sizes.clear();
+      upload.decoded_mip_count = 0u;
+      upload.format = BlpUploadFormat::kRgba8;
+      AppendRgbaMipChain(blp, requested_mips, upload);
+    }
+    if (upload.decoded_mip_count > 0u) {
+      SynthesizeMissingRgbaMips(upload.width, upload.height,
+                                upload.retail_mip_count, upload);
+    }
   }
 
   upload.complete_mip_chain =
