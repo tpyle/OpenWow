@@ -391,8 +391,12 @@ void ComputeVisibleWmoGroups(
     if (out_visible_group_paths != nullptr) out_visible_group_paths->clear();
     if (out_sky_visibility != nullptr) *out_sky_visibility = {};
     if (out_portal_fills != nullptr) out_portal_fills->clear();
+    workspace.group_path_index.assign(groups.size(),
+                                      std::numeric_limits<std::uint32_t>::max());
   } else if (out_mask.size() < groups.size()) {
     out_mask.resize(groups.size(), 0);
+    workspace.group_path_index.resize(groups.size(),
+                                      std::numeric_limits<std::uint32_t>::max());
   }
   workspace.staged_portal_fills.clear();
   workspace.portal_fill_blockers.clear();
@@ -503,9 +507,22 @@ void ComputeVisibleWmoGroups(
   const auto visit_group = [&](const std::uint16_t group_index,
                                const WmoPortalClipRect& clip_rect) {
     out_mask[group_index] = 1u;
-    if (out_visible_group_paths != nullptr) {
-      out_visible_group_paths->push_back({group_index, clip_rect});
+    if (out_visible_group_paths == nullptr) {
+      return;
     }
+    const std::uint32_t existing = workspace.group_path_index[group_index];
+    if (existing != std::numeric_limits<std::uint32_t>::max() &&
+        existing < out_visible_group_paths->size()) {
+      WmoPortalClipRect& into = (*out_visible_group_paths)[existing].clip_rect;
+      into.min_x = std::min(into.min_x, clip_rect.min_x);
+      into.min_y = std::min(into.min_y, clip_rect.min_y);
+      into.max_x = std::max(into.max_x, clip_rect.max_x);
+      into.max_y = std::max(into.max_y, clip_rect.max_y);
+      return;
+    }
+    workspace.group_path_index[group_index] =
+        static_cast<std::uint32_t>(out_visible_group_paths->size());
+    out_visible_group_paths->push_back({group_index, clip_rect});
   };
 
   const auto accumulate_aperture = [](bool& visible, WmoPortalClipRect& into,
@@ -549,7 +566,23 @@ void ComputeVisibleWmoGroups(
         (groups[seed_group].flags & data::wmo::kMogpAlwaysDraw) != 0u) {
       return;
     }
-    visit_group(seed_group, {});
+    // A seed group's own entry gets an unclipped (full-viewport) rect only
+    // when that's actually justified: for the camera lane, seed_group is
+    // containing_group, confirmed containment. For the exterior lane,
+    // seed_group is merely any kMogpExterior-flagged group whose raw AABB
+    // intersects the frustum (see IsExteriorSeed above) -- a real seed only
+    // when the camera lane found nothing for this instance (append == false,
+    // i.e. the camera is genuinely outside this WMO placement, looking at
+    // its exterior shell with nothing to portal-clip against). When the
+    // camera lane already placed the camera inside a specific room here
+    // (append == true), unrelated exterior-flagged groups elsewhere in the
+    // same WMO (a courtyard, another wing's roof, ...) must not also get an
+    // unclipped entry just because their AABB overlaps the current frustum;
+    // their portals are still walked below so anything genuinely visible
+    // through a window/doorway is still found, with a real clipped rect.
+    if (camera_lane || !append) {
+      visit_group(seed_group, {});
+    }
     workspace.traversal_stack.push_back(
         {.group_index = seed_group,
          .predecessor_group = 0xFFFFu,

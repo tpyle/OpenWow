@@ -54,6 +54,12 @@ struct WmoPortalClipRect {
   float min_y{-1.0f};
   float max_x{1.0f};
   float max_y{1.0f};
+
+  [[nodiscard]] friend bool operator==(const WmoPortalClipRect& lhs,
+                                       const WmoPortalClipRect& rhs) noexcept {
+    return lhs.min_x == rhs.min_x && lhs.min_y == rhs.min_y &&
+           lhs.max_x == rhs.max_x && lhs.max_y == rhs.max_y;
+  }
 };
 
 struct WmoVisibleGroupPath {
@@ -111,6 +117,23 @@ struct WmoVisibilityWorkspace {
   std::vector<WmoPortalClipRect> portal_fill_blockers;
   std::vector<std::array<float, 2u>> projected_portal_ndc;
   std::vector<std::array<float, 3u>> occlusion_probe;
+
+  // group_index -> that group's index within the current call's
+  // out_visible_group_paths, or UINT32_MAX if the group hasn't been visited
+  // yet this call. A group can be reached more than once: the kCamera lane
+  // seeds the room(s) the camera physically occupies with a full-viewport
+  // clip rect, and the kExterior lane (run right after, with append=true,
+  // into the same out_visible_group_paths) can then reach that very room
+  // again via a portal visible from outside, e.g. a window. Used to union
+  // clip rects onto the existing entry for a repeat visit instead of
+  // pushing a duplicate, matching how a group reachable through two
+  // interior portals should show the union of both apertures, not just
+  // whichever was visited first (WmoRenderer's per-batch generation check
+  // means the first-pushed entry for a group renders and later duplicates
+  // are silently skipped as "already submitted" -- so an unmerged duplicate
+  // doesn't corrupt anything by itself, but does throw away a real second
+  // aperture, and wastes a full traversal/submission on it).
+  std::vector<std::uint32_t> group_path_index;
 };
 
 enum class WmoTraversalLanes : std::uint8_t {
