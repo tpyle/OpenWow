@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <filesystem>
@@ -21,9 +22,11 @@
 #  include <dbghelp.h>
 #  pragma comment(lib, "dbghelp.lib")
 #elif defined(__APPLE__) || defined(__linux__)
+#  include <cerrno>
 #  include <csignal>
 #  include <cstdlib>
 #  include <execinfo.h>
+#  include <fcntl.h>
 #  include <unistd.h>
 #endif
 
@@ -134,20 +137,39 @@ static struct sigaction s_prev_sigsegv;
 static struct sigaction s_prev_sigabrt;
 static struct sigaction s_prev_sigfpe;
 
+// write()-loops past EINTR/short writes. The only I/O primitive used from
+// the signal handler; see WriteMinimalCrashReport()'s doc comment for why
+// nothing here may allocate.
+static void WriteAllRaw(int fd, const char* data, std::size_t len) {
+  while (len > 0) {
+    ssize_t written = write(fd, data, len);
+    if (written < 0) {
+      if (errno == EINTR) continue;
+      return;
+    }
+    data += written;
+    len -= static_cast<std::size_t>(written);
+  }
+}
+
+// A non-allocating counterpart to the public CrashHandler::SignalName(),
+// which builds a std::string and so cannot be called from the handler.
+static const char* SignalNameLiteral(int sig) {
+  switch (sig) {
+    case SIGSEGV: return "SIGSEGV (Segmentation fault)";
+    case SIGABRT: return "SIGABRT (Abort)";
+    case SIGFPE:  return "SIGFPE (Floating-point exception)";
+    case SIGBUS:  return "SIGBUS (Bus error)";
+    case SIGILL:  return "SIGILL (Illegal instruction)";
+    default:      return "Unknown signal";
+  }
+}
+
 static void CrashSignalHandler(int sig, siginfo_t* info, void* ) {
   auto& handler = CrashHandler::Get();
 
   if (handler.IsInstalled()) {
-    std::string sig_info = CrashHandler::SignalName(sig);
-    if (info && info->si_addr) {
-      std::ostringstream oss;
-      oss << " at address 0x" << std::hex
-          << reinterpret_cast<std::uintptr_t>(info->si_addr);
-      sig_info += oss.str();
-    }
-
-    auto stack = CrashHandler::CaptureStackTrace(64);
-    (void)handler.WriteCrashReport(sig_info, stack);
+    handler.WriteMinimalCrashReport(sig, info ? info->si_addr : nullptr);
   }
 
   struct sigaction sa{};
@@ -165,6 +187,15 @@ void CrashHandler::Install(const CrashContext& context) {
   if (context_.logs_directory.empty()) {
     context_.logs_directory = "Logs";
   }
+
+  // Snapshot for WriteMinimalCrashReport(), and create the directory now
+  // (safe here; not safe from inside a signal handler) so the signal
+  // handler only ever has to open() a file in a directory that's already
+  // there.
+  std::snprintf(raw_logs_dir_, sizeof(raw_logs_dir_), "%s",
+                context_.logs_directory.c_str());
+  std::error_code ec;
+  std::filesystem::create_directories(context_.logs_directory, ec);
 
 #if defined(_WIN32)
   s_prev_filter = SetUnhandledExceptionFilter(CrashExceptionFilter);
@@ -199,6 +230,53 @@ void CrashHandler::Uninstall() {
 #endif
 
   installed_ = false;
+}
+
+void CrashHandler::WriteMinimalCrashReport(
+    int signal_number, const void* fault_address) const noexcept {
+#if defined(_WIN32)
+  (void)signal_number;
+  (void)fault_address;
+  // Windows crashes go through CrashExceptionFilter()/MiniDumpWriteDump()
+  // instead of this method; SEH dispatch does not share the
+  // malloc-arena-reentrancy hazard documented on the declaration.
+#elif defined(__APPLE__) || defined(__linux__)
+  // snprintf() into a fixed stack buffer (never std::string/ostringstream)
+  // is the one formatting call made from this handler: glibc's vsnprintf
+  // does not allocate for a fixed-size, non-growing destination, so it does
+  // not hit the malloc-arena-reentrancy hazard this method exists to avoid.
+  char header[160];
+  int header_len = fault_address
+      ? std::snprintf(header, sizeof(header),
+                       "\nOpenWoW crash: %s at address %p\n",
+                       SignalNameLiteral(signal_number), fault_address)
+      : std::snprintf(header, sizeof(header), "\nOpenWoW crash: %s\n",
+                       SignalNameLiteral(signal_number));
+  std::size_t header_bytes =
+      header_len > 0 ? std::min(static_cast<std::size_t>(header_len),
+                                 sizeof(header) - 1)
+                     : 0;
+
+  WriteAllRaw(STDERR_FILENO, header, header_bytes);
+
+  constexpr int kMaxFrames = 64;
+  void* frames[kMaxFrames];
+  int frame_count = backtrace(frames, kMaxFrames);
+  if (frame_count > 0) {
+    backtrace_symbols_fd(frames, frame_count, STDERR_FILENO);
+  }
+
+  char path[kRawLogsDirCapacity + 32];
+  std::snprintf(path, sizeof(path), "%s/crash_raw.log", raw_logs_dir_);
+  int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+  if (fd >= 0) {
+    WriteAllRaw(fd, header, header_bytes);
+    if (frame_count > 0) {
+      backtrace_symbols_fd(frames, frame_count, fd);
+    }
+    close(fd);
+  }
+#endif
 }
 
 void CrashHandler::SetBuildVersion(std::string_view version) {
