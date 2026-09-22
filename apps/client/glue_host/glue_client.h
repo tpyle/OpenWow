@@ -254,7 +254,14 @@ class GlueClient {
   openwow::render::integration::ui::BgfxDisplayDeviceAdapter display_device_;
   openwow::ui::display::ProductionDisplaySettingsRuntime display_settings_{
       display_device_};
-  openwow::ui::glue::GlueLuaRuntime glue_runtime_;
+  // glue_bindings_ and glue_widgets_ (below) must outlive glue_runtime_ --
+  // see the full explanation next to glue_runtime_'s declaration further
+  // down, where the rest of its dependencies (game_state_, glue_host_,
+  // dbc_loader_, character_world_runtime_) also live. They can't all be
+  // adjacent to glue_runtime_ (some of its dependencies are unavoidably
+  // declared much later), so this note is the anchor: every non-owning
+  // pointer GlueClient hands into GlueLuaRuntime must come from a member
+  // declared before it.
   openwow::ui::glue::GlueBindingRegistry glue_bindings_;
   openwow::ui::glue::GlueWidgetRuntime glue_widgets_;
   openwow::ui::glue::GlueBackgroundController background_controller_;
@@ -305,6 +312,23 @@ class GlueClient {
 
   openwow::game::GameLoop game_loop_;
   openwow::game::CharacterWorldRuntime character_world_runtime_;
+
+  // glue_runtime_ must be declared (and therefore destroyed) after every
+  // member GlueClient hands it a non-owning pointer/reference to via a
+  // Bind*() call: glue_bindings_, glue_widgets_, glue_fonts_, game_state_,
+  // glue_host_, dbc_loader_, character_world_runtime_ (for its game_time()).
+  // GlueLuaRuntime stores all of these as raw pointers and dereferences
+  // several of them from inside its own destructor (DestroyVmState() calls
+  // widget_runtime_->ClearLifecycleVisibilityOverrides() directly), so if
+  // any of them were destroyed first -- as glue_widgets_ and glue_bindings_
+  // were when glue_runtime_ was originally declared right after
+  // display_settings_, and as game_state_/glue_host_/dbc_loader_/
+  // character_world_runtime_ still would be if glue_runtime_ were declared
+  // any earlier than here -- ~GlueLuaRuntime() dereferences freed memory.
+  // Confirmed with AddressSanitizer for the glue_widgets_/glue_bindings_
+  // case; the same heap-use-after-free mechanism applies to the others.
+  openwow::ui::glue::GlueLuaRuntime glue_runtime_;
+
   openwow::platform::PendingWindowEventQueue pending_window_events_;
   openwow::platform::StockWindowEventState stock_window_event_state_;
   bool left_mouse_held_{false};

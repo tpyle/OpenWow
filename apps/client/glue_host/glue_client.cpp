@@ -585,7 +585,6 @@ GlueClient::GlueClient(Options opts)
                      [this](const std::uint32_t sound_kit_id) {
                        (void)sound_runtime_.PlaySoundKit(sound_kit_id, nullptr, nullptr);
                      }),
-      glue_runtime_(display_settings_, sound_runtime_),
       glue_host_(&login_vfs_, sound_runtime_),
       glue_random_(openwow::core::GetClientStartupAdlerSeedState()),
       realm_runtime_(),
@@ -593,7 +592,11 @@ GlueClient::GlueClient(Options opts)
       character_world_runtime_(db_cache_runtime_, realm_runtime_, game_loop_.item_definitions(),
                                m2_system_, dbc_loader_, openwow::game::SpellbookSystem::Get(),
                                openwow::game::PvPInfo::Get(), openwow::game::ReputationInfo::Get(),
-                               sound_runtime_) {
+                               sound_runtime_),
+      // Initializer-list position matches glue_runtime_'s declaration
+      // (after character_world_runtime_ in glue_client.h) -- see the
+      // comment there for why it has to be declared this late.
+      glue_runtime_(display_settings_, sound_runtime_) {
   window_focused_ =
       window_ != nullptr && (SDL_GetWindowFlags(window_) & SDL_WINDOW_INPUT_FOCUS) != 0;
   realm_runtime_.session.SetClientCacheVersionCallback(
@@ -615,6 +618,17 @@ GlueClient::~GlueClient() {
   openwow::game::BattleNetApi::Instance().SetEventSink({});
   gamma_controller_.Shutdown(openwow::ui::game::CVarSystem::Instance());
   openwow::data::BindErrorTableVfs(nullptr);
+  // The process-lifetime CInputControl singleton (g_owned_input_control_
+  // singleton in input_control.cpp) is bound to game_loop_.binding_profiles_
+  // via BindBindingProfiles() in GameLoop::Initialize(). Left unreleased
+  // here, it survives this destructor -- it's a namespace-scope static, torn
+  // down later by exit()'s static-destruction sequence -- and its own
+  // destructor (~CInputControl -> ClearMouselookOverrideBindings ->
+  // DeactivateMouselookOverrideBindings) then dereferences a BindingProfiles
+  // that GameLoop's own (already-run) member teardown has already freed: a
+  // heap-use-after-free, confirmed with AddressSanitizer. Releasing it here,
+  // while game_loop_ is still alive, runs that same teardown safely instead.
+  openwow::game::input::ChatLog_Shutdown();
 }
 
 void GlueClient::ApplyClientCacheVersion(const std::uint32_t version) {
