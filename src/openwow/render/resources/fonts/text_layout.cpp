@@ -187,11 +187,14 @@ TextLayout LayoutText(const FontFace& face, const std::string_view source,
       TokenizeFormattedText(source, request.formatting_enabled);
   if (result.tokens.empty()) return result;
 
+  // face.line_height() already folds in OutlineCellGrowthPixels() (see
+  // FontFace::LoadMemory), so only the explicit request.line_height
+  // override -- a raw value from outside FontFace -- needs it added here.
   const float base_line_height =
-      std::max(1.0f, (request.line_height > 0.0f
-                          ? request.line_height
-                          : static_cast<float>(face.pixel_height())) +
-                         OutlineCellGrowthPixels(face.style().outline));
+      std::max(1.0f, request.line_height > 0.0f
+                         ? request.line_height +
+                               OutlineCellGrowthPixels(face.style().outline)
+                         : face.line_height());
   const float normal_line_height =
       std::max(1.0f, base_line_height + request.line_spacing);
   const std::uint32_t allowed_lines =
