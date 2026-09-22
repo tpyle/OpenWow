@@ -50,7 +50,7 @@ WorldPresentationSnapshot WorldMap::BuildPresentationSnapshot(
     bool walked = false;
     const auto cached = wmo_cache_.find(instance.wmo_path);
     if (cached != wmo_cache_.end() && camera_cache_entry != nullptr) {
-      std::array<std::uint16_t, 4u> seed_storage{};
+      std::array<std::uint16_t, 1u> seed_storage{};
       std::size_t seed_count = 0u;
       const auto append_seed = [&](const std::optional<WmoAreaGroupRef>& ref) {
         if (!ref.has_value() || ref->placement != placement ||
@@ -64,10 +64,21 @@ WorldPresentationSnapshot WorldMap::BuildPresentationSnapshot(
           seed_storage[seed_count++] = group;
         }
       };
+      // Only containing_group represents confirmed containment (the
+      // corrected floor hit from CorrectWmoRoomHitThroughPortal). The other
+      // three AreaEnvironmentQueryCache fields describe threshold-adjacent
+      // rooms for other consumers -- e.g. alternate_group exists so
+      // ResolveCameraWmoFog (world_map.cpp) can blend fog as the camera
+      // crosses a doorway -- not confirmed containment, so they must not be
+      // seeded here with a full-viewport (unclipped) camera-lane rect: doing
+      // so rendered the room on the other side of any nearby portal across
+      // the whole screen whenever it was in the view frustum, regardless of
+      // whether the portal aperture actually admitted it, which is visible
+      // as the far room's geometry bleeding through solid walls near a
+      // doorway. Any room genuinely visible through a portal from
+      // containing_group is still found via normal portal traversal below,
+      // with a real aperture-clipped rect instead of an unclipped one.
       append_seed(camera_cache_entry->containing_group);
-      append_seed(camera_cache_entry->alternate_group);
-      append_seed(camera_cache_entry->secondary_group);
-      append_seed(camera_cache_entry->secondary_alternate_group);
       if (seed_count != 0u) {
         const std::span<const std::uint16_t> seeds(seed_storage.data(),
                                                    seed_count);
