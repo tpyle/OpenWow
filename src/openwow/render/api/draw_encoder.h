@@ -138,6 +138,25 @@ class DrawEncoder {
     }
   }
 
+  std::uint16_t setScissor(std::uint16_t x, std::uint16_t y,
+                           std::uint16_t width, std::uint16_t height) const {
+    if (encoder_ != nullptr) {
+      return encoder_->setScissor(x, y, width, height);
+    }
+    return bgfx::setScissor(x, y, width, height);
+  }
+
+  // Pass no argument (cache == UINT16_MAX) to clear back to the view's
+  // scissor for the next submit -- see bgfx::Encoder::setScissor's doc
+  // comment in bgfx.h.
+  void setScissor(std::uint16_t cache = UINT16_MAX) const {
+    if (encoder_ != nullptr) {
+      encoder_->setScissor(cache);
+    } else {
+      bgfx::setScissor(cache);
+    }
+  }
+
  private:
   bgfx::Encoder *encoder_ = nullptr;
 };

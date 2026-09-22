@@ -19,6 +19,8 @@
 #include <cstddef>
 #include <cstring>
 #include <functional>
+#include <optional>
+#include <string>
 #include <utility>
 
 namespace openwow::render {
@@ -1208,6 +1210,18 @@ const WmoSubmitTelemetry& WmoRenderer::Render(
   const auto &shaders = *shader_resources_;
   const DrawEncoder draw{encoder};
 
+  // Defensive: nothing in this codebase called setScissor() before the
+  // portal-clip-rect fix below started setting a restrictive one, so
+  // nothing else ever needed to explicitly clear it back afterward either.
+  // Make sure a scissor left set by whatever rendered immediately before
+  // this call doesn't leak into it, and clear it again at the end of this
+  // function (see the matching draw.setScissor() before `return telemetry`)
+  // so a restrictive scissor this call sets for a portal-clipped group
+  // can't leak into whatever renders after it in the same frame -- terrain,
+  // sky, or another WMO instance -- none of which set their own scissor,
+  // since until now nothing upstream of them ever left one active.
+  draw.setScissor();
+
   const RenderVec4 group_color{1.0f, 1.0f, 1.0f, 1.0f};
 
   auto &tex_mgr = texture_manager_;
@@ -1295,8 +1309,65 @@ const WmoSubmitTelemetry& WmoRenderer::Render(
     RenderVec4 group_color{};
     std::size_t record_index{0u};
     bool open{false};
+    // Portal clip rect (NDC) the batches in this run were made visible
+    // through, or nullopt for a group with no portal ancestor (the group
+    // the camera itself is standing in). Batches from groups reached
+    // through different portals -- or one clipped and one not -- must
+    // never merge into the same run: merging only checks vb/ib/material/
+    // region/lighting/color/index-contiguity, none of which differ between
+    // two adjacent groups sharing one merged geometry buffer, so without
+    // this the run silently spanned groups with different (or no) clip
+    // rects and rendered whichever scissor submit_scissor_for() below
+    // applied to the whole merged draw -- letting one group's geometry
+    // bleed past its own portal opening into wherever the OTHER group's
+    // clip rect (or lack of one) put it on screen. See
+    // submit_scissor_for()'s comment for the actual bug this caused.
+    std::optional<world::WmoPortalClipRect> clip_rect;
   };
   SubmitRun run;
+
+  // bgfx::Encoder::setScissor() is consumed by the very next submit() and
+  // must be set again before each one; scissor coordinates are top-left,
+  // Y-down pixels ("Position y from the top of the window", per bgfx.h),
+  // while WmoPortalClipRect is Y-up NDC in [-1, 1] (matching the
+  // right-handed clip space bx::mtxProj() builds), hence the Y flip here.
+  //
+  // Applying this was the actual fix: WmoRenderer computed a correct
+  // clip_rect for every portal-visible group (successive portal-aperture
+  // intersection in WmoVisibilityData) but never turned it into a scissor
+  // rect, so a group visible through a doorway/window rendered across the
+  // *entire* viewport rather than just the portal opening -- visibly, a
+  // neighboring room's geometry showing through walls it shouldn't, in a
+  // sharp-edged rectangle that moved as the camera (and therefore which
+  // portals were in view) rotated, and only inside WMO buildings, since
+  // outdoor terrain never goes through this portal path at all.
+  const auto submit_scissor_for =
+      [&](const std::optional<world::WmoPortalClipRect>& clip_rect) {
+    if (!clip_rect.has_value() || viewport_width == 0u ||
+        viewport_height == 0u) {
+      draw.setScissor();
+      return;
+    }
+    const auto to_unit = [](const float ndc) { return (ndc + 1.0f) * 0.5f; };
+    const auto clampi = [](const float value, const std::int32_t hi) {
+      return static_cast<std::uint16_t>(
+          std::clamp(static_cast<std::int32_t>(value), 0, hi));
+    };
+    const std::uint16_t x0 =
+        clampi(to_unit(clip_rect->min_x) * viewport_width, viewport_width);
+    const std::uint16_t x1 =
+        clampi(to_unit(clip_rect->max_x) * viewport_width, viewport_width);
+    const std::uint16_t y0 = clampi(
+        (1.0f - to_unit(clip_rect->max_y)) * viewport_height, viewport_height);
+    const std::uint16_t y1 = clampi(
+        (1.0f - to_unit(clip_rect->min_y)) * viewport_height, viewport_height);
+    if (x1 <= x0 || y1 <= y0) {
+      draw.setScissor(x0, y0, 0u, 0u);
+      return;
+    }
+    draw.setScissor(x0, y0, static_cast<std::uint16_t>(x1 - x0),
+                    static_cast<std::uint16_t>(y1 - y0));
+  };
 
   const auto flush_run = [&]() {
     if (!run.open) {
@@ -1407,6 +1478,7 @@ const WmoSubmitTelemetry& WmoRenderer::Render(
     draw.setTexture(0, shaders.diffuse_sampler, tex, sampler_flags);
     bind_environment_sampler();
     draw.setState(state);
+    submit_scissor_for(submitted.clip_rect);
     draw.submit(view_id, prog);
     ++record_telemetry.submit_count;
     ++telemetry.submit_count;
@@ -1446,6 +1518,7 @@ const WmoSubmitTelemetry& WmoRenderer::Render(
       draw.setTexture(0, shaders.diffuse_sampler, tex, sampler_flags);
       bind_environment_sampler();
       draw.setState(interior_state);
+      submit_scissor_for(submitted.clip_rect);
       draw.submit(view_id, prog);
       ++record_telemetry.submit_count;
       ++telemetry.submit_count;
@@ -1480,6 +1553,7 @@ const WmoSubmitTelemetry& WmoRenderer::Render(
         draw.setTexture(0, shaders.diffuse_sampler, tex, sampler_flags);
         bind_environment_sampler();
         draw.setState(additive_state);
+        submit_scissor_for(submitted.clip_rect);
         draw.submit(view_id, prog);
         ++record_telemetry.submit_count;
         ++telemetry.submit_count;
@@ -1488,8 +1562,7 @@ const WmoSubmitTelemetry& WmoRenderer::Render(
   };
 
   const auto render_group = [&](const std::size_t group_index,
-                                [[maybe_unused]] const world::WmoPortalClipRect*
-                                    clip_rect) {
+                                const world::WmoPortalClipRect* clip_rect) {
 
     const std::size_t record_index = telemetry.records.size();
     WmoGroupSubmitTelemetry& record_telemetry =
@@ -1588,12 +1661,16 @@ const WmoSubmitTelemetry& WmoRenderer::Render(
         }
       }
 
+      const std::optional<world::WmoPortalClipRect> current_clip_rect =
+          clip_rect != nullptr ? std::make_optional(*clip_rect) : std::nullopt;
+
       if (run.open) {
         if (run.vb.idx == group_vb.idx && run.ib.idx == group_ib.idx &&
             run.material_index == batch.material_index &&
             run.region == batch.region &&
             run.lighting_mode == lighting_mode &&
             run.group_color == group_color &&
+            run.clip_rect == current_clip_rect &&
             run.start_index + run.index_count == batch_start_index) {
           run.index_count += batch.index_count;
           continue;
@@ -1611,6 +1688,7 @@ const WmoSubmitTelemetry& WmoRenderer::Render(
           .group_color = group_color,
           .record_index = record_index,
           .open = true,
+          .clip_rect = current_clip_rect,
       };
     }
   };
@@ -1636,6 +1714,8 @@ const WmoSubmitTelemetry& WmoRenderer::Render(
   }
 
   flush_run();
+  draw.setScissor();
+
   return telemetry;
 }
 
