@@ -110,6 +110,8 @@ class TooltipSystem {
   void ClearLines();
   void AddLine(const std::string& text, float r = 1.0f, float g = 1.0f,
                float b = 1.0f, bool wrap = false);
+  void PrependLine(const std::string& text, float r = 1.0f, float g = 1.0f,
+                   float b = 1.0f);
   void AddDoubleLine(const std::string& leftText,
                      const std::string& rightText, float leftR = 1.0f,
                      float leftG = 1.0f, float leftB = 1.0f,
@@ -132,6 +134,14 @@ class TooltipSystem {
   void ClearFadeState();
 
   void SetItemById(std::uint32_t itemId);
+  // Prepends a "Currently Equipped" header and appends a stat-delta
+  // section describing what changes if `equipped_item` (already the
+  // active tooltip content, e.g. via SetItemById) is replaced by
+  // `candidate_item`. Call after this tooltip's content is already the
+  // equipped item's own tooltip.
+  void AppendItemReplacementComparison(
+      const openwow::game::ItemTemplate& candidate_item,
+      const openwow::game::ItemTemplate& equipped_item);
   void SetItemByLink(const std::string& link);
   void SetItemFromLoot(std::uint32_t itemId,
                        std::int32_t randomPropertyId,

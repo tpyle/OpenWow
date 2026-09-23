@@ -81,6 +81,16 @@ public:
         bool completed,
         const std::string& date = ""
     );
+
+    // Lines describing what changes if `equipped_item` is replaced by
+    // `candidate_item` (the item the player is hovering/comparing): a
+    // "Currently Equipped" header handled by the caller, followed here by
+    // a stat-delta section for the equipped item's own tooltip. Empty if
+    // neither item contributes a comparable stat.
+    static std::vector<TooltipLine> BuildItemReplacementStatChanges(
+        const openwow::game::ItemTemplate& candidate_item,
+        const openwow::game::ItemTemplate& equipped_item
+    );
 };
 
 }

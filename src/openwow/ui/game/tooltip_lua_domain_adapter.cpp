@@ -1178,8 +1178,21 @@ TooltipTruthyResult SetTooltipHyperlinkCompareItem(
     offset = std::max(0, static_cast<int>(*offset_value) - 1);
   }
 
-  [[maybe_unused]] const bool shift_button_value =
+  const auto show_comparison = [&](const std::uint32_t equipped_entry) {
+    tooltip.SetItemById(equipped_entry);
+    if (const auto* const equipped_template =
+            session->item_definitions().GetItem(equipped_entry);
+        equipped_template != nullptr) {
+      tooltip.AppendItemReplacementComparison(*item_template, *equipped_template);
+    }
+  };
+
+  const bool shift_button_value =
       shift_button.value_or(openwow::ui::lua::LuaTruthy{}).value;
+  if (!shift_button_value &&
+      !CVarSystem::Instance().GetCVarBool("alwaysCompareItems")) {
+    return openwow::ui::lua::LuaNil{};
+  }
 
   static constexpr uint32_t kInvTypeToSlotMask[] = {
       0x00000000,
@@ -1245,10 +1258,18 @@ TooltipTruthyResult SetTooltipHyperlinkCompareItem(
           mh_item->entry != oh_item->entry;
 
       if (both_equipped) {
+        // Exactly two comparison slots exist here (off-hand, main-hand);
+        // unlike this, every other branch in this function already
+        // rejects an out-of-range offset instead of silently falling
+        // through to the last valid slot -- match that so a stray third
+        // call (or higher) hides rather than duplicating the main-hand
+        // comparison.
         if (offset == 0) {
-          tooltip.SetItemById(oh_item->entry);
+          show_comparison(oh_item->entry);
+        } else if (offset == 1) {
+          show_comparison(mh_item->entry);
         } else {
-          tooltip.SetItemById(mh_item->entry);
+          return openwow::ui::lua::LuaNil{};
         }
       } else {
         if (offset != 0) {
@@ -1260,7 +1281,7 @@ TooltipTruthyResult SetTooltipHyperlinkCompareItem(
         if (!equipped || equipped->entry == 0) {
           return openwow::ui::lua::LuaNil{};
         }
-        tooltip.SetItemById(equipped->entry);
+        show_comparison(equipped->entry);
       }
     } else {
       if (offset != 0) {
@@ -1277,7 +1298,7 @@ TooltipTruthyResult SetTooltipHyperlinkCompareItem(
           return openwow::ui::lua::LuaNil{};
         }
       }
-      tooltip.SetItemById(equipped->entry);
+      show_comparison(equipped->entry);
     }
 
     return openwow::ui::lua::LuaTruthy{true};
@@ -1293,7 +1314,7 @@ TooltipTruthyResult SetTooltipHyperlinkCompareItem(
       continue;
 
     if (remaining_offset == 0) {
-      tooltip.SetItemById(equipped->entry);
+      show_comparison(equipped->entry);
       return openwow::ui::lua::LuaTruthy{true};
     }
     --remaining_offset;

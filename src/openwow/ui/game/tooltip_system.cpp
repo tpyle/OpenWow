@@ -1246,6 +1246,43 @@ void TooltipSystem::AddLine(const std::string &text, float r, float g, float b, 
   MarkPresentationChanged();
 }
 
+void TooltipSystem::PrependLine(const std::string &text, float r, float g, float b) {
+  if (text.empty()) {
+    return;
+  }
+
+  TooltipLine line;
+  line.left_text = ExpandSimpleRenderTooltipText(text);
+  line.left_r = QuantizeTooltipColorChannel(r);
+  line.left_g = QuantizeTooltipColorChannel(g);
+  line.left_b = QuantizeTooltipColorChannel(b);
+  lines_.insert(lines_.begin(), std::move(line));
+  MarkPresentationChanged();
+}
+
+void TooltipSystem::AppendItemReplacementComparison(
+    const openwow::game::ItemTemplate &candidate_item,
+    const openwow::game::ItemTemplate &equipped_item) {
+  const auto marker =
+      openwow::game::Localization::Get().GetString("CURRENTLY_EQUIPPED", "Currently Equipped");
+  constexpr float kGrayChannel = 128.0f / 255.0f;
+  PrependLine(marker, kGrayChannel, kGrayChannel, kGrayChannel);
+
+  for (const auto &line : openwow::ui::TooltipBuilder::BuildItemReplacementStatChanges(
+           candidate_item, equipped_item)) {
+    AppendBuilderLine(*this, line);
+  }
+
+  // Neither SetItemById nor the lines just added above commit a fresh
+  // layout snapshot themselves (that normally happens via SetOwner/Show,
+  // which comparison tooltip objects like ShoppingTooltip1/2 never call).
+  // Without this, FinalizeTooltipLuaLayout sees an unchanged
+  // GetLayoutRevision() and skips recomputing the backdrop width/wrap
+  // geometry for this new, longer content, so the wrapped stat-change
+  // header renders unconstrained and overflows the tooltip.
+  CommitLayoutState();
+}
+
 void TooltipSystem::AddDoubleLine(const std::string &leftText, const std::string &rightText,
                                   float leftR, float leftG, float leftB, float rightR, float rightG,
                                   float rightB, bool wrap) {

@@ -1728,4 +1728,104 @@ std::vector<TooltipLine> TooltipBuilder::BuildAchievementTooltip(
   return lines;
 }
 
+namespace {
+
+float WeaponDps(const openwow::game::ItemTemplate& item) {
+  const auto& damage = item.damage[0];
+  const auto average = (damage.min_damage + damage.max_damage) * 0.5f;
+  return item.delay == 0u ? 0.0f : average / (static_cast<float>(item.delay) / 1000.0f);
+}
+
+std::int32_t StatValueOfType(const openwow::game::ItemTemplate& item,
+                             const std::uint32_t type) {
+  for (const auto& stat : item.stats) {
+    if (stat.type == type && stat.value != 0) {
+      return stat.value;
+    }
+  }
+  return 0;
+}
+
+std::string SignedDeltaText(const std::int32_t delta, const std::string_view suffix) {
+  return (delta > 0 ? "+" : "") + std::to_string(delta) + " " + std::string(suffix);
+}
+
+}
+
+std::vector<TooltipLine> TooltipBuilder::BuildItemReplacementStatChanges(
+    const openwow::game::ItemTemplate& candidate_item,
+    const openwow::game::ItemTemplate& equipped_item) {
+  std::vector<TooltipLine> lines;
+
+  std::optional<float> dps_delta;
+  if (candidate_item.IsWeapon() && equipped_item.IsWeapon() &&
+      candidate_item.delay != 0u && equipped_item.delay != 0u) {
+    const auto delta = WeaponDps(candidate_item) - WeaponDps(equipped_item);
+    if (std::fabs(delta) >= 0.05f) {
+      dps_delta = delta;
+    }
+  }
+
+  const auto armor_delta = candidate_item.armor - equipped_item.armor;
+  const auto block_delta = static_cast<std::int32_t>(candidate_item.block) -
+                           static_cast<std::int32_t>(equipped_item.block);
+
+  struct StatTypeDelta {
+    std::uint32_t type;
+    std::int32_t delta;
+  };
+  std::vector<StatTypeDelta> stat_deltas;
+  const auto accumulate_type = [&](const std::uint32_t type) {
+    if (std::any_of(stat_deltas.begin(), stat_deltas.end(),
+                    [type](const StatTypeDelta& entry) { return entry.type == type; })) {
+      return;
+    }
+    const auto delta = StatValueOfType(candidate_item, type) - StatValueOfType(equipped_item, type);
+    if (delta != 0) {
+      stat_deltas.push_back({type, delta});
+    }
+  };
+  for (const auto& stat : candidate_item.stats) {
+    if (stat.value != 0) accumulate_type(stat.type);
+  }
+  for (const auto& stat : equipped_item.stats) {
+    if (stat.value != 0) accumulate_type(stat.type);
+  }
+
+  if (!dps_delta.has_value() && armor_delta == 0 && block_delta == 0 &&
+      stat_deltas.empty()) {
+    return lines;
+  }
+
+  lines.push_back(MakeWrappedLine(
+      Localized("ITEM_TOOLTIP_STAT_COMPARE",
+               "If you replace this item, the following stat changes will occur:"),
+      kGold));
+
+  if (dps_delta.has_value()) {
+    std::array<char, 32> value{};
+    std::snprintf(value.data(), value.size(), "%+.1f", *dps_delta);
+    lines.push_back(MakeLine(std::string(value.data()) + " Damage Per Second",
+                             *dps_delta > 0.0f ? kGreen : kRed));
+  }
+  if (armor_delta != 0) {
+    lines.push_back(MakeLine(SignedDeltaText(armor_delta, "Armor"),
+                             armor_delta > 0 ? kGreen : kRed));
+  }
+  for (const auto& entry : stat_deltas) {
+    const auto name = StatFallbackName(entry.type);
+    if (name.empty()) {
+      continue;
+    }
+    lines.push_back(MakeLine(SignedDeltaText(entry.delta, name),
+                             entry.delta > 0 ? kGreen : kRed));
+  }
+  if (block_delta != 0) {
+    lines.push_back(MakeLine(SignedDeltaText(block_delta, "Block Value"),
+                             block_delta > 0 ? kGreen : kRed));
+  }
+
+  return lines;
+}
+
 }
