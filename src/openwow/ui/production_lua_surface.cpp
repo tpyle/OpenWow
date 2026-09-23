@@ -66,7 +66,6 @@
 #include "openwow/ui/game/secure_execution.h"
 #include "openwow/ui/game/cvar_system.h"
 #include "openwow/ui/game/script_event_dispatch.h"
-#include "openwow/ui/game/tooltip_system.h"
 #include "openwow/ui/game/ui_error_manager.h"
 #include "openwow/ui/glue/glue_native_binding_catalogs.h"
 #include "openwow/ui/lua_base_overrides.h"
@@ -358,7 +357,6 @@ void BindProductionWorldLuaAdapters(
       .session_state = session.session(),
       .reputation = openwow::game::ReputationInfo::Get(),
       .events = game::ScriptEventDispatch::Get(),
-      .tooltip = game::TooltipSystem::Get(),
   });
 }
 

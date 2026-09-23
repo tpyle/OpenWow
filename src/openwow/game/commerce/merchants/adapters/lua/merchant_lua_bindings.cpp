@@ -200,7 +200,17 @@ void MerchantLuaAdapter::PresentMerchantUpdated() const {
 
 void MerchantLuaAdapter::ShowItemTooltip(
     const std::uint32_t item_id) const {
-  deps().tooltip.SetItemFromLoot(item_id, 0, 0);
+  // Deliberately not deps().tooltip: that reference is captured once, at
+  // Bind() time, from whichever TooltipSystem::Get() returned back then --
+  // the default instance, since Bind() runs outside any ScopedActivation.
+  // The real "GameTooltip" Lua object is backed by its own per-instance
+  // TooltipSystem (see ApplyPerObjectGameTooltipMethods in
+  // tooltip_object_bridge.cpp), activated via ScopedActivation for the
+  // duration of each method call. TooltipSystem::Get() resolved here, at
+  // call time, picks that instance up; deps().tooltip never would.
+  auto& tooltip = TooltipSystem::Get();
+  tooltip.SetItemFromLoot(item_id, 0, 0);
+  tooltip.Show();
 }
 
 MerchantLuaAdapter* TryMerchantLuaAdapter(lua_State* state) noexcept {

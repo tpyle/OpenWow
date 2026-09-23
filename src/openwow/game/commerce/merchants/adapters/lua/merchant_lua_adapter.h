@@ -29,7 +29,6 @@ namespace actions::held_cursor { class HeldCursor; }
 namespace openwow::ui::game {
 
 class ScriptEventDispatch;
-class TooltipSystem;
 
 class MerchantLuaAdapter final {
  public:
@@ -55,7 +54,6 @@ class MerchantLuaAdapter final {
     openwow::game::SessionHandler& session_state;
     openwow::game::ReputationInfo& reputation;
     ScriptEventDispatch& events;
-    TooltipSystem& tooltip;
   };
 
   void Bind(Dependencies);
