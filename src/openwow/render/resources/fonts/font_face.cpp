@@ -52,6 +52,7 @@ struct FontFace::Impl {
   int pixel_height{};
   float line_height{};
   float ascent{};
+  float descent{};
   mutable std::mutex mutex;
   mutable std::unordered_map<std::uint32_t, GlyphMetrics> glyphs;
   mutable std::unordered_map<std::uint64_t, float> advances;
@@ -106,9 +107,20 @@ std::shared_ptr<FontFace> FontFace::LoadSharedMemory(
       impl->face->size != nullptr
           ? static_cast<float>(impl->face->size->metrics.ascender) / 64.0f
           : static_cast<float>(pixel_height);
+  impl->descent =
+      impl->face->size != nullptr
+          ? static_cast<float>(impl->face->size->metrics.descender) / 64.0f
+          : 0.0f;
   impl->line_height = std::max(impl->line_height, 1.0f) + outline;
 
-  impl->ascent += outline > 0.0f ? 1.0f : 0.0f;
+  // Split evenly so ascent() - descent() grows by the same full `outline`
+  // amount as line_height() above, instead of a flat +/-1 regardless of
+  // Normal (2px) vs Thick (4px) outline -- otherwise a thick outline's
+  // rasterized glyph bounds (which line_height() already budgets for) can
+  // extend up to 2px past what ascent() - descent() alone would reserve,
+  // most visibly as a descender (e.g. "y") hanging below its own text box.
+  impl->ascent += outline * 0.5f;
+  impl->descent -= outline * 0.5f;
   return std::shared_ptr<FontFace>(new FontFace(std::move(impl)));
 }
 
@@ -116,6 +128,7 @@ const std::string& FontFace::path() const noexcept { return impl_->path; }
 int FontFace::pixel_height() const noexcept { return impl_->pixel_height; }
 float FontFace::line_height() const noexcept { return impl_->line_height; }
 float FontFace::ascent() const noexcept { return impl_->ascent; }
+float FontFace::descent() const noexcept { return impl_->descent; }
 FontStyle FontFace::style() const noexcept { return impl_->style; }
 
 std::shared_ptr<FontFace> FontFace::WithPixelHeight(const int pixel_height) const {

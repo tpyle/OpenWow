@@ -152,9 +152,22 @@ MeasuredToken MeasureToken(const FormattedToken& token, const FontFace& face,
   if (token.kind == FormattedTokenKind::Glyph) {
     const GlyphMetrics glyph = face.Glyph(token.codepoint);
 
+    // This glyph's own bottom edge, measured from the line's top (matching
+    // how bgfx_text_cache.cpp positions the rendered quad: quad.y =
+    // ascent() - bearing_y, quad.height = glyph.height). face.descent()
+    // alone is a face-wide metric that isn't guaranteed to cover every
+    // individual glyph's actual rasterized extent -- some fonts have
+    // specific glyphs (e.g. "y", "g", "Q") whose bitmap reaches further
+    // below the baseline than the face's own descender metric claims. Using
+    // the real per-glyph extent here means finish_line()'s content_height
+    // (below) widens the line whenever this text actually contains such a
+    // glyph, instead of relying solely on the face-level bound.
+    const float glyph_extent_from_line_top =
+        face.ascent() - glyph.bearing_y + glyph.height;
+
     return {.advance = std::floor(
                 face.Advance(previous_glyph, glyph.glyph_index) + 0.5f),
-            .height = static_cast<float>(face.pixel_height()),
+            .height = glyph_extent_from_line_top,
             .glyph = glyph.glyph_index};
   }
   if (token.kind == FormattedTokenKind::InlineImage) {
@@ -192,11 +205,28 @@ TextLayout LayoutText(const FontFace& face, const std::string_view source,
   // face.line_height() already folds in OutlineCellGrowthPixels() (see
   // FontFace::LoadMemory), so only the explicit request.line_height
   // override -- a raw value from outside FontFace -- needs it added here.
-  const float base_line_height =
-      std::max(1.0f, request.line_height > 0.0f
-                         ? request.line_height +
-                               OutlineCellGrowthPixels(face.style().outline)
-                         : face.line_height());
+  //
+  // face.line_height() is FreeType's own recommended line spacing
+  // (metrics.height), which for some fonts is tighter than the full
+  // ascent+descent span a glyph with a maximal descender (e.g. "y", "g",
+  // "p") actually needs -- glyphs are positioned via ascent() - bearing_y
+  // (see bgfx_text_cache.cpp), so a descender can extend down to
+  // ascent() - descent() from the top of the line, past a shorter
+  // line_height()-based box. Taking the max against that span keeps a
+  // descender inside the box the vertical-centering/anchor code sizes a
+  // FontString's frame to, instead of hanging below it.
+  // Applied to both branches below: an explicit request.line_height is a
+  // template-authored value that can predate/assume a different font's
+  // metrics than the one actually resolved here, so it isn't guaranteed
+  // to fit this font's descender either.
+  const float descender_inclusive_height = face.ascent() - face.descent();
+  const float requested_or_metric_height =
+      request.line_height > 0.0f
+          ? request.line_height + OutlineCellGrowthPixels(face.style().outline)
+          : face.line_height();
+  const float base_line_height = std::max(
+      1.0f, std::max(requested_or_metric_height, descender_inclusive_height));
+
   const float normal_line_height =
       std::max(1.0f, base_line_height + request.line_spacing);
   const std::uint32_t allowed_lines =

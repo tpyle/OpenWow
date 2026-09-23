@@ -1,6 +1,7 @@
 #include "openwow/ui/game/framescript/core/lua_script_object_access.h"
 #include "openwow/ui/game/framescript/core/frame_color_runtime.h"
 #include "openwow/ui/game/framescript/core/frame_font_runtime.h"
+#include "openwow/render/resources/fonts/font_string_flags.h"
 #include "openwow/ui/lua_taint_api.h"
 #include "openwow/ui/game/framescript/core/frame_font_binding.h"
 #include "openwow/ui/game/framescript/core/frame_font_face.h"
@@ -624,16 +625,39 @@ MeasureLuaFontStringMetrics(lua_State *L, int font_string_index) {
   const float effective_scale =
       ResolveLuaFontStringRasterScale(L, font_string_index);
 
+  const std::uint32_t font_flags =
+      openwow::render::ParseFontFlagsString(font_binding.flags);
+  const int outline_px = openwow::render::FontFlagsIsThickOutline(font_flags)
+                              ? openwow::render::kRetailThickOutlinePixels
+                              : (openwow::render::FontFlagsHasOutline(font_flags)
+                                     ? openwow::render::kRetailNormalOutlinePixels
+                                     : 0);
+  // Matches BgfxTextCache's render-time width (see bgfx_text_cache.cpp,
+  // cached->layout.width): outline rendering grows each glyph's rasterized
+  // bounds beyond its advance width, so the actual drawn text is wider than
+  // what LayoutText() alone reports. Without this, an auto-width
+  // FontString's declared frame width came out narrower than its rendered
+  // text for any outlined font, most visibly on frequently-updated numeric
+  // displays like MoneyFrame, where the text visibly overflowed its own
+  // resolved bounds.
+  const auto add_outline_padding =
+      [outline_px](std::optional<openwow::render::text::TextLayout> layout) {
+        if (layout.has_value()) {
+          layout->width += static_cast<float>(std::clamp(outline_px, 0, 4) * 2);
+        }
+        return layout;
+      };
+
   if (const auto *manager = openwow::ui::game::runtime::WorldUiRuntimeContext::FromLua(L);
       manager != nullptr && manager->vfs() != nullptr &&
       !IsAbsoluteFontPath(font_path)) {
-    return openwow::ui::LayoutFontText(
+    return add_outline_padding(openwow::ui::LayoutFontText(
         manager->vfs(), font_path, font_height_pixels, text, request,
-        effective_scale);
+        effective_scale));
   }
 
-  return openwow::ui::LayoutFontText(
-      nullptr, font_path, font_height_pixels, text, request, effective_scale);
+  return add_outline_padding(openwow::ui::LayoutFontText(
+      nullptr, font_path, font_height_pixels, text, request, effective_scale));
 }
 
 int PushLuaFontStringGetFontResults(lua_State *L, int font_string_index) {

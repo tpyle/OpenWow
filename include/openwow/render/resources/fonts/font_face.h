@@ -71,6 +71,14 @@ class FontFace final {
   [[nodiscard]] int pixel_height() const noexcept;
   [[nodiscard]] float line_height() const noexcept;
   [[nodiscard]] float ascent() const noexcept;
+  // FreeType's descender convention: distance from the baseline to the
+  // bottom of the descent region, stored negative (glyphs positioned via
+  // ascent() - bearing_y extend down to ascent() - descent() from the top
+  // of the line). Use ascent() - descent() for the full ascent+descent
+  // span a glyph with a maximal descender (e.g. "y", "g", "p") needs --
+  // line_height() is FreeType's own recommended line spacing and is not
+  // guaranteed to be as large as that span for every font.
+  [[nodiscard]] float descent() const noexcept;
   [[nodiscard]] FontStyle style() const noexcept;
   [[nodiscard]] std::shared_ptr<FontFace> WithPixelHeight(int pixel_height) const;
   [[nodiscard]] std::shared_ptr<FontFace> WithSizeAndStyle(
