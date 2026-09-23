@@ -74,13 +74,21 @@ void CLooseOctree::UpdateBounds(LooseOctreeNode* node) {
 }
 
 LooseOctreeNode* CLooseOctree::AllocBranch() {
-    auto* node = freeList_;
-    if (!node) return nullptr;
-    freeList_ = node->next;
-    if (freeList_)
-        freeList_->parent = nullptr;
-    node->next = nullptr;
-    return node;
+    if (freeList_) {
+        auto* node = freeList_;
+        freeList_ = node->next;
+        if (freeList_)
+            freeList_->parent = nullptr;
+        node->next = nullptr;
+        return node;
+    }
+
+    // No recycled branch available yet -- grow. The new node is
+    // zero-initialized (LooseOctreeNode is an aggregate, so value-init via
+    // make_unique<T>() zero-initializes it), matching the state a node
+    // freshly popped from the free list would be expected to be in.
+    ownedBranches_.push_back(std::make_unique<LooseOctreeNode>());
+    return ownedBranches_.back().get();
 }
 
 void CLooseOctree::FreeBranch(LooseOctreeNode* node) {

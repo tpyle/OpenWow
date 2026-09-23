@@ -2,6 +2,8 @@
 
 #include <cstdint>
 #include <cmath>
+#include <memory>
+#include <vector>
 
 namespace openwow::math {
 
@@ -92,6 +94,13 @@ private:
     float            centerZ_  = 0.0f;
     float            invSize_  = 1.0f;
     LooseOctreeNode* freeList_ = nullptr;
+
+    // Backing storage for branch nodes AllocBranch() creates when the free
+    // list (nodes recycled from RemoveNode()'s CollapseBranch()) is empty.
+    // Without this, a tree that has never had a node removed could not
+    // insert a second, spatially-distinct node at all: AllocBranch() would
+    // return nullptr and InsertInternal() would silently fail to attach it.
+    std::vector<std::unique_ptr<LooseOctreeNode>> ownedBranches_;
 };
 
 }
