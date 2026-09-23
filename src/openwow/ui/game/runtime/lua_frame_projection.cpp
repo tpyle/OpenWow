@@ -124,15 +124,20 @@ inline constexpr HandlerOrdinals kMouseWheelHandler{
                                          runtime::kMouseWheelHandlerFields.stored),
 };
 
-inline constexpr auto kMouseCategoryHandlers = [] {
-  std::array<HandlerOrdinals, runtime::kMouseCategoryHandlerFields.size()>
-      handlers{};
-  for (std::size_t index = 0; index < handlers.size(); ++index) {
-    handlers[index].stored = InternedLuaFieldKeyOrdinal(
-        kNames, runtime::kMouseCategoryHandlerFields[index].stored);
-  }
-  return handlers;
-}();
+// Built via a template-parameter-pack expansion, not an imperative loop
+// over a runtime-shaped index variable: GCC does not consistently accept a
+// consteval call (InternedLuaFieldKeyOrdinal) whose argument depends on an
+// ordinary for-loop counter, even inside a lambda invoked to initialize a
+// constexpr variable. Each Is here is a genuine template constant, which
+// sidesteps that.
+template <std::size_t... Is>
+inline constexpr auto BuildMouseCategoryHandlers(std::index_sequence<Is...>) {
+  return std::array<HandlerOrdinals, sizeof...(Is)>{HandlerOrdinals{
+      .stored = InternedLuaFieldKeyOrdinal(
+          kNames, runtime::kMouseCategoryHandlerFields[Is].stored)}...};
+}
+inline constexpr auto kMouseCategoryHandlers = BuildMouseCategoryHandlers(
+    std::make_index_sequence<runtime::kMouseCategoryHandlerFields.size()>{});
 
 struct Source {
   int table;
