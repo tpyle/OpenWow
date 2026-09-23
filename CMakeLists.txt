@@ -136,4 +136,8 @@ if(OPENWOW_BUILD_CLIENT)
   add_subdirectory(apps/client)
 endif()
 
+if(BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
+
 include(cmake/Packaging.cmake)
