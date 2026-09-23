@@ -4871,7 +4871,6 @@ bool GameLoop::TryCompleteLoadingScreenWorldEntry() {
              << " player_assets=" << gate->active_player_render_assets_ready
              << " world_surface=" << gate->critical_visible_world_surface_ready
              << " map_streaming=" << world_scene_.world_map().IsWorldEntryStreamingComplete()
-             << " terrain_uploads=" << world_scene_.IsTerrainWorldEntryLoadDrained()
              << " doodad_uploads=" << world_scene_.IsDoodadWorldEntryLoadDrained()
              << " transport_required=" << gate->requires_transport_assets
              << " transport_present=" << gate->has_transport_object
