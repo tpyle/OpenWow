@@ -200,12 +200,20 @@ void SetTooltipFontStringState(lua_State *L, int font_string_index, const char *
 void ClearTooltipFontStringState(lua_State *L, int font_string_index) {
   font_string_index = lua_absindex(L, font_string_index);
   SetTooltipFontStringState(L, font_string_index, "", TooltipLuaTextStyle{}, false);
-  lua_pushnumber(L, 0.0);
-  lua_setfield(L, font_string_index, "__ow_width");
-  MarkLuaFontStringDimensionFromLayout(L, font_string_index, "__ow_width", false);
-  lua_pushnumber(L, 0.0);
-  lua_setfield(L, font_string_index, "__ow_height");
-  MarkLuaFontStringDimensionFromLayout(L, font_string_index, "__ow_height", false);
+  // Deliberately not touching __ow_width/__ow_height (or their from-layout
+  // provenance flags) here. This is not a hidden-forever slot -- the loop
+  // right after this call in SyncTooltipRegisteredLinesFromSystem
+  // immediately repopulates every still-used slot's real content, and
+  // that repopulation's own probe/final passes already own resetting and
+  // republishing width/height. Blanking them here too just opens a window
+  // where the slot briefly holds width=0 with a still-valid (from the
+  // previous cycle) from-layout=true flag if something reads this
+  // FontString's state before the same sync finishes -- publishing a
+  // broken "wrap constrained to 0" render instead of the merely-stale (but
+  // still correctly wrapped) previous value. A slot that becomes
+  // genuinely unused (this frame has fewer lines than last time) is still
+  // hidden via SetTooltipFontStringState above; its stale leftover width
+  // is irrelevant once invisible.
 }
 
 void StoreTooltipAnchor(lua_State *L, int target_index, const char *point, int relative_index,
@@ -820,10 +828,18 @@ void FinalizeTooltipLuaLayout(lua_State *L, int tooltip_index) {
     if (row.left_visible) {
       lua_pushnumber(L, 0.0);
       lua_setfield(L, left_index, "__ow_width");
-      MarkLuaFontStringDimensionFromLayout(L, left_index, "__ow_width", false);
       lua_pushnumber(L, 0.0);
       lua_setfield(L, left_index, "__ow_height");
-      MarkLuaFontStringDimensionFromLayout(L, left_index, "__ow_height", false);
+      // Deliberately not marking these dimensions' from-layout provenance
+      // here: this is only a probe measurement (width=0/height=0 to read
+      // the row's unconstrained natural size for later wrap-cap math), not
+      // the value this FontString actually ends up rendered at. If
+      // RetainedLayout's own resolve pass happens to read this FontString's
+      // Lua state while these rows are still being probed (before the
+      // later pass below publishes the real, possibly wrap-constrained,
+      // width), marking from_layout=false here would make it see a
+      // transient probe value and misclassify the eventual layout-driven
+      // width as content-intrinsic, disabling wrap at render time.
       row.left = MeasureTooltipFontString(L, left_index);
       row.constrained =
           force_minimum_width || ReadTooltipLocalBoolean(L, left_index, "__ow_wordwrap");

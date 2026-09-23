@@ -845,18 +845,32 @@ struct RetainedLayout::Impl {
       if (ReadNumber<OW_LAYOUT_KEY("__ow_hit_b")>(lua, index, keys, &number))
         frame->hit_rect_inset_bottom = number;
       if (frame->runtime_kind == openwow::ui::framexml::UiFrame::RuntimeKind::FontString) {
-        if (const auto from_layout =
-                ReadOptionalBoolean<OW_LAYOUT_KEY("__ow_font_width_from_layout")>(
-                    lua, index, keys)) {
-          frame->font_intrinsic_width = !*from_layout;
+        const auto width_from_layout =
+            ReadOptionalBoolean<OW_LAYOUT_KEY("__ow_font_width_from_layout")>(
+                lua, index, keys);
+        if (width_from_layout) {
+          frame->font_intrinsic_width = !*width_from_layout;
         }
-        if (const auto from_layout =
-                ReadOptionalBoolean<OW_LAYOUT_KEY("__ow_font_height_from_layout")>(
-                    lua, index, keys)) {
-          frame->font_intrinsic_height = !*from_layout;
+        const auto height_from_layout =
+            ReadOptionalBoolean<OW_LAYOUT_KEY("__ow_font_height_from_layout")>(
+                lua, index, keys);
+        if (height_from_layout) {
+          frame->font_intrinsic_height = !*height_from_layout;
         }
-        const bool width_intrinsic = !openwow::ui::FontStringWidthComesFromLayout(*frame);
-        const bool height_intrinsic = !openwow::ui::FontStringHeightComesFromLayout(*frame);
+        // FontStringWidthComesFromLayout requires frame->width to already
+        // hold a value, so on a FontString's first-ever resolve (width
+        // still unset) it always reports "not layout-driven" regardless of
+        // what __ow_font_width_from_layout just said -- silently flipping
+        // font_intrinsic_width back on below and defeating callers (e.g.
+        // the tooltip system's dynamic word-wrap sizing) that explicitly
+        // marked a width as layout-provided. Trust that explicit signal
+        // directly when present instead of re-deriving it.
+        const bool width_intrinsic = width_from_layout.has_value()
+            ? !*width_from_layout
+            : !openwow::ui::FontStringWidthComesFromLayout(*frame);
+        const bool height_intrinsic = height_from_layout.has_value()
+            ? !*height_from_layout
+            : !openwow::ui::FontStringHeightComesFromLayout(*frame);
         layout_field::Get<OW_LAYOUT_KEY("__ow_text")>(lua, index, keys);
         const char* text = lua_tostring(lua, -1);
         const bool has_text = text != nullptr && text[0] != '\0';
