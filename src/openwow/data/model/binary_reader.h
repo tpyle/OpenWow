@@ -96,7 +96,16 @@ class BinaryReader {
     }
     const std::size_t bytes = count * sizeof(T);
     if (!CanRead(offset, bytes)) return std::nullopt;
-    const auto* ptr = reinterpret_cast<const T*>(data_ + offset);
+    const auto* base = data_ + offset;
+    // reinterpret_cast-ing a T* out of an arbitrary byte offset is
+    // undefined behavior when that address isn't correctly aligned for T
+    // (e.g. a 4-byte-aligned type read from an odd offset). Well-formed
+    // WoW chunk files keep every array offset naturally aligned, but a
+    // malformed or adversarially-crafted file is exactly the case this
+    // reader needs to fail safely on rather than invoke UB, so a
+    // misaligned request is rejected the same way an out-of-bounds one is.
+    if (reinterpret_cast<std::uintptr_t>(base) % alignof(T) != 0) return std::nullopt;
+    const auto* ptr = reinterpret_cast<const T*>(base);
     return std::span<const T>(ptr, count);
   }
 
