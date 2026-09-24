@@ -302,6 +302,9 @@ bool BattlegroundManager::HandleArenaTeamRoster(const std::uint8_t* data,
   std::uint32_t member_count;
   if (!r.ReadU32(member_count)) return false;
   if (!r.ReadU32(roster.team_type)) return false;
+  // guid + online flag + name terminator
+  constexpr std::size_t kMinimumMemberSize = 8 + 1 + 1;
+  if (member_count > r.Remaining() / kMinimumMemberSize) return false;
 
   roster.members.clear();
   roster.members.resize(member_count);

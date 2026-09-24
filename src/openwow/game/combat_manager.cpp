@@ -177,6 +177,9 @@ static bool ReadThreatList(PacketReader& r,
                            std::vector<ThreatUpdateEntry>& entries) {
   std::uint32_t count;
   if (!r.ReadU32(count)) return false;
+  // packed-guid mask byte + threat
+  constexpr std::size_t kMinimumEntrySize = 1 + 4;
+  if (count > r.Remaining() / kMinimumEntrySize) return false;
   entries.reserve(count);
   for (std::uint32_t i = 0; i < count; ++i) {
     ThreatUpdateEntry te;

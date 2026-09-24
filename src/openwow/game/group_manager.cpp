@@ -61,6 +61,9 @@ bool GroupManager::HandleGroupList(const std::uint8_t* data, std::size_t len) {
     return true;
   }
 
+  // name terminator + guid
+  constexpr std::size_t kMinimumMemberSize = 1 + 8;
+  if (member_count > reader.Remaining() / kMinimumMemberSize) return false;
   members_.reserve(member_count);
 
   for (std::uint32_t i = 0; i < member_count; ++i) {

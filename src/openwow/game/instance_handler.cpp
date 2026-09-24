@@ -246,6 +246,10 @@ bool InstanceHandler::HandleRaidInstanceInfo(const std::uint8_t *data, std::size
   std::uint32_t count = 0;
   if (!r.ReadU32(count))
     return false;
+  // map + difficulty + lockout id + locked + extended + reset time
+  constexpr std::size_t kLockoutWireSize = 4 + 4 + 8 + 1 + 1 + 4;
+  if (count > r.Remaining() / kLockoutWireSize)
+    return false;
   lockouts_.clear();
   lockouts_.reserve(count);
   for (std::uint32_t i = 0; i < count; ++i) {

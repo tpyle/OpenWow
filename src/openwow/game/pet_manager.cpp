@@ -560,15 +560,17 @@ bool PetManager::HandlePetGuids(const std::uint8_t *data, std::size_t len) {
   PacketReader r(data, len);
 
   std::uint32_t count = 0;
-  (void)r.ReadU32(count);
-
   pet_guids_.clear();
-  pet_guids_.resize(count);
+  if (!r.ReadU32(count) || count > r.Remaining() / sizeof(std::uint64_t)) {
+    return false;
+  }
 
-  std::uint64_t pet_guid = 0;
+  pet_guids_.resize(count);
   for (std::uint32_t i = 0; i < count; ++i) {
-    (void)r.ReadU64(pet_guid);
-    pet_guids_[i] = pet_guid;
+    if (!r.ReadU64(pet_guids_[i])) {
+      pet_guids_.clear();
+      return false;
+    }
   }
   return true;
 }

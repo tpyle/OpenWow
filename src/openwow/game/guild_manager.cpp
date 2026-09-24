@@ -303,6 +303,11 @@ bool ParseGuildRosterPacket(const std::uint8_t* data, const std::size_t len,
     }
   }
 
+  // guid + status
+  constexpr std::size_t kMinimumMemberSize = 8 + 1;
+  if (member_count > reader.Remaining() / kMinimumMemberSize) {
+    return false;
+  }
   parsed.members.resize(member_count);
   for (auto& member : parsed.members) {
     if (!reader.ReadGuid(member.guid) || !reader.ReadU8(member.status)) {
