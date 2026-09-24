@@ -582,6 +582,16 @@ void ComputeVisibleWmoGroups(
     // through a window/doorway is still found, with a real clipped rect.
     if (camera_lane || !append) {
       visit_group(seed_group, {});
+    } else if (out_sky_visibility != nullptr &&
+               out_sky_visibility->terrain_visible) {
+      // With the camera inside this WMO, its exterior groups belong to the
+      // outside world seen through the rooms' outdoor portals, so draw them
+      // clipped to the aperture the camera lane found terrain through.
+      // Portal traversal never enters exterior groups, so skipping them here
+      // hid them entirely: e.g. Stormwind's gate walls and floor (exterior
+      // group city01) vanished while standing under the portcullis, inside
+      // the interior-flagged Valley of Heroes group.
+      visit_group(seed_group, out_sky_visibility->terrain_clip_rect);
     }
     workspace.traversal_stack.push_back(
         {.group_index = seed_group,
