@@ -31,6 +31,7 @@ add_executable(openwow_tests
   network/byte_buffer_tests.cpp
   network/zlib_compression_tests.cpp
   net/inline_download_file_name_tests.cpp
+  runtime/frame_scheduler_tests.cpp
   data/dbc_file_tests.cpp
   data/faction_reaction_tests.cpp
   data/binary_reader_tests.cpp
@@ -42,10 +43,13 @@ add_executable(openwow_tests
   # because they have no dependency beyond header-only siblings
   # (binary_reader.h, wow_chunk_fourcc.h, dbc_store.h, unit_defines.h) --
   # linking openwow_data_runtime would pull in
-  # StormLib/Lua/platform_filesystem/JPEG for no reason.
+  # StormLib/Lua/platform_filesystem/JPEG for no reason. frame_scheduler.cpp
+  # is likewise compiled directly instead of linking all of
+  # openwow_engine_core.
   ${PROJECT_SOURCE_DIR}/src/openwow/data/terrain/wdt_file.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/data/blp/blp_info.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/data/formats/dbc/faction_reaction.cpp
+  ${PROJECT_SOURCE_DIR}/src/openwow/runtime/scheduling/frame_scheduler.cpp
 )
 
 target_include_directories(openwow_tests PRIVATE

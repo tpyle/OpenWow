@@ -29,7 +29,7 @@ CallbackHandle FrameScheduler::Register(Phase phase, int priority,
 
     std::lock_guard lock(mutex_);
 
-    if (running_frame_) {
+    if (running_depth_ != 0) {
 
         pending_adds_.emplace_back(phase, std::move(entry));
     } else {
@@ -47,8 +47,14 @@ bool FrameScheduler::Unregister(CallbackHandle handle) {
 
     std::lock_guard lock(mutex_);
 
-    if (running_frame_) {
-
+    if (running_depth_ != 0) {
+        const auto pending = std::find_if(
+            pending_adds_.begin(), pending_adds_.end(),
+            [handle](const auto& add) { return add.second.handle == handle; });
+        if (pending != pending_adds_.end()) {
+            pending_adds_.erase(pending);
+            return true;
+        }
         pending_removes_.push_back(handle);
         return true;
     }
@@ -84,46 +90,55 @@ bool FrameScheduler::IsRegistered(CallbackHandle handle) const {
 }
 
 void FrameScheduler::RunFrame(double delta_sec) {
-
-    ApplyPending();
-
-    running_frame_ = true;
-
-    for (std::size_t i = 0; i < kPhaseCount; ++i) {
-        auto& pd = phases_[i];
-
-        if (pd.dirty) {
-            SortPhase(pd);
-        }
-
-        for (const auto& entry : pd.entries) {
-            entry.callback(delta_sec);
-        }
+    const RunScope scope(*this);
+    for (auto& pd : phases_) {
+        RunPhaseEntries(pd, delta_sec);
     }
-
-    running_frame_ = false;
-
     frame_count_.fetch_add(1, std::memory_order_relaxed);
-
-    ApplyPending();
 }
 
 void FrameScheduler::RunPhase(Phase phase, double delta_sec) {
-    ApplyPending();
+    const RunScope scope(*this);
+    RunPhaseEntries(phases_[static_cast<std::size_t>(phase)], delta_sec);
+}
 
-    running_frame_ = true;
-
-    auto idx = static_cast<std::size_t>(phase);
-    auto& pd = phases_[idx];
-    if (pd.dirty) {
-        SortPhase(pd);
+void FrameScheduler::BeginRun() {
+    std::lock_guard lock(mutex_);
+    if (running_depth_ == 0) {
+        ApplyPendingLocked();
+        for (auto& pd : phases_) {
+            if (pd.dirty) {
+                SortPhase(pd);
+            }
+        }
     }
-    for (const auto& entry : pd.entries) {
+    ++running_depth_;
+}
+
+void FrameScheduler::EndRun() {
+    std::lock_guard lock(mutex_);
+    --running_depth_;
+    if (running_depth_ == 0) {
+        ApplyPendingLocked();
+    }
+}
+
+void FrameScheduler::RunPhaseEntries(PhaseData& pd, double delta_sec) {
+    for (std::size_t index = 0; index < pd.entries.size(); ++index) {
+        const Entry& entry = pd.entries[index];
+        // A callback unregistered earlier in this frame (e.g. because its
+        // owner was destroyed) must not run.
+        if (IsPendingRemoval(entry.handle)) {
+            continue;
+        }
         entry.callback(delta_sec);
     }
+}
 
-    running_frame_ = false;
-    ApplyPending();
+bool FrameScheduler::IsPendingRemoval(CallbackHandle handle) const {
+    std::lock_guard lock(mutex_);
+    return std::find(pending_removes_.begin(), pending_removes_.end(), handle) !=
+           pending_removes_.end();
 }
 
 std::size_t FrameScheduler::GetCallbackCount(Phase phase) const {
@@ -146,6 +161,15 @@ std::uint64_t FrameScheduler::GetFrameCount() const noexcept {
 
 void FrameScheduler::Clear() {
     std::lock_guard lock(mutex_);
+    if (running_depth_ != 0) {
+        pending_adds_.clear();
+        for (const auto& pd : phases_) {
+            for (const auto& entry : pd.entries) {
+                pending_removes_.push_back(entry.handle);
+            }
+        }
+        return;
+    }
     for (auto& pd : phases_) {
         pd.entries.clear();
         pd.dirty = false;
@@ -155,9 +179,7 @@ void FrameScheduler::Clear() {
     frame_count_.store(0, std::memory_order_relaxed);
 }
 
-void FrameScheduler::ApplyPending() {
-    std::lock_guard lock(mutex_);
-
+void FrameScheduler::ApplyPendingLocked() {
     if (!pending_removes_.empty()) {
         for (auto handle : pending_removes_) {
             for (auto& pd : phases_) {

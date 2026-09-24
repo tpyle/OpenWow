@@ -80,8 +80,23 @@ private:
         bool               dirty{false};
     };
 
-    void ApplyPending();
+    void ApplyPendingLocked();
     void SortPhase(PhaseData& pd);
+    void BeginRun();
+    void EndRun();
+
+    // Keeps running_depth_ balanced even if a callback throws.
+    struct RunScope {
+        explicit RunScope(FrameScheduler& scheduler) : scheduler_(scheduler) {
+            scheduler_.BeginRun();
+        }
+        ~RunScope() { scheduler_.EndRun(); }
+        RunScope(const RunScope&) = delete;
+        RunScope& operator=(const RunScope&) = delete;
+        FrameScheduler& scheduler_;
+    };
+    void RunPhaseEntries(PhaseData& pd, double delta_sec);
+    [[nodiscard]] bool IsPendingRemoval(CallbackHandle handle) const;
 
     mutable std::mutex   mutex_;
     PhaseData            phases_[kPhaseCount];
@@ -91,7 +106,10 @@ private:
 
     std::atomic<std::uint64_t> next_handle_{1};
     std::atomic<std::uint64_t> frame_count_{0};
-    bool                       running_frame_{false};
+    // Nesting depth of RunFrame/RunPhase, guarded by mutex_. While
+    // non-zero, Register/Unregister/Clear defer their changes so the
+    // entries being iterated are never mutated.
+    int                        running_depth_{0};
 };
 
 }
