@@ -120,17 +120,30 @@ void NetEventQueue_Cleanup(NetEventQueue* self) {
 
 void NetEventQueue_ProcessEvents(NetEventQueue* self,
                                   const NetEventProcessDispatch& dispatch) {
-    std::lock_guard<std::mutex> lock(GetQueueMutex(self));
-
     auto* connection = static_cast<WowClientConnection*>(self->owner);
     if (!connection) return;
+
+    // Detach the pending nodes under the lock and dispatch them with it
+    // released: handlers may post events or disconnect (which flushes the
+    // queue), and either would deadlock on the non-recursive mutex, while
+    // dispatch.destroy may free the queue itself.
+    NetEventQueueNode pending{};
+    {
+        std::lock_guard<std::mutex> lock(GetQueueMutex(self));
+        pending.next = self->list_sentinel.next;
+        pending.prev = self->list_sentinel.prev;
+        self->list_sentinel.next = nullptr;
+        self->list_sentinel.prev = nullptr;
+    }
+    if (pending.next != nullptr) {
+        pending.next->prev = &pending;
+    }
 
     openwow::compiler::AtomicFetchAddSeqCst(const_cast<int32_t*>(&connection->pending_event_count), 1);
 
     bool shutdown_triggered = false;
 
-    NetEventQueueNode* node = self->list_sentinel.next;
-    while (node && node != &self->list_sentinel) {
+    for (NetEventQueueNode* node = pending.next; node != nullptr; node = node->next) {
         if (!connection->shutdown_pending) {
             switch (node->event_id) {
                 case kNetEventTypeMessage:
@@ -168,15 +181,10 @@ void NetEventQueue_ProcessEvents(NetEventQueue* self,
             }
         }
 
-        int32_t new_count =
-            openwow::compiler::AtomicFetchSubSeqCst(const_cast<int32_t*>(&connection->pending_event_count), 1) - 1;
-        if (new_count == 0 && connection->shutdown_pending) {
-            if (dispatch.destroy) {
-                dispatch.destroy(connection);
-            }
-        }
-
-        node = node->next;
+        // The +1 taken above keeps this from reaching zero mid-loop, so the
+        // connection is only ever destroyed after every node is handled.
+        openwow::compiler::AtomicFetchSubSeqCst(
+            const_cast<int32_t*>(&connection->pending_event_count), 1);
     }
 
     if (!shutdown_triggered) {
@@ -184,6 +192,8 @@ void NetEventQueue_ProcessEvents(NetEventQueue* self,
             dispatch.check_ping(connection);
         }
     }
+
+    NetEventQueue_DrainNodes(&pending);
 
     int32_t final_count =
         openwow::compiler::AtomicFetchSubSeqCst(const_cast<int32_t*>(&connection->pending_event_count), 1)
@@ -193,8 +203,6 @@ void NetEventQueue_ProcessEvents(NetEventQueue* self,
             dispatch.destroy(connection);
         }
     }
-
-    NetEventQueue_DrainNodes(&self->list_sentinel);
 }
 
 }
