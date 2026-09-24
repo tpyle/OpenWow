@@ -1212,7 +1212,12 @@ void UnitMovementRuntime::UpdateBodyFacing(float *vehicle_facing) {
   } else {
 
     float target_facing = owner_.GetLocalFacing();
-    if (!ActiveSpellSuppressesBodyFacingTargetTracking(owner_)) {
+    // A moving unit's body follows its movement orientation; turning it to
+    // its selected target here made units that move with a target behind
+    // or beside them (e.g. bots kiting or following) run backwards or
+    // sideways.
+    const bool moving = IsMoving() || spline_locomotion_active_;
+    if (!moving && !ActiveSpellSuppressesBodyFacingTargetTracking(owner_)) {
       const auto *body_facing_target = [&]() -> const CGUnit_C * {
         if (owner_.Animation().StandSelectionInteractionTargetGuid() != 0u) {
           const auto* const objects = owner_.object_manager();
