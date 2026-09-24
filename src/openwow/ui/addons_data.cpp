@@ -2,6 +2,7 @@
 #include "openwow/ui/addons_data.h"
 
 #include "openwow/core/storm_string.h"
+#include "openwow/platform/filesystem/filesystem.h"
 #include "openwow/ui/addon_manager.h"
 #include "openwow/ui/game/cvar_system.h"
 #include "openwow/ui/retail_client_build.h"
@@ -1006,17 +1007,20 @@ bool AddOnsData::SaveSavedStates() {
       any_new_file_created = true;
     }
 
-    std::ofstream output(addons_file, std::ios::binary | std::ios::trunc);
-    if (!output.is_open()) {
-      continue;
-    }
-
+    std::string content;
     for (const auto &addon_name : saved_state.addon_order) {
       const bool *enabled = FindSavedStateValue(saved_state.addon_enabled, addon_name);
       if (enabled == nullptr) {
         continue;
       }
-      output << addon_name << ": " << (*enabled ? "enabled" : "disabled") << "\r\n";
+      content += addon_name;
+      content += *enabled ? ": enabled\r\n" : ": disabled\r\n";
+    }
+
+    // Written via a temp file and rename so a crash or full disk mid-write
+    // cannot leave the character's addon selection empty or truncated.
+    if (!openwow::platform::filesystem::AtomicWriteFile(addons_file, content)) {
+      saved_state.dirty = true;
     }
   }
 
