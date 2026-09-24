@@ -1,0 +1,86 @@
+The pinned bgfx allocates every Vulkan descriptor set from one shared
+pool of 1024 * BGFX_CONFIG_MAX_FRAME_LATENCY sets and frees each set a
+few frames later. In release builds VK_CHECK does not check anything,
+so when the pool is exhausted or fragmented (busy scenes: a crowded city
+plus UI can issue well over 1024 draws with distinct bindings per frame)
+vkAllocateDescriptorSets fails silently, getDescriptorSet writes and
+binds a VK_NULL_HANDLE set, and the driver faults (on RADV: SIGSEGV at
+address 0x40 inside vkUpdateDescriptorSets, on bgfx's render thread).
+
+This raises the pool to 4096 sets per frame in flight and checks the
+allocation: on failure getDescriptorSet returns VK_NULL_HANDLE (logging
+once) and the draw/dispatch submit loops skip that item and retry the
+allocation on the next one, instead of crashing. Upstream bgfx later
+replaced the shared pool with per-frame chunked pools that are reset
+each frame and grow on demand; that restructuring is not backported
+here.
+--- a/bgfx/src/renderer_vk.cpp
++++ b/bgfx/src/renderer_vk.cpp
+@@ -1130,7 +1130,7 @@
+ 			);
+ 	}
+ 
+-#define MAX_DESCRIPTOR_SETS (1024 * BGFX_CONFIG_MAX_FRAME_LATENCY)
++#define MAX_DESCRIPTOR_SETS (4096 * BGFX_CONFIG_MAX_FRAME_LATENCY)
+ 
+ 	struct RendererContextVK : public RendererContextI
+ 	{
+@@ -3832,7 +3832,7 @@
+ 
+ 		VkDescriptorSet getDescriptorSet(const ProgramVK& program, const RenderBind& renderBind, const ScratchBufferVK& scratchBuffer, const float _palette[][4])
+ 		{
+-			VkDescriptorSet descriptorSet;
++			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+ 
+ 			VkDescriptorSetAllocateInfo dsai;
+ 			dsai.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+@@ -3841,7 +3841,22 @@
+ 			dsai.descriptorSetCount = 1;
+ 			dsai.pSetLayouts        = &program.m_descriptorSetLayout;
+ 
+-			VK_CHECK(vkAllocateDescriptorSets(m_device, &dsai, &descriptorSet) );
++			const VkResult allocResult = vkAllocateDescriptorSets(m_device, &dsai, &descriptorSet);
++			if (VK_SUCCESS != allocResult)
++			{
++				// The shared pool is exhausted or fragmented. Callers skip the
++				// draw/dispatch/blit instead of handing a null set to the driver.
++				static bool s_reported = false;
++				if (!s_reported)
++				{
++					s_reported = true;
++					bx::debugPrintf("bgfx vk: vkAllocateDescriptorSets failed (%d: %s); skipping draws until sets free up.\n"
++						, allocResult
++						, getName(allocResult)
++						);
++				}
++				return VK_NULL_HANDLE;
++			}
+ 
+ 			VkDescriptorImageInfo  imageInfo[BGFX_CONFIG_MAX_TEXTURE_SAMPLERS];
+ 			VkDescriptorBufferInfo bufferInfo[BGFX_CONFIG_MAX_TEXTURE_SAMPLERS];
+@@ -8881,6 +8896,12 @@
+ 								, _render->m_colorPalette
+ 							);
+ 
++							if (VK_NULL_HANDLE == currentDescriptorSet)
++							{
++								currentBindHash = 0;
++								continue;
++							}
++
+ 							descriptorSetCount++;
+ 						}
+ 
+@@ -9192,6 +9213,12 @@
+ 								, _render->m_colorPalette
+ 							);
+ 
++							if (VK_NULL_HANDLE == currentDescriptorSet)
++							{
++								currentBindHash = 0;
++								continue;
++							}
++
+ 							descriptorSetCount++;
+ 						}
+ 

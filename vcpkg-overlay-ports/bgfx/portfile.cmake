@@ -25,6 +25,7 @@ vcpkg_extract_source_archive(
     shaderc-uniform-array-regcount.patch
     vulkan-bc1-punchthrough-alpha.patch
     vulkan-opaque-composite-alpha.patch
+    vulkan-descriptor-pool-exhaustion.patch
 )
 file(REMOVE_RECURSE
   "${SOURCE_PATH}/bgfx/3rdparty/dear-imgui"
