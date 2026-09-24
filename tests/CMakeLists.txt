@@ -30,6 +30,7 @@ add_executable(openwow_tests
   foundation/container_flat_hash_map_tests.cpp
   network/byte_buffer_tests.cpp
   network/zlib_compression_tests.cpp
+  net/inline_download_file_name_tests.cpp
   data/dbc_file_tests.cpp
   data/faction_reaction_tests.cpp
   data/binary_reader_tests.cpp

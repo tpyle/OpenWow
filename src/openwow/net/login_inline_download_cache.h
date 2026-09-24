@@ -1,6 +1,7 @@
 #pragma once
 
 #include "openwow/core/md5.h"
+#include "openwow/net/inline_download_file_name.h"
 #include "openwow/net/login_patch_download_session.h"
 #include "openwow/foundation/text/ascii.h"
 
@@ -122,6 +123,9 @@ inline LoginInlineDownloadBootstrapResult StartPatchInlineDownload(
         expected_digest,
     const std::uint64_t expected_size,
     std::unique_ptr<LoginInlineDownloadCache>* active_download) {
+  if (!IsSafeInlineDownloadFileName(raw_filename)) {
+    return {};
+  }
   const std::filesystem::path relative_target =
       openwow::text::EqualsIgnoreCaseAscii(raw_filename, "Patch")
           ? std::filesystem::path("wow-patch.mpq")
