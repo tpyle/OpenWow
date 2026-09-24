@@ -1,7 +1,5 @@
 #pragma once
 
-#include "openwow/game/creep.h"
-#include "openwow/game/tumor.h"
 #include "openwow/game/warden_client.h"
 #include "openwow/net/wotlk/main_thread_packet_dispatcher.h"
 #include "openwow/net/wotlk/protocol/world_protocol.h"
@@ -29,8 +27,6 @@ class RealmRuntime final {
 
   net::wotlk::MainThreadPacketDispatcher packet_dispatcher;
   WardenClient warden;
-  Creep creep;
-  TumorManager tumor;
   net::wotlk::RealmSession session;
 
  private:

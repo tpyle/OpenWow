@@ -6,8 +6,6 @@
 namespace openwow::game {
 
 RealmRuntime::RealmRuntime() {
-  creep.RegisterEventBinding("SendEvent", &TumorManager::ScriptSendEvent,
-                             &tumor);
   session.SetDisconnectedCallback([this]() {
     warden.Reset();
     pending_warden_packets_.clear();
@@ -70,8 +68,6 @@ RealmRuntime::~RealmRuntime() {
   session.Disconnect();
   warden.Reset();
   pending_warden_packets_.clear();
-  creep.UnregisterEventBinding("SendEvent", &TumorManager::ScriptSendEvent,
-                               &tumor);
 }
 
 std::array<std::uint8_t, 20> RealmRuntime::BuildBotDetectedDigest(

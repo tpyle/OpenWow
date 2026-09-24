@@ -114,8 +114,6 @@ openwow_add_component(openwow_game
   social_manager.cpp
   battlenet_api.cpp
   battlenet_login.cpp
-  battlenet_plugin.cpp
-  creep.cpp
   realm_runtime.cpp
   group_manager.cpp
   conditional_text_tag.cpp
@@ -364,7 +362,6 @@ openwow_add_component(openwow_game
   unit_vehicle.cpp
   player_control_runtime.cpp
   unit_animation_resolution.cpp
-  bnet_bit_stream.cpp
   bnet_message_reflect.cpp
   callee_wrappers.cpp
   ccamera.cpp
@@ -382,7 +379,6 @@ openwow_add_component(openwow_game
   comsat_voice_codec_post_filter.cpp
   comsat_voice_codec_resampler_state.cpp
   creature_sound.cpp
-  creep_tendril.cpp
   current_area_record.cpp
   delayed_spell_visual_kit.cpp
   descriptor_callback_registry.cpp
@@ -417,7 +413,6 @@ openwow_add_component(openwow_game
   tabard_frame.cpp
   taint_system.cpp
   tracked_unit_state_slice.cpp
-  tumor.cpp
   unit_combat.cpp
   unit_combat_log.cpp
   unit_path_utils.cpp
