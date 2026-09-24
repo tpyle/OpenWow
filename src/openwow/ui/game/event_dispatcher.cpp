@@ -452,15 +452,13 @@ void EventDispatcher::FireEventArgs(
 void EventDispatcher::DrainDeferredMutations(
     const std::string& event, EventRegistrationState& state) {
 
+  // A nested dispatch of the same event is ending while an outer one is
+  // still iterating active_listeners, which must not be mutated yet. Keep
+  // the pending lists for the outermost drain: the outer loop already skips
+  // pending removals, and discarding them here would leave an unregistered
+  // (or destroyed and unref'd) frame registered forever and lose a
+  // registration made during the nested dispatch.
   if (state.dispatch_depth != 0) {
-    while (const auto ref = state.pending_removals.PopFront()) {
-      ++performance_counters_.nested_removals_consumed;
-      ReconcileFrameEventAssociation(event, state, *ref);
-    }
-    while (const auto ref = state.pending_additions.PopFront()) {
-      ++performance_counters_.nested_additions_consumed;
-      ReconcileFrameEventAssociation(event, state, *ref);
-    }
     return;
   }
 
