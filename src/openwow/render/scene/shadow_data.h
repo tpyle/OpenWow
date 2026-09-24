@@ -3,6 +3,7 @@
 #include "openwow/render/api/math/render_math_types.h"
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -21,6 +22,25 @@ enum class WorldShadowProduct : std::uint8_t {
   Mid = 2,
   Far = 3,
 };
+
+/// Moves a light view matrix's translation onto the shadow map's texel grid.
+///
+/// A shadow map that follows the player by fractions of a texel re-rasterises
+/// every static caster at a slightly different offset each frame, so shadow
+/// edges on static geometry shimmer. Snapping keeps each texel over the same
+/// world position while the light direction is unchanged. `view` is a
+/// row-vector (bx) matrix; `half_extent` is the orthographic half-width and
+/// `resolution` the shadow map size in texels.
+inline void SnapLightViewToTexelGrid(RenderMatrix4x4& view, const float half_extent,
+                                     const std::uint32_t resolution) {
+  if (resolution == 0u || !(half_extent > 0.0f)) {
+    return;
+  }
+  const float texel = (2.0f * half_extent) / static_cast<float>(resolution);
+  // The translation row is the light-space position of the world origin.
+  view[12] = std::round(view[12] / texel) * texel;
+  view[13] = std::round(view[13] / texel) * texel;
+}
 
 class ShadowRenderData {
  public:

@@ -33,6 +33,7 @@ add_executable(openwow_tests
   net/inline_download_file_name_tests.cpp
   net/realm_type_tests.cpp
   world/move_spline_update_tests.cpp
+  render/shadow_texel_snap_tests.cpp
   runtime/frame_scheduler_tests.cpp
   data/dbc_file_tests.cpp
   data/faction_reaction_tests.cpp

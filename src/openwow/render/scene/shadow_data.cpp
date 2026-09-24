@@ -248,6 +248,7 @@ bool ShadowRenderData::PrepareProduct(const std::size_t product_index,
                 bx::Handedness::Left);
 
   const float half_extent = kProductHalfExtents[product_index];
+  SnapLightViewToTexelGrid(view, half_extent, resolution_);
   bx::mtxOrtho(projection.data(), -half_extent, half_extent, -half_extent,
                half_extent, kCasterNear, kCasterFar, 0.0f,
                bgfx::getCaps()->homogeneousDepth);
