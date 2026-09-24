@@ -298,10 +298,14 @@ void MoveSpline::Initialize(const game::MovementUpdate& update,
 
   const game::Vec3 destination{update.spline.dest_x, update.spline.dest_y, update.spline.dest_z};
   final_destination_ = destination;
-  if (wire_controls.size() >= 4u) {
-
+  // Catmull-Rom paths carry one padding control point at each end; linear
+  // paths list their real nodes, starting at the launch position.
+  if (catmull_rom_ && wire_controls.size() >= 4u) {
     control_points_ = wire_controls;
     points_.assign(wire_controls.begin() + 1, wire_controls.end() - 1);
+  } else if (!catmull_rom_ && wire_controls.size() >= 2u) {
+    points_ = wire_controls;
+    RebuildControlPoints();
   } else {
     points_.clear();
     points_.push_back(start_position);
