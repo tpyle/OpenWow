@@ -393,8 +393,6 @@ public:
   std::array<float, 3> ground_contact_normal_{{0.0f, 0.0f, 1.0f}};
   bool ground_projection_seeded_{false};
   bool ground_projection_failed_{false};
-  // Spline id last reported for carrying a local fall into a ground spline.
-  std::uint32_t falling_spline_reported_id_{0};
   std::optional<std::uint32_t> last_ground_discontinuity_log_tick_;
   std::array<float, 3> ground_projection_anchor_{};
   std::array<float, 3> ground_projection_position_{};

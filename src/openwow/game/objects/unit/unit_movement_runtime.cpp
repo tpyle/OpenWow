@@ -2778,19 +2778,18 @@ void UnitMovementRuntime::ApplySplineMovementPose(const Vec3 &position,
                                         const bool parent_movement_active,
                                         const std::uint32_t spline_id) {
   const MovementInfo previous_movement = owner_.position_.movement;
+  // A server spline without Falling or Parabolic defines the unit's whole
+  // path, including height. A fall started locally by an earlier state
+  // packet can't land while the spline owns the pose (the movement step
+  // that would detect landing is skipped), so it would otherwise play the
+  // fall animation for the entire walk. Drop it when the spline starts.
   if (!owner_.IsActiveMover() && spline_active &&
-      spline_id != falling_spline_reported_id_ &&
-      (previous_movement.flags & (kMoveFlagFalling | kMoveFlagFallingFar)) != 0u &&
-      (spline_flags & (SplineFlag::kFalling | SplineFlag::kParabolic)) == 0u) {
-    falling_spline_reported_id_ = spline_id;
-    diagnostics::Log(diagnostics::LogLevel::kWarn,
-                     "unit movement stage=spline-pose reason=fall-flag-on-ground-spline guid=" +
-                         owner_.GetGuid().ToString() + " entry=" +
-                         std::to_string(owner_.GetEntry()) + " spline=" +
-                         std::to_string(spline_id) + " splineFlags=" +
-                         std::to_string(spline_flags) + " moveFlags=" +
-                         std::to_string(previous_movement.flags) + " fallTime=" +
-                         std::to_string(previous_movement.fall_time));
+      (spline_flags & (SplineFlag::kFalling | SplineFlag::kParabolic)) == 0u &&
+      (owner_.position_.movement.flags &
+       (kMoveFlagFalling | kMoveFlagFallingFar)) != 0u) {
+    owner_.position_.movement.flags &= ~(kMoveFlagFalling | kMoveFlagFallingFar);
+    owner_.position_.movement.fall_time = 0u;
+    owner_.position_.movement.jump = {};
   }
   const auto animation_base_flags =
       owner_.GetMovementInfo().flags & ~kDirectionalLocomotionMask;
