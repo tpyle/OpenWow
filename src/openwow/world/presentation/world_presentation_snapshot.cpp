@@ -1,5 +1,6 @@
 #include "openwow/world/presentation/world_presentation_snapshot.h"
 
+#include "openwow/data/wmo/wmo_file.h"
 #include "openwow/world/streaming/world_map.h"
 
 #include <algorithm>
@@ -59,6 +60,17 @@ WorldPresentationSnapshot WorldMap::BuildPresentationSnapshot(
           return;
         }
         const auto group = static_cast<std::uint16_t>(ref->group_index);
+        // An exterior group is outdoor space (world_map.cpp treats a camera
+        // in one as outdoors for sky and environment too). Seeding the
+        // camera lane from it would switch the exterior lane to append mode
+        // and suppress every other exterior group of this WMO -- e.g. the
+        // Stormwind gate's floor and walls vanished while the camera stood
+        // under the portcullis -- so leave such placements to the exterior
+        // lane.
+        if ((cached->second.visibility.groups()[group].flags &
+             data::wmo::kMogpExterior) != 0u) {
+          return;
+        }
         if (std::find(seed_storage.begin(), seed_storage.begin() + seed_count,
                       group) == seed_storage.begin() + seed_count) {
           seed_storage[seed_count++] = group;
