@@ -218,12 +218,29 @@ void AuthSession::HandleLogonChallenge(const uint8_t* data, size_t size) {
     return;
   }
 
+  const auto fail_malformed = [this] {
+    std::lock_guard lock(mutex_);
+    state_ = AuthState::Failed;
+    last_error_ = AuthResult::FailConnectLater;
+  };
+
+  // g and N are length-prefixed by the server, so every field after them
+  // is bounds-checked against the actual packet size, not the fixed
+  // minimum above.
   size_t p = 3;
   const uint8_t* B_le  = data + p; p += 32;
   const uint8_t  g_len = data[p++];
+  if (g_len == 0 || p + g_len + 1 > size) {
+    fail_malformed();
+    return;
+  }
   const uint8_t  g_val = data[p];
   p += g_len;
   const uint8_t  N_len = data[p++];
+  if (p + N_len + 32 > size) {
+    fail_malformed();
+    return;
+  }
   const uint8_t* N_data = data + p;
   p += N_len;
   const uint8_t* s_le = data + p;
