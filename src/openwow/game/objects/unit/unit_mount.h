@@ -88,7 +88,7 @@ public:
   void CompleteTransition(CGUnit_C &owner, const WorldSession &session);
   void SetPendingTransition(std::uint32_t spell_id,
                             std::uint32_t cached_mount_display) noexcept;
-  void HandleDismountPacket(CGUnit_C &owner);
+  void HandleDismountPacket(CGUnit_C &owner, const WorldSession &session);
   void Dismount(CGUnit_C &owner, bool restore_collision_bounds);
   void ApplyDisplayChange(CGUnit_C &owner, const WorldSession &session,
                           std::uint32_t mount_display_id);

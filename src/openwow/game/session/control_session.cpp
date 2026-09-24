@@ -269,7 +269,7 @@ void WorldSession::HandleDismount(const net::wotlk::WorldPacket &pkt) {
   if (unit == nullptr)
     return;
 
-  unit->Mount().HandleDismountPacket(*unit);
+  unit->Mount().HandleDismountPacket(*unit, *this);
 
   unit->Animation().RefreshSelectedStandAnimation(*this, 0u, ~0u);
 }

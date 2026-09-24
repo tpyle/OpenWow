@@ -96,7 +96,8 @@ void UnitMountComponent::SetPendingTransition(
   SetPendingTransitionSpellId(spell_id);
 }
 
-void UnitMountComponent::HandleDismountPacket(CGUnit_C &owner) {
+void UnitMountComponent::HandleDismountPacket(CGUnit_C &owner,
+                                              const WorldSession &session) {
   if (CachedDisplayForSpell() == 0u) {
     return;
   }
@@ -120,6 +121,7 @@ void UnitMountComponent::HandleDismountPacket(CGUnit_C &owner) {
   // Dismount() refreshed while the mount display was still cached; refresh
   // again so sound data (footsteps) and footprints come from the rider.
   owner.Presentation().RefreshActiveDisplayRuntimeState();
+  AddHardcodedOneShotEffect(session, owner, HardcodedEffectId::kMountPoof);
   owner.UpdateOverlayModel();
   owner.Presentation().RefreshModelBoundsAndEffectsForced();
   owner.SpellVisuals().UpdateObjectEffect();
@@ -190,7 +192,8 @@ void UnitMountComponent::ApplyDisplayChange(
   SetCachedDisplayForSpell(mount_display_id);
   SetDisplayScale(ResolveMountDisplayScale(owner, mount_display_id));
   owner.Presentation().RefreshActiveDisplayRuntimeState();
-  if (mount_display_id != 0u && previous_display == 0u) {
+  // The poof plays on mounting and on dismounting, not when swapping mounts.
+  if ((mount_display_id == 0u) != (previous_display == 0u)) {
     AddHardcodedOneShotEffect(session, owner, HardcodedEffectId::kMountPoof);
   }
 
