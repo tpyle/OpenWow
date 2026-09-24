@@ -137,7 +137,8 @@ int SetFrameResizeBounds(lua_State *L, const char *width_field, const char *heig
                          const char *usage_format) {
   const int self_idx = ValidateFrameResizeSelf(L);
   if (lua_isnumber(L, 2) == 0 || lua_isnumber(L, 3) == 0) {
-    return luaL_error(L, usage_format, GetFrameUsageObjectName(L, self_idx).c_str());
+    lua_pushfstring(L, usage_format, GetFrameUsageObjectName(L, self_idx).c_str());
+    return luaL_error(L, "%s", lua_tostring(L, -1));
   }
 
   const float width_pixels = static_cast<float>(lua_tonumber(L, 2));

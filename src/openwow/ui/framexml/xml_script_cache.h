@@ -223,9 +223,15 @@ private:
       resolved_source = openwow::ui::lua_get_taint(L, -1);
     }
     lua_insert(L, 1);
-    const openwow::ui::ScopedLuaExecutionTaintSource call_scope(L,
-                                                                resolved_source);
-    if (lua_pcall(L, argument_count, LUA_MULTRET, 0) != 0) {
+    int status = 0;
+    {
+      // Restore the taint source before re-raising: lua_error longjmps past
+      // this frame and would skip the scope's destructor.
+      const openwow::ui::ScopedLuaExecutionTaintSource call_scope(
+          L, resolved_source);
+      status = lua_pcall(L, argument_count, LUA_MULTRET, 0);
+    }
+    if (status != 0) {
       return lua_error(L);
     }
     return lua_gettop(L);

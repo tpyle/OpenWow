@@ -53,8 +53,9 @@ void ApplyEditBoxStateMethods(lua_State *L) {
 
   lua_pushcfunction(L, [](lua_State *Ls) -> int {
     if (!lua_isnumber(Ls, 2)) {
-      return luaL_error(Ls, "Usage: %s:SetBlinkSpeed(speed)",
-                        GetObjectNameOrUnnamed(Ls, 1).c_str());
+      lua_pushfstring(Ls, "Usage: %s:SetBlinkSpeed(speed)",
+                      GetObjectNameOrUnnamed(Ls, 1).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     if (lua_istable(Ls, 1)) {
 
@@ -120,8 +121,9 @@ void ApplyEditBoxStateMethods(lua_State *L) {
 
   lua_pushcfunction(L, [](lua_State *Ls) -> int {
     if (lua_gettop(Ls) != 2 || !lua_isnumber(Ls, 2)) {
-      return luaL_error(Ls, "Usage: %s:SetMaxBytes(max)",
-                        GetObjectNameOrUnnamed(Ls, 1).c_str());
+      lua_pushfstring(Ls, "Usage: %s:SetMaxBytes(max)",
+                      GetObjectNameOrUnnamed(Ls, 1).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     if (lua_istable(Ls, 1)) {
       auto max = static_cast<int>(lua_tonumber(Ls, 2));

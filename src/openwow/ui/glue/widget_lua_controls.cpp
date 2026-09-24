@@ -79,11 +79,11 @@ int LuaWidget_RegisterForClicks(lua_State* state) {
 }
 
 int LuaWidget_Click(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
+  if (WidgetNameFromArg(state, 1).empty()) {
     return 0;
   }
   const char* button = luaL_optstring(state, 2, "LeftButton");
+  const auto name = WidgetNameFromArg(state, 1);
   const bool down = ScriptReadBoolArgOrDefault(state, 3, false);
   auto* widget_runtime = GetWidgetRuntime(state);
   if (widget_runtime != nullptr) {
@@ -129,16 +129,19 @@ int LuaWidget_Click(lua_State* state) {
   return 0;
 }
 static std::string GetCheckedGlueButtonWidgetName(lua_State* state) {
-  const auto name = GetCheckedGlueWidgetName(state);
-  auto* runtime = GetWidgetRuntime(state);
-  const auto owner = runtime != nullptr ? runtime->GetWidget(name)
-                                        : std::optional<GlueWidgetState>{};
-  if (!owner.has_value() ||
-      (!openwow::text::EqualsIgnoreCaseAscii(owner->kind, "Button") &&
-       !openwow::text::EqualsIgnoreCaseAscii(owner->kind, "CheckButton"))) {
-    luaL_error(state, "Wrong object type for member function");
+  {
+    auto name = GetCheckedGlueWidgetName(state);
+    auto* runtime = GetWidgetRuntime(state);
+    const auto owner = runtime != nullptr ? runtime->GetWidget(name)
+                                          : std::optional<GlueWidgetState>{};
+    if (owner.has_value() &&
+        (openwow::text::EqualsIgnoreCaseAscii(owner->kind, "Button") ||
+         openwow::text::EqualsIgnoreCaseAscii(owner->kind, "CheckButton"))) {
+      return name;
+    }
   }
-  return name;
+  luaL_error(state, "Wrong object type for member function");
+  return {};
 }
 
 int LuaWidget_GetFontString(lua_State* state) {
@@ -183,11 +186,11 @@ int LuaWidget_GetDisabledTexture(lua_State* state) {
 }
 
 int LuaWidget_SetNormalTexture(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
+  if (WidgetNameFromArg(state, 1).empty()) {
     return 0;
   }
   const char* file = luaL_optstring(state, 2, "");
+  const auto name = WidgetNameFromArg(state, 1);
   auto* runtime = GetWidgetRuntime(state);
   const std::string target =
       FindFirstExistingWidgetName(runtime, name, {"NormalTexture", "Normal", "UpTexture"});
@@ -198,11 +201,11 @@ int LuaWidget_SetNormalTexture(lua_State* state) {
 }
 
 int LuaWidget_SetPushedTexture(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
+  if (WidgetNameFromArg(state, 1).empty()) {
     return 0;
   }
   const char* file = luaL_optstring(state, 2, "");
+  const auto name = WidgetNameFromArg(state, 1);
   auto* runtime = GetWidgetRuntime(state);
   const std::string target =
       FindFirstExistingWidgetName(runtime, name, {"PushedTexture", "Pushed", "DownTexture"});
@@ -213,11 +216,11 @@ int LuaWidget_SetPushedTexture(lua_State* state) {
 }
 
 int LuaWidget_SetHighlightTexture(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
+  if (WidgetNameFromArg(state, 1).empty()) {
     return 0;
   }
   const char* file = luaL_optstring(state, 2, "");
+  const auto name = WidgetNameFromArg(state, 1);
   auto* runtime = GetWidgetRuntime(state);
   const std::string target =
       FindFirstExistingWidgetName(runtime, name, {"HighlightTexture", "Highlight"});
@@ -291,12 +294,15 @@ int LuaWidget_GetMinMaxValues(lua_State* state) {
 }
 
 int LuaWidget_SetMinMaxValues(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
-    if (runtime->IsStatusBar(name)) {
+    if (runtime->IsStatusBar(WidgetNameFromArg(state, 1))) {
       if (lua_isnumber(state, 2) == 0 || lua_isnumber(state, 3) == 0) {
-        return luaL_error(state, "Usage: %s:SetMinMaxValues(min, max)",
+        {
+          const auto name = WidgetNameFromArg(state, 1);
+          lua_pushfstring(state, "Usage: %s:SetMinMaxValues(min, max)",
                           name.c_str());
+        }
+        return luaL_error(state, "%s", lua_tostring(state, -1));
       }
       const float minimum = static_cast<float>(lua_tonumber(state, 2));
       const float maximum = static_cast<float>(lua_tonumber(state, 3));
@@ -308,6 +314,7 @@ int LuaWidget_SetMinMaxValues(lua_State* state) {
         case openwow::ui::widgets::StatusBarRangeError::None:
           break;
       }
+      const auto name = WidgetNameFromArg(state, 1);
       const auto change =
           runtime->SetStatusBarRange(name, minimum, maximum);
       if (!change.range_changed) {
@@ -335,6 +342,7 @@ int LuaWidget_SetMinMaxValues(lua_State* state) {
 
     const double min_v = luaL_optnumber(state, 2, 0.0);
     const double max_v = luaL_optnumber(state, 3, 0.0);
+    const auto name = WidgetNameFromArg(state, 1);
     const bool range_was_set = runtime->HasSliderRange(name);
     const auto [old_minimum, old_maximum] = runtime->GetMinMaxValues(name);
     const bool range_changed =
@@ -386,12 +394,16 @@ int LuaWidget_GetValue(lua_State* state) {
 }
 
 int LuaWidget_SetValue(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
-    if (runtime->IsStatusBar(name)) {
+    if (runtime->IsStatusBar(WidgetNameFromArg(state, 1))) {
       if (lua_gettop(state) != 2 || lua_isnumber(state, 2) == 0) {
-        return luaL_error(state, "Usage: %s:SetValue(value)", name.c_str());
+        {
+          const auto name = WidgetNameFromArg(state, 1);
+          lua_pushfstring(state, "Usage: %s:SetValue(value)", name.c_str());
+        }
+        return luaL_error(state, "%s", lua_tostring(state, -1));
       }
+      const auto name = WidgetNameFromArg(state, 1);
       if (runtime->SetStatusBarValue(
               name, static_cast<float>(lua_tonumber(state, 2)))) {
         const float value = runtime->GetStatusBarValueSnapshot(name).value;
@@ -406,6 +418,7 @@ int LuaWidget_SetValue(lua_State* state) {
     }
 
     const double value = luaL_optnumber(state, 2, 0.0);
+    const auto name = WidgetNameFromArg(state, 1);
     const double old_value = runtime->GetValue(name);
     runtime->SetValue(name, value);
     const double new_value = runtime->GetValue(name);
@@ -432,8 +445,8 @@ int LuaWidget_GetValueStep(lua_State* state) {
 }
 
 int LuaWidget_SetValueStep(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   const double step = luaL_optnumber(state, 2, 0.0);
+  const auto name = WidgetNameFromArg(state, 1);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     const bool value_was_set = runtime->HasSliderValue(name);
     const double previous_value = runtime->GetValue(name);
@@ -478,8 +491,8 @@ int LuaWidget_GetButtonState(lua_State* state) {
 }
 
 int LuaWidget_SetButtonState(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   const char* new_state = luaL_optstring(state, 2, "");
+  const auto name = WidgetNameFromArg(state, 1);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetButtonState(name, new_state ? std::string(new_state) : std::string());
   }
@@ -521,11 +534,11 @@ int LuaWidget_SetDisabledTextColor(lua_State* state) {
 
 int LuaWidget_AddLine(lua_State* state) {
 
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
+  if (WidgetNameFromArg(state, 1).empty()) {
     return 0;
   }
   const char* text = luaL_optstring(state, 2, "");
+  const auto name = WidgetNameFromArg(state, 1);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr && text != nullptr) {
     const std::string existing = runtime->GetText(name);
     if (existing.empty()) {

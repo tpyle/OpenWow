@@ -60,30 +60,34 @@ int LuaEnumerateFrames(lua_State* state) {
     return 1;
   }
 
-  const auto frame_names = CollectGlueFrameNamesInCreationOrder(*runtime);
   if (lua_type(state, 1) == LUA_TTABLE) {
+    const char* error = nullptr;
+    {
+      const auto current_name = ReadStoredWidgetRuntimeKey(state, 1);
+      const auto current = current_name.empty()
+                               ? std::optional<GlueWidgetState>{}
+                               : runtime->GetWidget(current_name);
+      if (current_name.empty()) {
+        error = "EnumerateFrames: Couldn't find 'this' in current object";
+      } else if (!current.has_value() || !IsGlueFrameLikeForEnumeration(*current)) {
+        error = "EnumerateFrames: Wrong current object type, expected frame";
+      } else {
+        const auto frame_names = CollectGlueFrameNamesInCreationOrder(*runtime);
+        const auto it = std::find(frame_names.begin(), frame_names.end(), current_name);
+        if (it != frame_names.end() && it != frame_names.begin()) {
+          if (PushGlueWidgetGlobalTable(state, *(it - 1))) {
+            return 1;
+          }
+        }
 
-    const auto current_name = ReadStoredWidgetRuntimeKey(state, 1);
-    if (current_name.empty()) {
-      return luaL_error(state, "EnumerateFrames: Couldn't find 'this' in current object");
-    }
-
-    const auto current = runtime->GetWidget(current_name);
-    if (!current.has_value() || !IsGlueFrameLikeForEnumeration(*current)) {
-      return luaL_error(state, "EnumerateFrames: Wrong current object type, expected frame");
-    }
-
-    const auto it = std::find(frame_names.begin(), frame_names.end(), current_name);
-    if (it != frame_names.end() && it != frame_names.begin()) {
-      if (PushGlueWidgetGlobalTable(state, *(it - 1))) {
+        lua_pushnil(state);
         return 1;
       }
     }
-
-    lua_pushnil(state);
-    return 1;
+    return luaL_error(state, "%s", error);
   }
 
+  const auto frame_names = CollectGlueFrameNamesInCreationOrder(*runtime);
   for (auto it = frame_names.rbegin(); it != frame_names.rend(); ++it) {
     if (PushGlueWidgetGlobalTable(state, *it)) {
       return 1;
@@ -100,27 +104,33 @@ int LuaGetFramesRegisteredForEvent(lua_State* state) {
   }
 
   const char* event_name_arg = lua_tostring(state, 1);
-  const std::string event_name = event_name_arg != nullptr ? event_name_arg : "";
-  const auto* glue_runtime = GetGlueRuntime(state);
-  if (glue_runtime == nullptr) {
-    return 0;
+  int pushed = 0;
+  bool stack_overflow = false;
+  {
+    const std::string event_name = event_name_arg != nullptr ? event_name_arg : "";
+    const auto* glue_runtime = GetGlueRuntime(state);
+    if (glue_runtime == nullptr) {
+      return 0;
+    }
+
+    const auto registered_widgets = glue_runtime->RegisteredWidgetsForEvent(event_name);
+
+    if (registered_widgets.size() >
+            static_cast<std::size_t>(std::numeric_limits<int>::max()) ||
+        lua_checkstack(state, static_cast<int>(registered_widgets.size())) == 0) {
+      stack_overflow = true;
+    } else {
+      for (const auto& widget_name : registered_widgets) {
+        if (!PushGlueWidgetGlobalTable(state, widget_name)) {
+          continue;
+        }
+        ++pushed;
+      }
+    }
   }
-
-  const auto registered_widgets = glue_runtime->RegisteredWidgetsForEvent(event_name);
-
-  if (registered_widgets.size() >
-          static_cast<std::size_t>(std::numeric_limits<int>::max()) ||
-      lua_checkstack(state, static_cast<int>(registered_widgets.size())) == 0) {
+  if (stack_overflow) {
     return luaL_error(state, "GetFramesRegisteredForEvent(%s): Stack overflow",
                       event_name_arg);
-  }
-
-  int pushed = 0;
-  for (const auto& widget_name : registered_widgets) {
-    if (!PushGlueWidgetGlobalTable(state, widget_name)) {
-      continue;
-    }
-    ++pushed;
   }
 
   return pushed;
@@ -185,12 +195,79 @@ void PublishWidgetGlobal(lua_State* state, const std::string& name) {
   lua_pop(state, 1);
 }
 
+// Runs LuaCreateFrame's argument validation. On failure pushes the error message (without
+// the location prefix) and returns true, so the caller can raise it after every C++ object
+// used here has been destroyed.
+static bool PushCreateFrameArgumentError(lua_State* state) {
+  const char* frame_type_raw = lua_tostring(state, 1);
+  const std::string frame_type =
+      frame_type_raw != nullptr ? std::string(frame_type_raw) : std::string();
+
+  const char* inherits_raw = lua_tostring(state, 4);
+  auto* runtime = GetWidgetRuntime(state);
+
+  if (lua_istable(state, 3) != 0) {
+    const std::string parent_key = ReadStoredWidgetRuntimeKey(state, 3);
+    if (parent_key.empty()) {
+      lua_pushstring(state, "CreateFrame: Couldn't find 'this' in parent object");
+      return true;
+    }
+    if (auto* parent_runtime = GetWidgetRuntime(state);
+        parent_runtime != nullptr && !IsUiParentName(parent_key)) {
+      const auto parent_widget = parent_runtime->GetWidget(parent_key);
+      if (!parent_widget.has_value()) {
+        lua_pushstring(state, "CreateFrame: Couldn't find 'this' in parent object");
+        return true;
+      }
+      if (!GlueWidgetMatchesFrameType(*parent_widget)) {
+        lua_pushstring(state, "CreateFrame: Wrong parent object type, expected frame");
+        return true;
+      }
+    } else if (parent_runtime == nullptr &&
+               !IsGlueFrameLikeType(
+                   ReadGlueTableStringField(state, 3, "__ow_type"))) {
+      lua_pushstring(state, "CreateFrame: Wrong parent object type, expected frame");
+      return true;
+    }
+  }
+
+  const std::string inherits =
+      inherits_raw != nullptr ? std::string(inherits_raw) : std::string();
+  if (runtime != nullptr && lua_type(state, 4) == LUA_TSTRING) {
+    for (const auto& template_name : openwow::ui::framexml::SplitTemplateList(
+             inherits, openwow::ui::framexml::TemplateListSyntax::kCreateFrame)) {
+      switch (runtime->ValidateTemplateChain(template_name)) {
+        case GlueTemplateValidation::kFound:
+          break;
+        case GlueTemplateValidation::kMissing:
+          lua_pushfstring(state, "CreateFrame(): Couldn't find inherited node \"%s\"",
+                          template_name.c_str());
+          return true;
+        case GlueTemplateValidation::kRecursive:
+          lua_pushfstring(state, "CreateFrame(): Recursively inherited node \"%s\"",
+                          template_name.c_str());
+          return true;
+      }
+    }
+  }
+
+  if (openwow::ui::widgets::ResolveRegisteredCreateFrameTypeName(frame_type) == nullptr) {
+    lua_pushfstring(state, "CreateFrame: Unknown frame type '%s'", frame_type.c_str());
+    return true;
+  }
+  return false;
+}
+
 int LuaCreateFrame(lua_State* state) {
   if (lua_isstring(state, 1) == 0 ||
       (!lua_isnone(state, 3) && lua_isnil(state, 3) == 0 &&
        lua_istable(state, 3) == 0)) {
     return luaL_error(
         state, "Usage: CreateFrame(\"frameType\" [, \"name\"] [, parent] [, \"template\"] [, id])");
+  }
+
+  if (PushCreateFrameArgumentError(state)) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
 
   const char* frame_type_raw = lua_tostring(state, 1);
@@ -203,50 +280,12 @@ int LuaCreateFrame(lua_State* state) {
   std::string parent_key;
   if (lua_istable(state, 3) != 0) {
     parent_key = ReadStoredWidgetRuntimeKey(state, 3);
-    if (parent_key.empty()) {
-      return luaL_error(state, "CreateFrame: Couldn't find 'this' in parent object");
-    }
-    if (auto* parent_runtime = GetWidgetRuntime(state);
-        parent_runtime != nullptr && !IsUiParentName(parent_key)) {
-      const auto parent_widget = parent_runtime->GetWidget(parent_key);
-      if (!parent_widget.has_value()) {
-        return luaL_error(state,
-                          "CreateFrame: Couldn't find 'this' in parent object");
-      }
-      if (!GlueWidgetMatchesFrameType(*parent_widget)) {
-        return luaL_error(
-            state, "CreateFrame: Wrong parent object type, expected frame");
-      }
-    } else if (parent_runtime == nullptr &&
-               !IsGlueFrameLikeType(
-                   ReadGlueTableStringField(state, 3, "__ow_type"))) {
-      return luaL_error(
-          state, "CreateFrame: Wrong parent object type, expected frame");
-    }
   }
 
   const std::string inherits = inherits_raw != nullptr ? std::string(inherits_raw) : std::string();
-  if (runtime != nullptr && lua_type(state, 4) == LUA_TSTRING) {
-    for (const auto& template_name : openwow::ui::framexml::SplitTemplateList(
-             inherits, openwow::ui::framexml::TemplateListSyntax::kCreateFrame)) {
-      switch (runtime->ValidateTemplateChain(template_name)) {
-        case GlueTemplateValidation::kFound:
-          break;
-        case GlueTemplateValidation::kMissing:
-          return luaL_error(state, "CreateFrame(): Couldn't find inherited node \"%s\"",
-                            template_name.c_str());
-        case GlueTemplateValidation::kRecursive:
-          return luaL_error(state, "CreateFrame(): Recursively inherited node \"%s\"",
-                            template_name.c_str());
-      }
-    }
-  }
 
   const char* canonical_frame_type =
       openwow::ui::widgets::ResolveRegisteredCreateFrameTypeName(frame_type);
-  if (canonical_frame_type == nullptr) {
-    return luaL_error(state, "CreateFrame: Unknown frame type '%s'", frame_type.c_str());
-  }
 
   const std::string frame_name =
       openwow::ui::game::frame_api::ExpandLuaParentNameToken(

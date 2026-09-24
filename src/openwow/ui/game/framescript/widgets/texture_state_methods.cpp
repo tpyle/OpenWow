@@ -178,8 +178,9 @@ void ApplyTextureStateMethods(lua_State *L, int table_idx) {
     const int self_idx = ValidateTextureSelf(Ls);
     int draw_layer_id = 0;
     if (lua_isstring(Ls, 2) == 0 || !TryParseDrawLayerName(lua_tostring(Ls, 2), &draw_layer_id)) {
-      return luaL_error(Ls, "Usage: %s:SetDrawLayer(\"layer\")",
-                        GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      lua_pushfstring(Ls, "Usage: %s:SetDrawLayer(\"layer\")",
+                      GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
 
     const char *canonical_layer = GetDrawLayerNameById(draw_layer_id);

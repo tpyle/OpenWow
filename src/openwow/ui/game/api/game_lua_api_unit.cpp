@@ -188,6 +188,11 @@ int LuaUnitDynamicFlagPredicate(lua_State *L, const char *usage,
 
 [[nodiscard]] LuaUnitPair ResolveLiveScriptUnitPair(const LuaCallFrame &call,
                                                     const char *usage) {
+  // Both arguments raise the same usage error; check argument 2 before first_id exists so
+  // luaL_error cannot longjmp past its destructor.
+  if (!lua_isstring(call.state(), 2)) {
+    luaL_error(call.state(), usage);
+  }
   const auto first_id = call.require_string(1, usage);
   const auto second_id = call.require_string(2, usage);
   auto *const session = call.world_session();
@@ -1800,6 +1805,11 @@ int LuaUnitIsEnemy(lua_State *L) {
 
 int LuaUnitIsFriend(lua_State *L) {
   const LuaCallFrame call{L};
+  // Argument 2 raises the same usage error; check it before any std::string exists so
+  // luaL_error cannot longjmp past a destructor.
+  if (!lua_isstring(L, 2)) {
+    return luaL_error(L, "Usage: UnitIsFriend(\"unit\", \"otherUnit\")");
+  }
   const auto uid1 = call.require_string(1, "Usage: UnitIsFriend(\"unit\", \"otherUnit\")");
   const auto uid2 = call.require_string(2, "Usage: UnitIsFriend(\"unit\", \"otherUnit\")");
   auto *session = call.world_session();
@@ -1823,6 +1833,11 @@ int LuaUnitIsFriend(lua_State *L) {
 
 int LuaUnitIsUnit(lua_State *L) {
   const LuaCallFrame call{L};
+  // Argument 2 raises the same usage error; check it before any std::string exists so
+  // luaL_error cannot longjmp past a destructor.
+  if (!lua_isstring(L, 2)) {
+    return luaL_error(L, "Usage: UnitIsUnit(\"unit\", \"otherUnit\")");
+  }
   const auto uid1 = call.require_string(1, "Usage: UnitIsUnit(\"unit\", \"otherUnit\")");
   const auto uid2 = call.require_string(2, "Usage: UnitIsUnit(\"unit\", \"otherUnit\")");
   if (openwow::text::EqualsIgnoreCaseAscii(uid1, uid2)) {
@@ -1940,6 +1955,11 @@ int LuaUnitCanAttack(lua_State *L) {
 
 int LuaUnitCanCooperate(lua_State *L) {
   const LuaCallFrame call{L};
+  // Argument 2 raises the same usage error; check it before any std::string exists so
+  // luaL_error cannot longjmp past a destructor.
+  if (!lua_isstring(L, 2)) {
+    return luaL_error(L, "Usage: UnitCanCooperate(\"unit\", \"otherUnit\")");
+  }
   const auto uid1 = call.require_string(1, "Usage: UnitCanCooperate(\"unit\", \"otherUnit\")");
   const auto uid2 = call.require_string(2, "Usage: UnitCanCooperate(\"unit\", \"otherUnit\")");
   auto *session = call.world_session();
@@ -2200,12 +2220,13 @@ int LuaUnitReaction(lua_State *L) {
 
 int LuaUnitThreatSituation(lua_State *L) {
   auto *session = GetWorldSession(L);
-  const auto unit_token = UnitIdArg(L, 1);
-  if (ParseUnitId(unit_token).kind == UnitIdKind::kUnknown) {
+  // Unit tokens are only held as temporaries so no std::string is alive when luaL_error
+  // longjmps out of this function.
+  if (ParseUnitId(UnitIdArg(L, 1)).kind == UnitIdKind::kUnknown) {
     return luaL_error(L, "Usage: UnitThreatSituation(\"unit\" [, \"mob\"])");
   }
 
-  const auto unit_guid = ResolveUnitId(session, unit_token);
+  const auto unit_guid = ResolveUnitId(session, UnitIdArg(L, 1));
   if (unit_guid.IsEmpty()) {
     return 0;
   }
@@ -2214,12 +2235,11 @@ int LuaUnitThreatSituation(lua_State *L) {
   std::uint8_t status_plus_one = 0;
 
   if (lua_isstring(L, 2) != 0) {
-    const auto mob_token = UnitIdArg(L, 2);
-    if (ParseUnitId(mob_token).kind == UnitIdKind::kUnknown) {
+    if (ParseUnitId(UnitIdArg(L, 2)).kind == UnitIdKind::kUnknown) {
       return luaL_error(L, "Usage: UnitThreatSituation(\"unit\" [, \"mob\"])");
     }
 
-    const auto mob_guid = ResolveUnitId(session, mob_token);
+    const auto mob_guid = ResolveUnitId(session, UnitIdArg(L, 2));
     const auto *const mob = session != nullptr ? session->objects().GetUnit(mob_guid) : nullptr;
     if (mob == nullptr) {
       return 0;
@@ -2261,15 +2281,15 @@ int LuaUnitThreatSituation(lua_State *L) {
 
 int LuaUnitDetailedThreatSituation(lua_State *L) {
   auto *session = GetWorldSession(L);
-  const auto unit_token = UnitIdArg(L, 1);
-  const auto mob_token = UnitIdArg(L, 2);
-  if (ParseUnitId(unit_token).kind == UnitIdKind::kUnknown ||
-      ParseUnitId(mob_token).kind == UnitIdKind::kUnknown) {
+  // Unit tokens are only held as temporaries so no std::string is alive when luaL_error
+  // longjmps out of this function.
+  if (ParseUnitId(UnitIdArg(L, 1)).kind == UnitIdKind::kUnknown ||
+      ParseUnitId(UnitIdArg(L, 2)).kind == UnitIdKind::kUnknown) {
     return luaL_error(L, "Usage: UnitDetailedThreatSituation(\"unit\" [, \"mob\"])");
   }
 
-  const auto unit_guid = ResolveUnitId(session, unit_token);
-  const auto mob_guid = ResolveUnitId(session, mob_token);
+  const auto unit_guid = ResolveUnitId(session, UnitIdArg(L, 1));
+  const auto mob_guid = ResolveUnitId(session, UnitIdArg(L, 2));
   const auto *const mob = session != nullptr ? session->objects().GetUnit(mob_guid) : nullptr;
   if (unit_guid.IsEmpty() || mob == nullptr) {
     return 0;
@@ -2439,8 +2459,6 @@ int LuaUnitResistance(lua_State *L) {
     return luaL_error(L, "Usage: UnitResistance(\"unit\", resistanceIndex)");
   }
 
-  const auto uid = UnitIdArg(L, 1);
-
   auto *session = call.world_session();
 
   const auto school = static_cast<std::uint32_t>(
@@ -2449,6 +2467,8 @@ int LuaUnitResistance(lua_State *L) {
   constexpr std::uint32_t kHighestResistanceSchool = 6u;
   if (school > kHighestResistanceSchool)
     return luaL_error(L, "Invalid resistance index in UnitResistance");
+
+  const auto uid = UnitIdArg(L, 1);
 
   const auto *unit = ResolveLiveScriptUnit(session, uid);
 
@@ -2874,6 +2894,11 @@ int LuaUnitClassBase(lua_State *L) {
 
 int LuaUnitIsSameServer(lua_State *L) {
   const LuaCallFrame call{L};
+  // Argument 2 raises the same usage error; check it before any std::string exists so
+  // luaL_error cannot longjmp past a destructor.
+  if (!lua_isstring(L, 2)) {
+    return luaL_error(L, "Usage: UnitIsSameServer(\"unit\", \"otherUnit\")");
+  }
   const auto token1 = call.require_string(1, "Usage: UnitIsSameServer(\"unit\", \"otherUnit\")");
   const auto token2 = call.require_string(2, "Usage: UnitIsSameServer(\"unit\", \"otherUnit\")");
 
@@ -3020,17 +3045,23 @@ int LuaGetPlayerInfoByGUID(lua_State *L) {
     return luaL_error(L, "Usage: GetPlayerInfoByGUID(\"playerGUID\")");
   }
 
-  const std::string guid_str = SafeLuaString(L, 1);
   std::uint64_t raw_guid = 0;
-  char *end = nullptr;
-  if (guid_str.size() > 2 && guid_str[0] == '0' && (guid_str[1] == 'x' || guid_str[1] == 'X')) {
-    raw_guid = std::strtoull(guid_str.c_str() + 2, &end, 16);
-  } else {
-    raw_guid = std::strtoull(guid_str.c_str(), &end, 10);
+  bool valid_guid = false;
+  {
+    // Scoped so guid_str is destroyed before luaL_error longjmps.
+    const std::string guid_str = SafeLuaString(L, 1);
+    char *end = nullptr;
+    if (guid_str.size() > 2 && guid_str[0] == '0' &&
+        (guid_str[1] == 'x' || guid_str[1] == 'X')) {
+      raw_guid = std::strtoull(guid_str.c_str() + 2, &end, 16);
+    } else {
+      raw_guid = std::strtoull(guid_str.c_str(), &end, 10);
+    }
+    valid_guid = !(guid_str.empty() || end == nullptr || *end != '\0' || raw_guid == 0 ||
+                   (raw_guid & 0xF000000000000000ull) != 0);
   }
 
-  if (guid_str.empty() || end == nullptr || *end != '\0' || raw_guid == 0 ||
-      (raw_guid & 0xF000000000000000ull) != 0) {
+  if (!valid_guid) {
     return luaL_error(L, "Usage: GetPlayerInfoByGUID(\"playerGUID\")");
   }
 

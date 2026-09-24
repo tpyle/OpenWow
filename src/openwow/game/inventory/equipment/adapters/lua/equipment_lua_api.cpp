@@ -167,31 +167,44 @@ int LuaSaveEquipmentSet(lua_State* state) {
   if (!adapter.equipment().received_list() || !lua_isnumber(state, 2)) {
     return 0;
   }
-  const auto name =
-      checked_name(state, 1, "Usage: SaveEquipmentSet(\"setName\", iconIndex)");
-  if (name.empty()) {
-    return luaL_error(state, "Invalid string for setName");
-  }
+  // The strings live in this scope and errors are raised after it closes, since luaL_error
+  // longjmps past C++ destructors.
+  bool invalid_name = false;
+  bool too_many_sets = false;
+  {
+    const auto name =
+        checked_name(state, 1, "Usage: SaveEquipmentSet(\"setName\", iconIndex)");
+    if (name.empty()) {
+      invalid_name = true;
+    } else {
+      const auto icon_index = static_cast<int>(lua_tonumber(state, 2));
+      std::string icon = "INV_Misc_QuestionMark";
+      if (icon_index < 0) {
+        if (auto resolved = adapter.ResolveVisibleSlotIcon(
+                state, static_cast<std::uint8_t>(-icon_index - 1));
+            resolved.has_value()) {
+          const auto slash = resolved->find_last_of("\\/");
+          icon = slash == std::string::npos ? *resolved
+                                           : resolved->substr(slash + 1);
+        }
+      }
 
-  const auto icon_index = static_cast<int>(lua_tonumber(state, 2));
-  std::string icon = "INV_Misc_QuestionMark";
-  if (icon_index < 0) {
-    if (auto resolved = adapter.ResolveVisibleSlotIcon(
-            state, static_cast<std::uint8_t>(-icon_index - 1));
-        resolved.has_value()) {
-      const auto slash = resolved->find_last_of("\\/");
-      icon = slash == std::string::npos ? *resolved
-                                       : resolved->substr(slash + 1);
+      const auto request =
+          adapter.equipment().prepare_save(name, icon, adapter.inventory());
+      if (!request.has_value()) {
+        too_many_sets = true;
+      } else {
+        adapter.SaveSet(*request);
+        adapter.equipment().clear_next_save_ignored_slots();
+      }
     }
   }
-
-  const auto request =
-      adapter.equipment().prepare_save(name, icon, adapter.inventory());
-  if (!request.has_value()) {
+  if (invalid_name) {
+    return luaL_error(state, "Invalid string for setName");
+  }
+  if (too_many_sets) {
     return luaL_error(state, "Too many sets! You can only have %d sets", 10);
   }
-  adapter.SaveSet(*request);
-  adapter.equipment().clear_next_save_ignored_slots();
   return 0;
 }
 
@@ -355,13 +368,18 @@ int LuaEquipmentManagerUnignoreSlotForSave(lua_State* state) {
 
 int LuaRenameEquipmentSet(lua_State* state) {
   auto& adapter = RequireItemLuaAdapter(state);
-  const auto old_name = checked_name(
-      state, 1, "Usage: RenameEquipmentSet(\"oldName\", \"newName\")");
-  const auto new_name = checked_name(
-      state, 2, "Usage: RenameEquipmentSet(\"oldName\", \"newName\")");
-  if (new_name.empty()) {
+  constexpr const char* kUsage =
+      "Usage: RenameEquipmentSet(\"oldName\", \"newName\")";
+  // Validate both arguments before either name string exists: luaL_error longjmps past
+  // C++ destructors. checked_name raises this same usage error for either argument.
+  if (!lua_isstring(state, 1) || !lua_isstring(state, 2)) {
+    return luaL_error(state, "%s", kUsage);
+  }
+  if (checked_name(state, 2, kUsage).empty()) {
     return luaL_error(state, "Invalid string for setName");
   }
+  const auto old_name = checked_name(state, 1, kUsage);
+  const auto new_name = checked_name(state, 2, kUsage);
   if (const auto request =
           adapter.equipment().prepare_rename(old_name, new_name);
       request.has_value()) {

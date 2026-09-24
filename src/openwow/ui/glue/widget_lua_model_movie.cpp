@@ -41,8 +41,8 @@ namespace openwow::ui::glue::detail {
 int LuaWidget_SetModelScale(lua_State* state) {
 
   if (lua_istable(state, 1) == 0) return 0;
-  const auto name = WidgetNameFromArg(state, 1);
   const float scale = static_cast<float>(luaL_optnumber(state, 2, 1.0));
+  const auto name = WidgetNameFromArg(state, 1);
   if (!name.empty()) {
     if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
       runtime->SetModelScale(name, scale);
@@ -52,10 +52,11 @@ int LuaWidget_SetModelScale(lua_State* state) {
 }
 
 int LuaWidget_SetPosition(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
+  (void)GetCheckedGlueFrameWidgetName(state);
   const float x = static_cast<float>(luaL_checknumber(state, 2));
   const float y = static_cast<float>(luaL_checknumber(state, 3));
   const float z = static_cast<float>(luaL_checknumber(state, 4));
+  const auto name = GetCheckedGlueFrameWidgetName(state);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetModelPosition(name, x, y, z);
   }
@@ -77,10 +78,14 @@ int LuaWidget_GetPosition(lua_State* state) {
 }
 
 int LuaWidget_SetFacing(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
   if (lua_isnumber(state, 2) == 0) {
-    return luaL_error(state, "Usage: %s:SetFacing(facing)", name.c_str());
+    {
+      const auto name = GetCheckedGlueFrameWidgetName(state);
+      lua_pushfstring(state, "Usage: %s:SetFacing(facing)", name.c_str());
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto name = GetCheckedGlueFrameWidgetName(state);
   const auto facing = static_cast<float>(lua_tonumber(state, 2));
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetFacing(name, facing);
@@ -104,10 +109,10 @@ int LuaWidget_GetFacing(lua_State* state) {
   return 1;
 }
 int LuaWidget_SetFogColor(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   const float r = static_cast<float>(luaL_optnumber(state, 2, 0.0));
   const float g = static_cast<float>(luaL_optnumber(state, 3, 0.0));
   const float b = static_cast<float>(luaL_optnumber(state, 4, 0.0));
+  const auto name = WidgetNameFromArg(state, 1);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetFogColor(name, r, g, b);
   }
@@ -115,8 +120,8 @@ int LuaWidget_SetFogColor(lua_State* state) {
 }
 
 int LuaWidget_SetFogNear(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   const float near_v = static_cast<float>(luaL_optnumber(state, 2, 0.0));
+  const auto name = WidgetNameFromArg(state, 1);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetFogNear(name, near_v);
   }
@@ -124,8 +129,8 @@ int LuaWidget_SetFogNear(lua_State* state) {
 }
 
 int LuaWidget_SetFogFar(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   const float far_v = static_cast<float>(luaL_optnumber(state, 2, 0.0));
+  const auto name = WidgetNameFromArg(state, 1);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetFogFar(name, far_v);
   }
@@ -141,11 +146,15 @@ int LuaWidget_ClearFog(lua_State* state) {
 }
 
 int LuaWidget_SetGlow(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   if (lua_isnumber(state, 2) == 0) {
-    return luaL_error(state, "Usage: %s:SetGlow(value)",
+    {
+      const auto name = WidgetNameFromArg(state, 1);
+      lua_pushfstring(state, "Usage: %s:SetGlow(value)",
                       name.empty() ? "<unnamed>" : name.c_str());
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto name = WidgetNameFromArg(state, 1);
   const float glow = static_cast<float>(lua_tonumber(state, 2));
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetGlow(name, glow);
@@ -163,24 +172,22 @@ bool GlueWidgetMatchesModelLightType(const std::string& kind) {
 }
 
 std::string GetCheckedGlueModelLightWidgetName(lua_State* state) {
-  const auto name = GetCheckedGlueWidgetName(state);
-  if (IsUiParentName(name)) {
-    luaL_error(state, "Wrong object type for member function");
+  const char* error = "Wrong object type for member function";
+  {
+    auto name = GetCheckedGlueWidgetName(state);
+    if (!IsUiParentName(name)) {
+      auto* runtime = GetWidgetRuntime(state);
+      const auto widget = runtime != nullptr ? runtime->GetWidget(name)
+                                             : std::optional<GlueWidgetState>{};
+      if (!widget.has_value()) {
+        error = "Attempt to find 'this' in non-framescript object";
+      } else if (GlueWidgetMatchesModelLightType(widget->kind)) {
+        return name;
+      }
+    }
   }
-
-  auto* runtime = GetWidgetRuntime(state);
-  if (runtime == nullptr) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
-  }
-
-  const auto widget = runtime->GetWidget(name);
-  if (!widget.has_value()) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
-  }
-  if (!GlueWidgetMatchesModelLightType(widget->kind)) {
-    luaL_error(state, "Wrong object type for member function");
-  }
-  return name;
+  luaL_error(state, "%s", error);
+  return {};
 }
 
 }
@@ -317,12 +324,14 @@ bool ParseLightFromStack(lua_State* state, int base,
 int AddGlueModelLight(lua_State* state,
                       openwow::ui::glue::ModelLightCategory category,
                       const char* usage_string) {
-  const auto name = GetCheckedGlueModelLightWidgetName(state);
+  (void)GetCheckedGlueModelLightWidgetName(state);
   openwow::ui::glue::ModelLightEntry entry;
   if (!ParseLightFromStack(state, 3, &entry)) {
-    return luaL_error(
+    lua_pushfstring(
         state, usage_string, GetGlueModelLightUsageObjectName(state).c_str());
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto name = GetCheckedGlueModelLightWidgetName(state);
 
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->AddModelLight(name, category, ReadGlueModelLightSlot(state, 2), entry);
@@ -356,46 +365,46 @@ int LuaWidget_AdvanceTime(lua_State* state) {
                       "Attempt to find 'this' in non-table object (used '.' instead of ':' ?)");
   }
 
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
-    return luaL_error(state, "Attempt to find 'this' in non-framescript object");
+  const char* error = "Attempt to find 'this' in non-framescript object";
+  {
+    const auto name = WidgetNameFromArg(state, 1);
+    auto* runtime = GetWidgetRuntime(state);
+    const auto widget = !name.empty() && runtime != nullptr
+                            ? runtime->GetWidget(name)
+                            : std::optional<GlueWidgetState>{};
+    if (widget.has_value()) {
+      const auto kind = ToLowerAscii(widget->kind);
+      if (kind != "model" && kind != "modelffx" && kind != "playermodel" &&
+          kind != "dressupmodel") {
+        error = "Wrong object type for member function";
+      } else {
+        error = nullptr;
+      }
+    }
   }
-
-  auto* runtime = GetWidgetRuntime(state);
-  if (runtime == nullptr) {
-    return luaL_error(state, "Attempt to find 'this' in non-framescript object");
-  }
-
-  const auto widget = runtime->GetWidget(name);
-  if (!widget.has_value()) {
-    return luaL_error(state, "Attempt to find 'this' in non-framescript object");
-  }
-
-  const auto kind = ToLowerAscii(widget->kind);
-  if (kind != "model" && kind != "modelffx" && kind != "playermodel" && kind != "dressupmodel") {
-    return luaL_error(state, "Wrong object type for member function");
+  if (error != nullptr) {
+    return luaL_error(state, "%s", error);
   }
   return 0;
 }
 
 static std::string GetCheckedGlueMovieFrameWidgetName(lua_State* state) {
-  const auto name = GetCheckedGlueWidgetName(state);
-  if (IsUiParentName(name)) {
-    luaL_error(state, "Wrong object type for member function");
+  const char* error = "Wrong object type for member function";
+  {
+    auto name = GetCheckedGlueWidgetName(state);
+    if (!IsUiParentName(name)) {
+      auto* runtime = GetWidgetRuntime(state);
+      const auto widget = runtime != nullptr ? runtime->GetWidget(name)
+                                             : std::optional<GlueWidgetState>{};
+      if (!widget.has_value()) {
+        error = "Attempt to find 'this' in non-framescript object";
+      } else if (EqualsIgnoreCaseAscii(widget->kind.c_str(), "MovieFrame")) {
+        return name;
+      }
+    }
   }
-
-  auto* runtime = GetWidgetRuntime(state);
-  if (runtime == nullptr) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
-  }
-  const auto widget = runtime->GetWidget(name);
-  if (!widget.has_value()) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
-  }
-  if (!EqualsIgnoreCaseAscii(widget->kind.c_str(), "MovieFrame")) {
-    luaL_error(state, "Wrong object type for member function");
-  }
-  return name;
+  luaL_error(state, "%s", error);
+  return {};
 }
 
 int LuaWidget_EnableSubtitles(lua_State* state) {
@@ -409,12 +418,16 @@ int LuaWidget_EnableSubtitles(lua_State* state) {
 
 int LuaWidget_StartMovie(lua_State* state) {
 
-  const auto widget_name = GetCheckedGlueMovieFrameWidgetName(state);
   if (lua_isstring(state, 2) == 0 || lua_isnumber(state, 3) == 0) {
-    return luaL_error(state,
+    {
+      const auto widget_name = GetCheckedGlueMovieFrameWidgetName(state);
+      lua_pushfstring(state,
                       "Usage: %s:StartMovie(\"filename\", volume_0_to_255)",
                       widget_name.empty() ? "<unnamed>" : widget_name.c_str());
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto widget_name = GetCheckedGlueMovieFrameWidgetName(state);
   size_t filename_length = 0;
   const char* filename = lua_tolstring(state, 2, &filename_length);
   const int volume = static_cast<int>(lua_tonumber(state, 3));
@@ -443,11 +456,12 @@ int LuaWidget_StopMovie(lua_State* state) {
   return 0;
 }
 int LuaWidget_SetCamera(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  const auto usage_name = GetUsageWidgetName(state);
   if (lua_isnumber(state, 2) == 0) {
-    return luaL_error(state, "Usage: %s:SetCamera(index)", usage_name.c_str());
+    (void)GetCheckedGlueFrameWidgetName(state);
+    lua_pushfstring(state, "Usage: %s:SetCamera(index)", GetUsageWidgetName(state).c_str());
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto name = GetCheckedGlueFrameWidgetName(state);
 
   const int camera = RuntimeModelIndexFromClientU32(ClampLuaNumberToClientU32(state, 2));
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
@@ -457,20 +471,24 @@ int LuaWidget_SetCamera(lua_State* state) {
 }
 
 int LuaWidget_SetSequence(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  const auto usage_name = GetUsageWidgetName(state);
   if (lua_isnumber(state, 2) == 0) {
-    return luaL_error(state, "Usage: %s:SetSequence(sequence)", usage_name.c_str());
+    (void)GetCheckedGlueFrameWidgetName(state);
+    lua_pushfstring(state, "Usage: %s:SetSequence(sequence)",
+                    GetUsageWidgetName(state).c_str());
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
 
   const std::uint32_t seq = ClampLuaNumberToClientU32(state, 2);
   if (seq >= kModelSequenceCount) {
-    return luaL_error(state,
-                      "Error: %s:SetSequence(sequence) exceeds valid range of 0 - %d",
-                      usage_name.c_str(),
+    (void)GetCheckedGlueFrameWidgetName(state);
+    lua_pushfstring(state,
+                    "Error: %s:SetSequence(sequence) exceeds valid range of 0 - %d",
+                    GetUsageWidgetName(state).c_str(),
 
-                      static_cast<int>(kModelSequenceCount));
+                    static_cast<int>(kModelSequenceCount));
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto name = GetCheckedGlueFrameWidgetName(state);
 
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetSequence(name, RuntimeModelIndexFromClientU32(seq));
@@ -479,13 +497,14 @@ int LuaWidget_SetSequence(lua_State* state) {
 }
 
 int LuaWidget_SetSequenceTime(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  const auto usage_name = GetUsageWidgetName(state);
   if (lua_isnumber(state, 2) == 0 || lua_isnumber(state, 3) == 0) {
-    return luaL_error(state,
-                      "Usage: %s:SetSequenceTime(sequence, time)",
-                      usage_name.c_str());
+    (void)GetCheckedGlueFrameWidgetName(state);
+    lua_pushfstring(state,
+                    "Usage: %s:SetSequenceTime(sequence, time)",
+                    GetUsageWidgetName(state).c_str());
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto name = GetCheckedGlueFrameWidgetName(state);
 
   const int seq = RuntimeModelIndexFromClientU32(ClampLuaNumberToClientU32(state, 2));
   const std::uint32_t time_ms = ClampLuaNumberToClientU32(state, 3);
@@ -499,8 +518,8 @@ int LuaWidget_SetModel(lua_State* state) {
   if (lua_istable(state, 1) == 0) {
     return 0;
   }
-  const auto name = WidgetNameFromArg(state, 1);
   const char* model = luaL_optstring(state, 2, "");
+  const auto name = WidgetNameFromArg(state, 1);
   lua_pushstring(state, model ? model : "");
   lua_setfield(state, 1, "__ow_model");
   if (!name.empty()) {

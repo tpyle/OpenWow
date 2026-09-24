@@ -283,26 +283,32 @@ TryResolveTrackedPartyControlledTemporaryPortraitTexturePath(const WorldSession 
 }
 
 static int PushPortraitTextureTarget(lua_State *L) {
+  // The error messages are formatted while texture_name is alive and raised after it is
+  // destroyed, since luaL_error longjmps past C++ destructors.
   if (lua_isstring(L, 1) != 0) {
-    const std::string texture_name = SafeLuaString(L, 1);
-    lua_getglobal(L, texture_name.c_str());
-    if (lua_istable(L, -1) != 0) {
-      const int texture_index = lua_absindex(L, -1);
-      const char *type_name = openwow::ui::BorrowRawLuaStringField(L, texture_index, "__ow_type");
-      if (HasLuaScriptObjectThis(L, texture_index) && TextureMatchesObjectType(type_name)) {
-        return texture_index;
+    {
+      const std::string texture_name = SafeLuaString(L, 1);
+      lua_getglobal(L, texture_name.c_str());
+      if (lua_istable(L, -1) != 0) {
+        const int texture_index = lua_absindex(L, -1);
+        const char *type_name =
+            openwow::ui::BorrowRawLuaStringField(L, texture_index, "__ow_type");
+        if (HasLuaScriptObjectThis(L, texture_index) && TextureMatchesObjectType(type_name)) {
+          return texture_index;
+        }
       }
-    }
 
-    lua_pop(L, 1);
-    return luaL_error(L, "SetPortraitToTexture(): Couldn't find texture named '%s'",
+      lua_pop(L, 1);
+      lua_pushfstring(L, "SetPortraitToTexture(): Couldn't find texture named '%s'",
                       texture_name.c_str());
+    }
+    return luaL_error(L, "%s", lua_tostring(L, -1));
   }
 
   if (lua_type(L, 1) != LUA_TTABLE) {
-    const std::string texture_name = SafeLuaString(L, 1);
-    return luaL_error(L, "SetPortraitToTexture(): Couldn't find texture named '%s'",
-                      texture_name.c_str());
+    lua_pushfstring(L, "SetPortraitToTexture(): Couldn't find texture named '%s'",
+                    SafeLuaString(L, 1).c_str());
+    return luaL_error(L, "%s", lua_tostring(L, -1));
   }
 
   lua_pushvalue(L, 1);
@@ -2189,32 +2195,41 @@ int LuaGetFramesRegisteredForEvent(lua_State *L) {
   }
 
   const char *event_name_arg = lua_tostring(L, 1);
-  const std::string event_name = event_name_arg != nullptr ? event_name_arg : "";
+  // Scoped so event_name and frame_refs are destroyed before luaL_error longjmps.
+  bool stack_overflow = false;
+  int result_count = 0;
+  {
+    const std::string event_name = event_name_arg != nullptr ? event_name_arg : "";
 
-  std::vector<int> frame_refs;
-  if (const auto *mgr = GetGameUiManager(L); mgr != nullptr) {
-    const auto registered_frames =
-        mgr->frame_events().dispatcher().GetFramesRegisteredForEvent(event_name);
-    frame_refs.reserve(registered_frames.size());
-    for (const int ref : registered_frames) {
-      if (ref == LUA_NOREF || ref == LUA_REFNIL) {
-        continue;
+    std::vector<int> frame_refs;
+    if (const auto *mgr = GetGameUiManager(L); mgr != nullptr) {
+      const auto registered_frames =
+          mgr->frame_events().dispatcher().GetFramesRegisteredForEvent(event_name);
+      frame_refs.reserve(registered_frames.size());
+      for (const int ref : registered_frames) {
+        if (ref == LUA_NOREF || ref == LUA_REFNIL) {
+          continue;
+        }
+        frame_refs.push_back(ref);
       }
-      frame_refs.push_back(ref);
+    }
+
+    if (frame_refs.size() > static_cast<std::size_t>(std::numeric_limits<int>::max()) ||
+        lua_checkstack(L, static_cast<int>(frame_refs.size())) == 0) {
+      stack_overflow = true;
+    } else {
+      result_count = static_cast<int>(frame_refs.size());
+
+      for (const int ref : frame_refs) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
+      }
     }
   }
 
-  if (frame_refs.size() > static_cast<std::size_t>(std::numeric_limits<int>::max()) ||
-      lua_checkstack(L, static_cast<int>(frame_refs.size())) == 0) {
+  if (stack_overflow) {
     return luaL_error(L, "GetFramesRegisteredForEvent(%s): Stack overflow",
                       event_name_arg);
   }
-  const int result_count = static_cast<int>(frame_refs.size());
-
-  for (const int ref : frame_refs) {
-    lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
-  }
-
   return result_count;
 }
 

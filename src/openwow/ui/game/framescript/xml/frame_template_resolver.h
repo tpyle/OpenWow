@@ -21,7 +21,11 @@ struct TemplateResolveResult {
 
 [[nodiscard]] TemplateResolveResult ResolveTemplateNodes(
     lua_State* lua, const char* inherits, const char* expected_kind);
-int RaiseInheritedTemplateError(lua_State* lua, int owner_index,
+/// Pushes the inherited-template failure message for `result` onto the Lua
+/// stack. The caller raises it with lua_error() once every C++ object that
+/// owns resources (including `result`) has gone out of scope, since
+/// lua_error() unwinds with longjmp and skips destructors.
+void PushInheritedTemplateError(lua_State* lua, int owner_index,
                                 const char* method_name,
                                 const TemplateResolveResult& result);
 

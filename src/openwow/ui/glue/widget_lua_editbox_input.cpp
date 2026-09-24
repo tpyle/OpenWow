@@ -72,10 +72,14 @@ int LuaWidget_Insert(lua_State* state) {
   return 0;
 }
 int LuaWidget_SetMaxBytes(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   if (lua_gettop(state) != 2 || !lua_isnumber(state, 2)) {
-    return luaL_error(state, "Usage: %s:SetMaxBytes(max)", name.c_str());
+    {
+      const auto name = WidgetNameFromArg(state, 1);
+      lua_pushfstring(state, "Usage: %s:SetMaxBytes(max)", name.c_str());
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto name = WidgetNameFromArg(state, 1);
   const int max_bytes = static_cast<int>(lua_tointeger(state, 2));
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetMaxBytes(name, max_bytes);
@@ -84,10 +88,14 @@ int LuaWidget_SetMaxBytes(lua_State* state) {
 }
 
 int LuaWidget_SetMaxLetters(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   if (lua_gettop(state) != 2 || !lua_isnumber(state, 2)) {
-    return luaL_error(state, "Usage: %s:SetMaxLetters(max)", name.c_str());
+    {
+      const auto name = WidgetNameFromArg(state, 1);
+      lua_pushfstring(state, "Usage: %s:SetMaxLetters(max)", name.c_str());
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto name = WidgetNameFromArg(state, 1);
   const int max_letters = static_cast<int>(lua_tointeger(state, 2));
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetMaxLetters(name, max_letters);
@@ -118,11 +126,15 @@ int LuaWidget_GetVerticalScroll(lua_State* state) {
 }
 
 int LuaWidget_SetVerticalScroll(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   if (!lua_isnumber(state, 2)) {
-    const char* frame_name = name.empty() ? "<unnamed>" : name.c_str();
-    return luaL_error(state, "Usage: %s:SetVerticalScroll(offset)", frame_name);
+    {
+      const auto name = WidgetNameFromArg(state, 1);
+      const char* frame_name = name.empty() ? "<unnamed>" : name.c_str();
+      lua_pushfstring(state, "Usage: %s:SetVerticalScroll(offset)", frame_name);
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto name = WidgetNameFromArg(state, 1);
   const double offset = lua_tonumber(state, 2);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     const double previous = runtime->GetVerticalScroll(name);
@@ -161,12 +173,16 @@ int LuaWidget_GetHorizontalScroll(lua_State* state) {
 }
 
 int LuaWidget_SetHorizontalScroll(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   if (!lua_isnumber(state, 2)) {
-    const char* frame_name = name.empty() ? "<unnamed>" : name.c_str();
-    return luaL_error(state, "Usage: %s:SetHorizontalScroll(offset)",
+    {
+      const auto name = WidgetNameFromArg(state, 1);
+      const char* frame_name = name.empty() ? "<unnamed>" : name.c_str();
+      lua_pushfstring(state, "Usage: %s:SetHorizontalScroll(offset)",
                       frame_name);
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto name = WidgetNameFromArg(state, 1);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     const double previous = runtime->GetHorizontalScroll(name);
     runtime->SetHorizontalScroll(name, lua_tonumber(state, 2));
@@ -252,15 +268,14 @@ int LuaWidget_HasFocus(lua_State* state) {
 }
 
 int LuaWidget_HighlightText(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty() || lua_istable(state, 1) == 0) {
+  if (WidgetNameFromArg(state, 1).empty() || lua_istable(state, 1) == 0) {
     return 0;
   }
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
-    const std::string text = runtime->GetText(name);
-    const int max_pos = static_cast<int>(text.size());
-
     if (lua_gettop(state) < 2) {
+      const auto name = WidgetNameFromArg(state, 1);
+      const std::string text = runtime->GetText(name);
+      const int max_pos = static_cast<int>(text.size());
 
       runtime->SetEditSelectionBytes(name, 0, max_pos);
       return 0;
@@ -268,6 +283,7 @@ int LuaWidget_HighlightText(lua_State* state) {
 
     const int start = static_cast<int>(luaL_optinteger(state, 2, 0));
     const int end = static_cast<int>(luaL_optinteger(state, 3, start));
+    const auto name = WidgetNameFromArg(state, 1);
     if (start == 0 && end == 0) {
       runtime->ClearEditSelection(name);
       return 0;

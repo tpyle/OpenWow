@@ -40,13 +40,17 @@
 namespace openwow::ui::glue::detail {
 
 int LuaWidget_SetJustifyH(lua_State* state) {
-  const auto widget = GetCheckedFontStringWidget(state);
   uint32_t flags = 0;
   const char* value = (lua_isstring(state, 2) != 0) ? lua_tostring(state, 2) : nullptr;
   if (openwow::ui::JustifyStringToFlags(value, &flags) == 0) {
-    return luaL_error(state, "Usage: %s:SetJustifyH(\"justify\")",
+    {
+      const auto widget = GetCheckedFontStringWidget(state);
+      lua_pushfstring(state, "Usage: %s:SetJustifyH(\"justify\")",
                       widget.name.empty() ? "<unnamed>" : widget.name.c_str());
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto widget = GetCheckedFontStringWidget(state);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetJustifyH(widget.name, openwow::ui::JustifyFlagsToString(flags));
   }
@@ -54,13 +58,17 @@ int LuaWidget_SetJustifyH(lua_State* state) {
 }
 
 int LuaWidget_SetJustifyV(lua_State* state) {
-  const auto widget = GetCheckedFontStringWidget(state);
   uint32_t flags = 0;
   const char* value = (lua_isstring(state, 2) != 0) ? lua_tostring(state, 2) : nullptr;
   if (openwow::ui::JustifyStringToFlags(value, &flags) == 0) {
-    return luaL_error(state, "Usage: %s:SetJustifyV(\"justify\")",
+    {
+      const auto widget = GetCheckedFontStringWidget(state);
+      lua_pushfstring(state, "Usage: %s:SetJustifyV(\"justify\")",
                       widget.name.empty() ? "<unnamed>" : widget.name.c_str());
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto widget = GetCheckedFontStringWidget(state);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetJustifyV(widget.name, openwow::ui::JustifyFlagsToString(flags));
   }
@@ -118,7 +126,8 @@ int LuaWidget_SetDisabledFontObject(lua_State* state) {
   return 0;
 }
 
-int LuaWidget_SetFontObject(lua_State* state) {
+// Returns false after pushing the error message when the font argument is rejected.
+static bool ApplyGlueFontObjectArgument(lua_State* state) {
   const auto widget = GetCheckedFontStringWidget(state);
   const std::string& name = widget.name;
   std::string style;
@@ -128,9 +137,10 @@ int LuaWidget_SetFontObject(lua_State* state) {
     const char* font_name = lua_tostring(state, -1);
     if (font_name == nullptr) {
       lua_pop(state, 1);
-      return luaL_error(
+      lua_pushfstring(
           state, "%s:SetFontObject(): Couldn't find 'this' in font object",
           name.empty() ? "<unnamed>" : name.c_str());
+      return false;
     }
     style = font_name;
     lua_pop(state, 1);
@@ -141,9 +151,10 @@ int LuaWidget_SetFontObject(lua_State* state) {
         registered && lua_rawequal(state, 2, -1) != 0;
     lua_pop(state, 1);
     if (!same_object) {
-      return luaL_error(
+      lua_pushfstring(
           state, "%s:SetFontObject(): Wrong object type, expected font",
           name.empty() ? "<unnamed>" : name.c_str());
+      return false;
     }
   } else if (argument_type == LUA_TSTRING) {
     const char* font_name = lua_tostring(state, 2);
@@ -152,20 +163,29 @@ int LuaWidget_SetFontObject(lua_State* state) {
         openwow::ui::game::frame_api::PushNamedFontObject(state, style.c_str());
     lua_pop(state, 1);
     if (!registered) {
-      return luaL_error(
+      lua_pushfstring(
           state, "%s:SetFontObject(): Couldn't find font named %s",
           name.empty() ? "<unnamed>" : name.c_str(), style.c_str());
+      return false;
     }
   } else if (argument_type == LUA_TNONE || argument_type == LUA_TNIL) {
     style.clear();
   } else {
-    return luaL_error(
+    lua_pushfstring(
         state, "Usage: %s:SetFontObject(font or \"font\" or nil)",
         name.empty() ? "<unnamed>" : name.c_str());
+    return false;
   }
 
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetFontStyle(name, style);
+  }
+  return true;
+}
+
+int LuaWidget_SetFontObject(lua_State* state) {
+  if (!ApplyGlueFontObjectArgument(state)) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
   return 0;
 }
@@ -189,35 +209,37 @@ GlueWidgetState GetCheckedFontStringWidget(lua_State* state) {
                "Attempt to find 'this' in non-table object (used '.' instead of ':' ?)");
   }
 
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
+  const char* error = "Attempt to find 'this' in non-framescript object";
+  {
+    const auto name = WidgetNameFromArg(state, 1);
+    auto* runtime = GetWidgetRuntime(state);
+    if (!name.empty() && runtime != nullptr) {
+      auto widget = runtime->GetWidget(name);
+      if (widget.has_value()) {
+        if (EqualsIgnoreCaseAscii(widget->kind.c_str(), "FontString")) {
+          return *std::move(widget);
+        }
+        error = "Wrong object type for member function";
+      }
+    }
   }
-
-  auto* runtime = GetWidgetRuntime(state);
-  if (runtime == nullptr) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
-  }
-
-  const auto widget = runtime->GetWidget(name);
-  if (!widget.has_value()) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
-  }
-  if (!EqualsIgnoreCaseAscii(widget->kind.c_str(), "FontString")) {
-    luaL_error(state, "Wrong object type for member function");
-  }
-  return *widget;
+  luaL_error(state, "%s", error);
+  return {};
 }
 
 static GlueWidgetState GetCheckedFontStringWidgetWithFont(lua_State* state,
                                                           const char* method_name) {
-  const auto widget = GetCheckedFontStringWidget(state);
-  if (widget.font_style.empty()) {
-    luaL_error(state, "%s:%s(): Font not set",
-               widget.name.empty() ? "<unnamed>" : widget.name.c_str(),
-               method_name);
+  {
+    auto widget = GetCheckedFontStringWidget(state);
+    if (!widget.font_style.empty()) {
+      return widget;
+    }
+    lua_pushfstring(state, "%s:%s(): Font not set",
+                    widget.name.empty() ? "<unnamed>" : widget.name.c_str(),
+                    method_name);
   }
-  return widget;
+  luaL_error(state, "%s", lua_tostring(state, -1));
+  return {};
 }
 
 static bool GlueWidgetSupportsSetText(const GlueWidgetState& widget) {
@@ -233,29 +255,33 @@ static bool GlueWidgetSupportsSetText(const GlueWidgetState& widget) {
 }
 
 static GlueWidgetState GetCheckedSetTextWidget(lua_State* state) {
-  const auto name = GetCheckedGlueWidgetName(state);
-  if (IsUiParentName(name)) {
-    luaL_error(state, "Wrong object type for member function");
+  const char* error = nullptr;
+  {
+    const auto name = GetCheckedGlueWidgetName(state);
+    auto* runtime = GetWidgetRuntime(state);
+    auto widget = IsUiParentName(name) || runtime == nullptr
+                      ? std::optional<GlueWidgetState>{}
+                      : runtime->GetWidget(name);
+    if (IsUiParentName(name)) {
+      error = "Wrong object type for member function";
+    } else if (!widget.has_value()) {
+      error = "Attempt to find 'this' in non-framescript object";
+    } else if (!GlueWidgetSupportsSetText(*widget)) {
+      error = "Wrong object type for member function";
+    } else if (EqualsIgnoreCaseAscii(widget->kind.c_str(), "FontString") &&
+               widget->font_style.empty()) {
+      lua_pushfstring(state, "%s:SetText(): Font not set",
+                      widget->name.empty() ? "<unnamed>" : widget->name.c_str());
+    } else {
+      return *std::move(widget);
+    }
   }
-
-  auto* runtime = GetWidgetRuntime(state);
-  if (runtime == nullptr) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
+  if (error != nullptr) {
+    luaL_error(state, "%s", error);
+  } else {
+    luaL_error(state, "%s", lua_tostring(state, -1));
   }
-
-  const auto widget = runtime->GetWidget(name);
-  if (!widget.has_value()) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
-  }
-  if (!GlueWidgetSupportsSetText(*widget)) {
-    luaL_error(state, "Wrong object type for member function");
-  }
-  if (EqualsIgnoreCaseAscii(widget->kind.c_str(), "FontString") &&
-      widget->font_style.empty()) {
-    luaL_error(state, "%s:SetText(): Font not set",
-               widget->name.empty() ? "<unnamed>" : widget->name.c_str());
-  }
-  return *widget;
+  return {};
 }
 
 std::string GetUsageWidgetName(lua_State* state) {
@@ -294,10 +320,11 @@ int LuaWidget_SetText(lua_State* state) {
 }
 
 int LuaWidget_SetFormattedText(lua_State* state) {
-  const auto widget = GetCheckedFontStringWidgetWithFont(state, "SetFormattedText");
+  (void)GetCheckedFontStringWidgetWithFont(state, "SetFormattedText");
 
   const int top = lua_gettop(state);
   const char* fmt = luaL_optstring(state, 2, "");
+  const auto widget = GetCheckedFontStringWidgetWithFont(state, "SetFormattedText");
   if (fmt == nullptr) {
     return 0;
   }
@@ -414,8 +441,11 @@ int LuaWidget_GetStringWidth(lua_State* state) {
 int LuaWidget_IsObjectType(lua_State* state) {
   (void)GetCheckedFontStringWidget(state);
   if (lua_isstring(state, 2) == 0) {
-    const auto usage_name = GetUsageWidgetName(state);
-    return luaL_error(state, "Usage: %s:IsObjectType(\"TYPE\")", usage_name.c_str());
+    {
+      const auto usage_name = GetUsageWidgetName(state);
+      lua_pushfstring(state, "Usage: %s:IsObjectType(\"TYPE\")", usage_name.c_str());
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
   const char* typeName = lua_tostring(state, 2);
   if (FontStringMatchesObjectType(typeName)) {
@@ -511,11 +541,15 @@ int LuaWidget_GetShadowOffset(lua_State* state) {
 }
 
 int LuaWidget_SetShadowOffset(lua_State* state) {
-  const auto widget = GetCheckedFontStringWidget(state);
   if (lua_isnumber(state, 2) == 0 || lua_isnumber(state, 3) == 0) {
-    return luaL_error(state, "Usage: %s:SetShadowOffset(x, y)",
+    {
+      const auto widget = GetCheckedFontStringWidget(state);
+      lua_pushfstring(state, "Usage: %s:SetShadowOffset(x, y)",
                       widget.name.empty() ? "<unnamed>" : widget.name.c_str());
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto widget = GetCheckedFontStringWidget(state);
 
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetShadowOffset(
@@ -537,11 +571,13 @@ int LuaWidget_GetSpacing(lua_State* state) {
 }
 
 int LuaWidget_SetSpacing(lua_State* state) {
-  const auto widget = GetCheckedFontStringWidget(state);
   if (lua_isnumber(state, 2) == 0) {
-    return luaL_error(state, "Usage: %s:SetSpacing(spacing)",
-                      GetUsageWidgetName(state).c_str());
+    (void)GetCheckedFontStringWidget(state);
+    lua_pushfstring(state, "Usage: %s:SetSpacing(spacing)",
+                    GetUsageWidgetName(state).c_str());
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto widget = GetCheckedFontStringWidget(state);
 
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetTextSpacing(
@@ -553,21 +589,27 @@ int LuaWidget_SetSpacing(lua_State* state) {
 }
 
 int LuaWidget_SetTextHeight(lua_State* state) {
-  const auto widget = GetCheckedFontStringWidget(state);
   if (lua_isnumber(state, 2) == 0) {
-    return luaL_error(state, "Usage: %s:SetTextHeight(pixelHeight)",
-                      GetUsageWidgetName(state).c_str());
+    (void)GetCheckedFontStringWidget(state);
+    lua_pushfstring(state, "Usage: %s:SetTextHeight(pixelHeight)",
+                    GetUsageWidgetName(state).c_str());
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
 
   const float height = static_cast<float>(lua_tonumber(state, 2));
   if (!(height > kMinPositiveTextHeightPixels)) {
-    const std::string widget_name =
-        widget.name.empty() ? std::string("<unnamed>") : widget.name;
-    return luaL_error(
-        state,
-        "%s:SetTextHeight(): invalid texHeight: %f, height must be > 0",
-        widget_name.c_str(), height);
+    {
+      const auto widget = GetCheckedFontStringWidget(state);
+      const std::string widget_name =
+          widget.name.empty() ? std::string("<unnamed>") : widget.name;
+      lua_pushfstring(
+          state,
+          "%s:SetTextHeight(): invalid texHeight: %f, height must be > 0",
+          widget_name.c_str(), height);
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto widget = GetCheckedFontStringWidget(state);
 
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     runtime->SetTextHeightStored(
@@ -595,11 +637,15 @@ int LuaWidget_GetStringHeight(lua_State* state) {
 }
 
 int LuaWidget_SetAlphaGradient(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   if (lua_isnumber(state, 2) == 0 || lua_isnumber(state, 3) == 0) {
-    return luaL_error(state, "Usage: %s:SetAlphaGradient(start, length)",
+    {
+      const auto name = WidgetNameFromArg(state, 1);
+      lua_pushfstring(state, "Usage: %s:SetAlphaGradient(start, length)",
                       name.c_str());
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto name = WidgetNameFromArg(state, 1);
   const int start = static_cast<int>(lua_tonumber(state, 2));
   const int length = static_cast<int>(lua_tonumber(state, 3));
   if (auto* runtime = GetWidgetRuntime(state);

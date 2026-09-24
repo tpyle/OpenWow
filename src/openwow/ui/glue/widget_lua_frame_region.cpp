@@ -89,16 +89,23 @@ int LuaWidget_GetName(lua_State* state) {
 }
 
 int LuaWidget_SetID(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  if (lua_isnumber(state, 2) == 0) {
-    return luaL_error(state, "Usage: %s:SetID(ID)", name.c_str());
+  bool usage_error = false;
+  {
+    const auto name = GetCheckedGlueFrameWidgetName(state);
+    if (lua_isnumber(state, 2) == 0) {
+      lua_pushfstring(state, "Usage: %s:SetID(ID)", name.c_str());
+      usage_error = true;
+    } else {
+      const int id = static_cast<int>(lua_tonumber(state, 2));
+      StoreGlueFrameId(state, 1, id);
+      if (auto* runtime = GetWidgetRuntime(state);
+          runtime != nullptr && !IsUiParentName(name)) {
+        runtime->SetId(name, id);
+      }
+    }
   }
-
-  const int id = static_cast<int>(lua_tonumber(state, 2));
-  StoreGlueFrameId(state, 1, id);
-  if (auto* runtime = GetWidgetRuntime(state);
-      runtime != nullptr && !IsUiParentName(name)) {
-    runtime->SetId(name, id);
+  if (usage_error) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
   return 0;
 }
@@ -114,11 +121,15 @@ int LuaWidget_GetID(lua_State* state) {
   return 1;
 }
 int LuaWidget_RegisterEvent(lua_State* state) {
-  const auto widget = WidgetNameFromArg(state, 1);
   if (lua_isstring(state, 2) == 0) {
-    const char* wname = widget.empty() ? "<unnamed>" : widget.c_str();
-    return luaL_error(state, "Usage: %s:RegisterEvent(\"event\")", wname);
+    {
+      const auto widget = WidgetNameFromArg(state, 1);
+      const char* wname = widget.empty() ? "<unnamed>" : widget.c_str();
+      lua_pushfstring(state, "Usage: %s:RegisterEvent(\"event\")", wname);
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto widget = WidgetNameFromArg(state, 1);
   const char* event = lua_tostring(state, 2);
   if (widget.empty() || event == nullptr || *event == '\0') {
     return 0;
@@ -130,11 +141,15 @@ int LuaWidget_RegisterEvent(lua_State* state) {
 }
 
 int LuaWidget_UnregisterEvent(lua_State* state) {
-  const auto widget = WidgetNameFromArg(state, 1);
   if (lua_isstring(state, 2) == 0) {
-    const char* wname = widget.empty() ? "<unnamed>" : widget.c_str();
-    return luaL_error(state, "Usage: %s:UnregisterEvent(\"event\")", wname);
+    {
+      const auto widget = WidgetNameFromArg(state, 1);
+      const char* wname = widget.empty() ? "<unnamed>" : widget.c_str();
+      lua_pushfstring(state, "Usage: %s:UnregisterEvent(\"event\")", wname);
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  const auto widget = WidgetNameFromArg(state, 1);
   const char* event = lua_tostring(state, 2);
   if (widget.empty() || event == nullptr || *event == '\0') {
     return 0;
@@ -157,8 +172,8 @@ int LuaWidget_UnregisterAllEvents(lua_State* state) {
 }
 
 int LuaWidget_IsEventRegistered(lua_State* state) {
-  const auto widget = WidgetNameFromArg(state, 1);
   const char* event = luaL_optstring(state, 2, "");
+  const auto widget = WidgetNameFromArg(state, 1);
   if (widget.empty() || event == nullptr || *event == '\0') {
     lua_pushnil(state);
     return 1;
@@ -242,9 +257,12 @@ int LuaWidget_GetAttribute(lua_State* state) {
   }
 
   if (!lua_isstring(state, 2)) {
-    const auto name = WidgetNameFromArg(state, 1);
-    return luaL_error(state, "Usage: %s:GetAttribute(\"name\")",
+    {
+      const auto name = WidgetNameFromArg(state, 1);
+      lua_pushfstring(state, "Usage: %s:GetAttribute(\"name\")",
                       name.empty() ? "<unnamed>" : name.c_str());
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
 
   const char* attr_name = lua_tostring(state, 2);
@@ -271,9 +289,12 @@ int LuaWidget_SetAttribute(lua_State* state) {
   lua_settop(state, 3);
 
   if (!lua_isstring(state, 2) || lua_type(state, 3) == LUA_TNONE) {
-    const auto name = WidgetNameFromArg(state, 1);
-    return luaL_error(state, "Usage: %s:SetAttribute(\"name\", value)",
+    {
+      const auto name = WidgetNameFromArg(state, 1);
+      lua_pushfstring(state, "Usage: %s:SetAttribute(\"name\", value)",
                       name.empty() ? "<unnamed>" : name.c_str());
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
 
   const char* attr_name = lua_tostring(state, 2);
@@ -289,17 +310,21 @@ int LuaWidget_SetAttribute(lua_State* state) {
   return 0;
 }
 int LuaWidget_SetPoint(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
+  if (WidgetNameFromArg(state, 1).empty()) {
     return 0;
   }
 
+  // Argument checks below can raise a Lua error (longjmp), so they run before any
+  // std::string is constructed; the strings are built from the recorded choices afterwards.
   const char* point = luaL_optstring(state, 2, "CENTER");
-  const std::string point_s = point ? std::string(point) : std::string("CENTER");
+  if (point == nullptr) {
+    point = "CENTER";
+  }
 
   const int top = lua_gettop(state);
-  std::string relative_to;
-  std::string relative_point = point_s;
+  bool relative_to_from_arg3 = false;
+  bool relative_point_from_arg3 = false;
+  const char* rel_point = nullptr;
   float x = 0.0f;
   float y = 0.0f;
   bool numeric_parent_overload = false;
@@ -312,14 +337,14 @@ int LuaWidget_SetPoint(lua_State* state) {
       y = static_cast<float>(luaL_optnumber(state, 4, 0.0));
     } else {
 
-      relative_to = WidgetNameFromArg(state, 3);
+      relative_to_from_arg3 = true;
       if (top >= 4) {
         if (lua_isnumber(state, 4) != 0) {
           if (lua_isstring(state, 3) != 0 && IsFramePointToken(lua_tostring(state, 3))) {
 
             numeric_parent_overload = true;
-            relative_point = relative_to.empty() ? point_s : relative_to;
-            relative_to.clear();
+            relative_point_from_arg3 = true;
+            relative_to_from_arg3 = false;
             x = static_cast<float>(lua_tonumber(state, 4));
             y = static_cast<float>(luaL_optnumber(state, 5, 0.0));
           } else {
@@ -329,13 +354,26 @@ int LuaWidget_SetPoint(lua_State* state) {
           }
         } else {
 
-          const char* rel_point = luaL_optstring(state, 4, point_s.c_str());
-          relative_point = rel_point ? std::string(rel_point) : point_s;
+          rel_point = luaL_optstring(state, 4, point);
           x = static_cast<float>(luaL_optnumber(state, 5, 0.0));
           y = static_cast<float>(luaL_optnumber(state, 6, 0.0));
         }
       }
     }
+  }
+
+  const auto name = WidgetNameFromArg(state, 1);
+  const std::string point_s(point);
+  std::string relative_to;
+  std::string relative_point = point_s;
+  if (relative_to_from_arg3) {
+    relative_to = WidgetNameFromArg(state, 3);
+  }
+  if (relative_point_from_arg3) {
+    auto token = WidgetNameFromArg(state, 3);
+    relative_point = token.empty() ? point_s : std::move(token);
+  } else if (rel_point != nullptr) {
+    relative_point = rel_point;
   }
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
     if (numeric_parent_overload && relative_to.empty()) {
@@ -379,38 +417,35 @@ int LuaWidget_ClearAllPoints(lua_State* state) {
 }
 
 int LuaWidget_SetSize(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
+  if (WidgetNameFromArg(state, 1).empty()) {
     return 0;
   }
   const float w = static_cast<float>(luaL_checknumber(state, 2));
   const float h = static_cast<float>(luaL_checknumber(state, 3));
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
-    runtime->SetSize(name, w, h);
+    runtime->SetSize(WidgetNameFromArg(state, 1), w, h);
   }
   return 0;
 }
 
 int LuaWidget_SetWidth(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
+  if (WidgetNameFromArg(state, 1).empty()) {
     return 0;
   }
   const float w = static_cast<float>(luaL_checknumber(state, 2));
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
-    runtime->SetWidth(name, w);
+    runtime->SetWidth(WidgetNameFromArg(state, 1), w);
   }
   return 0;
 }
 
 int LuaWidget_SetHeight(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
+  if (WidgetNameFromArg(state, 1).empty()) {
     return 0;
   }
   const float h = static_cast<float>(luaL_checknumber(state, 2));
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
-    runtime->SetHeight(name, h);
+    runtime->SetHeight(WidgetNameFromArg(state, 1), h);
   }
   return 0;
 }
@@ -734,8 +769,8 @@ int LuaWidget_GetNumPoints(lua_State* state) {
 }
 
 int LuaWidget_GetPoint(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
   const int index = static_cast<int>(luaL_optinteger(state, 2, 1));
+  const auto name = WidgetNameFromArg(state, 1);
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr && !name.empty() && !IsUiParentName(name)) {
     const auto anchor = runtime->GetPoint(name, index);
     if (!anchor.has_value()) {
@@ -768,25 +803,26 @@ int LuaWidget_GetPoint(lua_State* state) {
 }
 
 int LuaWidget_SetFrameLevel(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  if (lua_isnumber(state, 2) == 0) {
-    return luaL_error(state, "Usage: %s:SetFrameLevel(level)", name.c_str());
-  }
-
-  const int level = static_cast<int>(lua_tonumber(state, 2));
-  if (level < 0) {
-    return luaL_error(state, "%s:SetFrameLevel(): Passed negative frame level: %d",
+  bool raise_error = false;
+  {
+    const auto name = GetCheckedGlueFrameWidgetName(state);
+    const int level = static_cast<int>(lua_tonumber(state, 2));
+    if (lua_isnumber(state, 2) == 0) {
+      lua_pushfstring(state, "Usage: %s:SetFrameLevel(level)", name.c_str());
+      raise_error = true;
+    } else if (level < 0) {
+      lua_pushfstring(state, "%s:SetFrameLevel(): Passed negative frame level: %d",
                       name.c_str(), level);
+      raise_error = true;
+    } else if (IsUiParentName(name)) {
+      lua_pushinteger(state, static_cast<lua_Integer>(level));
+      lua_setfield(state, 1, "__ow_frame_level");
+    } else if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
+      runtime->SetFrameLevel(name, level);
+    }
   }
-
-  if (IsUiParentName(name)) {
-    lua_pushinteger(state, static_cast<lua_Integer>(level));
-    lua_setfield(state, 1, "__ow_frame_level");
-    return 0;
-  }
-
-  if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
-    runtime->SetFrameLevel(name, level);
+  if (raise_error) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
   return 0;
 }
@@ -836,40 +872,52 @@ int LuaWidget_GetEffectiveScale(lua_State* state) {
 
 int LuaWidget_SetScale(lua_State* state) {
 
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  const auto usage_name = GetUsageWidgetName(state);
-  if (lua_isnumber(state, 2) == 0) {
-    return luaL_error(state, "Usage: %s:SetScale(scale)", usage_name.c_str());
+  bool raise_error = false;
+  {
+    const auto name = GetCheckedGlueFrameWidgetName(state);
+    const auto usage_name = GetUsageWidgetName(state);
+    const float scale = static_cast<float>(lua_tonumber(state, 2));
+    if (lua_isnumber(state, 2) == 0) {
+      lua_pushfstring(state, "Usage: %s:SetScale(scale)", usage_name.c_str());
+      raise_error = true;
+    } else if (scale <= 0.0f) {
+      lua_pushfstring(state, "%s:SetScale(): Scale must be > 0", usage_name.c_str());
+      raise_error = true;
+    } else {
+      auto* runtime = GetWidgetRuntime(state);
+      runtime->SetScale(name, scale);
+    }
   }
-
-  const float scale = static_cast<float>(lua_tonumber(state, 2));
-  if (scale <= 0.0f) {
-    return luaL_error(state, "%s:SetScale(): Scale must be > 0", usage_name.c_str());
+  if (raise_error) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
-
-  auto* runtime = GetWidgetRuntime(state);
-  runtime->SetScale(name, scale);
   return 0;
 }
 int LuaWidget_SetFrameStrata(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  if (lua_isstring(state, 2) == 0) {
-    return luaL_error(state, "Usage: %s:SetFrameStrata(level)", name.c_str());
-  }
-  const char* raw_strata = lua_tostring(state, 2);
-  int strata_value = 0;
-  if (openwow::ui::StringToScriptFrameStrata(raw_strata, &strata_value) == 0) {
-    return luaL_error(state, "%s:SetFrameStrata(): Unknown frame strata: %s",
+  bool raise_error = false;
+  {
+    const auto name = GetCheckedGlueFrameWidgetName(state);
+    int strata_value = 0;
+    if (lua_isstring(state, 2) == 0) {
+      lua_pushfstring(state, "Usage: %s:SetFrameStrata(level)", name.c_str());
+      raise_error = true;
+    } else if (const char* raw_strata = lua_tostring(state, 2);
+               openwow::ui::StringToScriptFrameStrata(raw_strata, &strata_value) == 0) {
+      lua_pushfstring(state, "%s:SetFrameStrata(): Unknown frame strata: %s",
                       name.c_str(), raw_strata != nullptr ? raw_strata : "");
+      raise_error = true;
+    } else {
+      const char* canonical_strata = openwow::ui::ScriptFrameStrataToString(strata_value);
+      if (IsUiParentName(name)) {
+        lua_pushstring(state, canonical_strata);
+        lua_setfield(state, 1, "__ow_frame_strata");
+      } else if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
+        runtime->SetFrameStrata(name, canonical_strata);
+      }
+    }
   }
-  const char* canonical_strata = openwow::ui::ScriptFrameStrataToString(strata_value);
-  if (IsUiParentName(name)) {
-    lua_pushstring(state, canonical_strata);
-    lua_setfield(state, 1, "__ow_frame_strata");
-    return 0;
-  }
-  if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
-    runtime->SetFrameStrata(name, canonical_strata);
+  if (raise_error) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
   return 0;
 }
@@ -889,16 +937,24 @@ int LuaWidget_IsVisible(lua_State* state) {
 }
 
 int LuaWidget_SetAlpha(lua_State* state) {
-  const auto name = GetCheckedGlueWidgetName(state);
-  if (lua_isnumber(state, 2) == 0) {
-    return luaL_error(state, "Usage: %s:SetAlpha(alpha 0 to 1)",
+  bool usage_error = false;
+  {
+    const auto name = GetCheckedGlueWidgetName(state);
+    if (lua_isnumber(state, 2) == 0) {
+      lua_pushfstring(state, "Usage: %s:SetAlpha(alpha 0 to 1)",
                       name.c_str());
+      usage_error = true;
+    } else {
+      float alpha = static_cast<float>(lua_tonumber(state, 2));
+      if (alpha < 0.0f) alpha = 0.0f;
+      else if (alpha >= 1.0f) alpha = 1.0f;
+      if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
+        runtime->SetAlpha(name, alpha);
+      }
+    }
   }
-  float alpha = static_cast<float>(lua_tonumber(state, 2));
-  if (alpha < 0.0f) alpha = 0.0f;
-  else if (alpha >= 1.0f) alpha = 1.0f;
-  if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
-    runtime->SetAlpha(name, alpha);
+  if (usage_error) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
   return 0;
 }
@@ -947,20 +1003,31 @@ int LuaWidget_GetBoundsRect(lua_State* state) {
 }
 
 int LuaWidget_SetScript(lua_State* state) {
-  const auto widget_name = GetCheckedGlueFrameWidgetName(state);
-  if (!lua_isstring(state, 2)
-      || (lua_type(state, 3) != LUA_TFUNCTION && lua_type(state, 3) != LUA_TNIL)) {
-    return luaL_error(state, "Usage: %s:SetScript(\"type\", function)",
+  const openwow::ui::FrameScriptTypeInfo* script_info = nullptr;
+  bool raise_error = false;
+  {
+    const auto widget_name = GetCheckedGlueFrameWidgetName(state);
+    if (!lua_isstring(state, 2)
+        || (lua_type(state, 3) != LUA_TFUNCTION && lua_type(state, 3) != LUA_TNIL)) {
+      lua_pushfstring(state, "Usage: %s:SetScript(\"type\", function)",
                       widget_name.c_str());
+      raise_error = true;
+    } else {
+      script_info = ResolveGlueFrameScriptTypeInfo(state, 1, 2);
+      if (script_info == nullptr) {
+        const char* script_name = lua_tostring(state, 2);
+        lua_pushfstring(state, "%s doesn't have a \"%s\" script",
+                        widget_name.c_str(),
+                        script_name != nullptr ? script_name : "");
+        raise_error = true;
+      }
+    }
   }
-
-  const auto* script_info = ResolveGlueFrameScriptTypeInfo(state, 1, 2);
-  if (script_info == nullptr) {
-    const char* script_name = lua_tostring(state, 2);
-    return luaL_error(state, "%s doesn't have a \"%s\" script",
-                      widget_name.c_str(),
-                      script_name != nullptr ? script_name : "");
+  if (raise_error) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
+  // Same value GetCheckedGlueFrameWidgetName validated above.
+  const auto widget_name = WidgetNameFromArg(state, 1);
 
   lua_getfield(state, 1, "__ow_scripts");
   if (lua_istable(state, -1) == 0) {

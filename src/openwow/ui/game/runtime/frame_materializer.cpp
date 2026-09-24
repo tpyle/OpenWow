@@ -806,8 +806,11 @@ int FrameMaterializer::CreateFrame(lua_State* state) {
   const char* name = lua_tostring(state, 2);
 
   const char* inherits = lua_tostring(state, 4);
+  // luaL_error longjmps past C++ destructors, so every raise below happens while no
+  // std::string/vector/UiFrame local is alive: template errors are formatted onto the Lua
+  // stack inside the loop and raised after it, and the parent key and frame description only
+  // exist in the scope that instantiates the frame.
   int parent_index = 0;
-  std::optional<std::string> parent_name;
   if (lua_istable(state, 3)) {
     parent_index = lua_absindex(state, 3);
     if (!lua_adapter::HasScriptObjectIdentity(state, parent_index))
@@ -818,69 +821,81 @@ int FrameMaterializer::CreateFrame(lua_State* state) {
     if (!detail::IsFrameLikeLookupObjectType(object_type))
       return luaL_error(
           state, "CreateFrame: Wrong parent object type, expected frame");
-    parent_name = dependencies_.frames.FindKeyForLuaTable(state, parent_index);
   }
   if (inherits != nullptr && inherits[0] != '\0') {
+    bool template_error = false;
     for (const auto& template_name : framexml::SplitTemplateList(
              inherits, framexml::TemplateListSyntax::kCreateFrame)) {
       switch (ValidateFrameTemplateChain(templates_, template_name)) {
         case FrameTemplateValidation::Missing:
-          return luaL_error(
+          lua_pushfstring(
               state, "CreateFrame(): Couldn't find inherited node \"%s\"",
               template_name.c_str());
+          template_error = true;
+          break;
         case FrameTemplateValidation::Recursive:
-          return luaL_error(state,
-                            "CreateFrame(): Recursively inherited node \"%s\"",
-                            template_name.c_str());
+          lua_pushfstring(state,
+                          "CreateFrame(): Recursively inherited node \"%s\"",
+                          template_name.c_str());
+          template_error = true;
+          break;
         case FrameTemplateValidation::Found:
           break;
       }
+      if (template_error) break;
     }
+    if (template_error) return luaL_error(state, "%s", lua_tostring(state, -1));
   }
   const char* canonical = widgets::ResolveRegisteredCreateFrameTypeName(
       type != nullptr ? type : "");
   if (canonical == nullptr)
     return luaL_error(state, "CreateFrame: Unknown frame type '%s'",
                       type != nullptr ? type : "");
-  UiFrame root;
-  root.kind = canonical;
-  root.visible = true;
-  if (name != nullptr && name[0] != '\0')
-    root.name = frame_api::ExpandLuaParentNameToken(
-        parent_name.has_value()
-            ? NearestStoredLuaName(dependencies_.frames, *parent_name)
-            : std::string(),
-        name);
-  if (inherits != nullptr && inherits[0] != '\0') root.inherits = inherits;
-  auto record_id = [&](const char* raw, const char* value_type) {
-    if (raw != nullptr && raw[0] != '\0')
-      root.initial_attributes.push_back(
-          {.name = "id", .type = value_type, .value = raw});
-  };
+  int ref = LUA_NOREF;
+  {
+    std::optional<std::string> parent_name;
+    if (parent_index != 0)
+      parent_name = dependencies_.frames.FindKeyForLuaTable(state, parent_index);
+    UiFrame root;
+    root.kind = canonical;
+    root.visible = true;
+    if (name != nullptr && name[0] != '\0')
+      root.name = frame_api::ExpandLuaParentNameToken(
+          parent_name.has_value()
+              ? NearestStoredLuaName(dependencies_.frames, *parent_name)
+              : std::string(),
+          name);
+    if (inherits != nullptr && inherits[0] != '\0') root.inherits = inherits;
+    auto record_id = [&](const char* raw, const char* value_type) {
+      if (raw != nullptr && raw[0] != '\0')
+        root.initial_attributes.push_back(
+            {.name = "id", .type = value_type, .value = raw});
+    };
 
-  if (lua_isstring(state, 5)) {
-    const char* raw = lua_tostring(state, 5);
-    record_id(raw, "string");
-    if (raw != nullptr)
-      if (auto parsed = framexml::ParseIntegerAttributeValue(raw);
-          parsed.has_value()) {
-        root.id = *parsed;
-        root.has_id = true;
-      }
-  } else if (lua_isnumber(state, 5)) {
-    record_id(lua_tostring(state, 5), "number");
-    root.id = static_cast<int>(lua_tointeger(state, 5));
-    root.has_id = true;
+    if (lua_isstring(state, 5)) {
+      const char* raw = lua_tostring(state, 5);
+      record_id(raw, "string");
+      if (raw != nullptr)
+        if (auto parsed = framexml::ParseIntegerAttributeValue(raw);
+            parsed.has_value()) {
+          root.id = *parsed;
+          root.has_id = true;
+        }
+    } else if (lua_isnumber(state, 5)) {
+      record_id(lua_tostring(state, 5), "number");
+      root.id = static_cast<int>(lua_tointeger(state, 5));
+      root.has_id = true;
+    }
+    if (parent_index != 0) {
+      if (parent_name.has_value()) root.parent = *parent_name;
+    } else if (inherits != nullptr && inherits[0] != '\0') {
+      if (auto parent = ResolveInheritedParentName(templates_, inherits);
+          parent.has_value())
+        root.parent = *parent;
+    }
+    ref = InstantiateFrameTree(std::move(root), {}, parent_index,
+                               parent_index != 0, true);
   }
-  if (parent_index != 0) {
-    if (parent_name.has_value()) root.parent = *parent_name;
-  } else if (inherits != nullptr && inherits[0] != '\0') {
-    if (auto parent = ResolveInheritedParentName(templates_, inherits);
-        parent.has_value())
-      root.parent = *parent;
-  }
-  const int ref = InstantiateFrameTree(std::move(root), {}, parent_index,
-                                       parent_index != 0, true);
 
   if (ref == LUA_NOREF || !lua_istable(state, -1)) {
     return luaL_error(state, "CreateFrame: failed to create frame '%s'",

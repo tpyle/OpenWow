@@ -2270,26 +2270,35 @@ static int CreateAnimationTableOnGroup(lua_State *L, const char *anim_type, int 
 
   const openwow::ui::framexml::UiAnimation* inherited_template = nullptr;
   if (inherits_from != nullptr) {
-    const std::string inherited_name = inherits_from;
     const auto resolve_template = [L, group_idx](const std::string& template_name) {
       return ResolveAnimationTemplateForGroup(L, group_idx, template_name);
     };
 
-    switch (ValidateAnimationTemplateChain(resolve_template, inherited_name)) {
+    // inherited_name is scoped so it is destroyed before luaL_error longjmps; the messages
+    // print inherits_from, which holds the same text.
+    AnimationTemplateResolution resolution = AnimationTemplateResolution::Found;
+    {
+      const std::string inherited_name = inherits_from;
+      resolution = ValidateAnimationTemplateChain(resolve_template, inherited_name);
+      if (resolution == AnimationTemplateResolution::Found) {
+        inherited_template = resolve_template(inherited_name);
+      }
+    }
+
+    switch (resolution) {
     case AnimationTemplateResolution::Missing:
       luaL_error(L,
                  "%s:CreateAnimation(): Couldn't find inherited node \"%s\"",
                  GroupDisplayName(group),
-                 inherited_name.c_str());
+                 inherits_from);
       break;
     case AnimationTemplateResolution::Recursive:
       luaL_error(L,
                  "%s:CreateAnimation(): Recursively inherited node \"%s\"",
                  GroupDisplayName(group),
-                 inherited_name.c_str());
+                 inherits_from);
       break;
     case AnimationTemplateResolution::Found:
-      inherited_template = resolve_template(inherited_name);
       break;
     }
   }
@@ -2411,26 +2420,35 @@ static int CreateAnimationGroupTableOnRegion(lua_State* L,
 
   const openwow::ui::framexml::UiAnimationGroup* inherited_template = nullptr;
   if (inherits_from != nullptr && inherits_from[0] != '\0') {
-    const std::string inherited_name = inherits_from;
     const auto resolve_group_template = [L, region_idx](const std::string& template_name) {
       return ResolveAnimationGroupTemplateForFrame(L, region_idx, template_name);
     };
 
-    switch (ValidateAnimationGroupTemplateChain(resolve_group_template, inherited_name)) {
+    // inherited_name is scoped so it is destroyed before luaL_error longjmps; the messages
+    // print inherits_from, which holds the same text.
+    AnimationGroupTemplateResolution resolution = AnimationGroupTemplateResolution::Found;
+    {
+      const std::string inherited_name = inherits_from;
+      resolution = ValidateAnimationGroupTemplateChain(resolve_group_template, inherited_name);
+      if (resolution == AnimationGroupTemplateResolution::Found) {
+        inherited_template = resolve_group_template(inherited_name);
+      }
+    }
+
+    switch (resolution) {
     case AnimationGroupTemplateResolution::Missing:
       luaL_error(L,
                  "%s:CreateAnimationGroup(): Couldn't find inherited node \"%s\"",
                  FrameDisplayName(L, region_idx),
-                 inherited_name.c_str());
+                 inherits_from);
       break;
     case AnimationGroupTemplateResolution::Recursive:
       luaL_error(L,
                  "%s:CreateAnimationGroup(): Recursively inherited node \"%s\"",
                  FrameDisplayName(L, region_idx),
-                 inherited_name.c_str());
+                 inherits_from);
       break;
     case AnimationGroupTemplateResolution::Found:
-      inherited_template = resolve_group_template(inherited_name);
       break;
     }
   }

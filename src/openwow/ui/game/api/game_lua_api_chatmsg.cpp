@@ -561,8 +561,7 @@ int LuaSendAddonMessage(lua_State *L) {
 
   ChatMsg chat_type = ChatMsg::kParty;
   if (lua_isstring(L, 3)) {
-    const std::string chat_type_string = SafeLuaString(L, 3);
-    const auto resolved_type = ParseAddonMessageChatType(chat_type_string);
+    const auto resolved_type = ParseAddonMessageChatType(SafeLuaString(L, 3));
     if (!resolved_type.has_value()) {
       return luaL_error(L, "Unknown addon chat type");
     }

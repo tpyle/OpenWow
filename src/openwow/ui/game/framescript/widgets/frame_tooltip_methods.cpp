@@ -1269,31 +1269,31 @@ void ApplyGameTooltipMethods(lua_State *L) {
       L,
       [](lua_State *Ls) -> int {
         const int tooltip_index = ValidateFrameObjectSelf(Ls, "GameTooltip");
-        const std::string usage_name = lua_adapter::ScriptObjectDisplayName(Ls, tooltip_index);
+        const char *const usage_name = lua_adapter::ScriptObjectDisplayName(Ls, tooltip_index);
 
         if (lua_istable(Ls, 2) == 0 || lua_istable(Ls, 3) == 0) {
           return luaL_error(Ls, "Usage: %s:AddFontStrings(leftstring, rightstring)",
-                            usage_name.c_str());
+                            usage_name);
         }
 
         const char *left_type = openwow::ui::BorrowRawLuaStringField(Ls, 2, "__ow_type");
         if (left_type == nullptr || left_type[0] == '\0') {
           return luaL_error(Ls, "%s:AddFontStrings(): Couldn't find 'this' in fontstring",
-                            usage_name.c_str());
+                            usage_name);
         }
         if (std::strcmp(left_type, "FontString") != 0) {
           return luaL_error(Ls, "%s:AddFontStrings(): Wrong object type, expected fontstring",
-                            usage_name.c_str());
+                            usage_name);
         }
 
         const char *right_type = openwow::ui::BorrowRawLuaStringField(Ls, 3, "__ow_type");
         if (right_type == nullptr || right_type[0] == '\0') {
           return luaL_error(Ls, "%s:AddFontStrings(): Couldn't find 'this' in fontstring",
-                            usage_name.c_str());
+                            usage_name);
         }
         if (std::strcmp(right_type, "FontString") != 0) {
           return luaL_error(Ls, "%s:AddFontStrings(): Wrong object type, expected fontstring",
-                            usage_name.c_str());
+                            usage_name);
         }
 
         AppendTooltipFontStringPair(Ls, tooltip_index, 2, 3);

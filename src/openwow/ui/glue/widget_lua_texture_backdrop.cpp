@@ -182,8 +182,7 @@ int LuaWidget_GetTexture(lua_State* state) {
   return 1;
 }
 int LuaWidget_SetTexCoord(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
+  if (WidgetNameFromArg(state, 1).empty()) {
     return 0;
   }
   auto* runtime = GetWidgetRuntime(state);
@@ -215,7 +214,7 @@ int LuaWidget_SetTexCoord(lua_State* state) {
     tex_coords.lower_left = {llx, lly};
     tex_coords.upper_right = {urx, ury};
     tex_coords.lower_right = {lrx, lry};
-    runtime->SetTexCoordQuad(name, tex_coords);
+    runtime->SetTexCoordQuad(WidgetNameFromArg(state, 1), tex_coords);
   } else if (nargs == 5) {
 
     const float left = static_cast<float>(luaL_checknumber(state, 2));
@@ -225,19 +224,22 @@ int LuaWidget_SetTexCoord(lua_State* state) {
     if (!validate(left) || !validate(right) || !validate(top) || !validate(bottom)) {
       return luaL_error(state, "TexCoord out of range");
     }
-    runtime->SetTexCoord(name, left, right, top, bottom);
+    runtime->SetTexCoord(WidgetNameFromArg(state, 1), left, right, top, bottom);
   } else {
-    return luaL_error(
-        state,
-        "Usage: %s:SetTexCoord(minX, maxX, minY, maxY) or SetTexCoord(ULx, ULy, LLx, LLy, URx, URy, LRx, LRy)",
-        name.empty() ? "<unnamed>" : name.c_str());
+    {
+      const auto name = WidgetNameFromArg(state, 1);
+      lua_pushfstring(
+          state,
+          "Usage: %s:SetTexCoord(minX, maxX, minY, maxY) or SetTexCoord(ULx, ULy, LLx, LLy, URx, URy, LRx, LRy)",
+          name.empty() ? "<unnamed>" : name.c_str());
+    }
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
   return 0;
 }
 
 int LuaWidget_SetVertexColor(lua_State* state) {
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
+  if (WidgetNameFromArg(state, 1).empty()) {
     return 0;
   }
   const float r = static_cast<float>(luaL_checknumber(state, 2));
@@ -248,7 +250,7 @@ int LuaWidget_SetVertexColor(lua_State* state) {
     a = static_cast<float>(luaL_checknumber(state, 5));
   }
   if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
-    runtime->SetVertexColor(name, r, g, b, a);
+    runtime->SetVertexColor(WidgetNameFromArg(state, 1), r, g, b, a);
   }
   return 0;
 }

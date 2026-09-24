@@ -358,21 +358,23 @@ int LuaChannelCommandWithTarget(lua_State *L, const char *function_name,
   }
 
   const char *raw_channel = lua_tostring(L, 1);
-  const auto channel_name = ResolveChannelNameOrIndex(raw_channel);
-  if (!channel_name) {
-    return 0;
-  }
+  {
+    const auto channel_name = ResolveChannelNameOrIndex(raw_channel);
+    if (!channel_name) {
+      return 0;
+    }
 
-  const char *target = lua_tostring(L, 2);
-  if (target && std::strlen(target) > kChannelCommandTargetNameMaxLength) {
-    return luaL_error(L, "Name too long");
+    const char *target = lua_tostring(L, 2);
+    if (!target || std::strlen(target) <= kChannelCommandTargetNameMaxLength) {
+      if (auto *session = GetWorldSession(L)) {
+        session->interaction().SendChannelTargetCommand(static_cast<std::uint16_t>(opcode),
+                                                        *channel_name, target ? target : "");
+      }
+      return 0;
+    }
   }
-
-  if (auto *session = GetWorldSession(L)) {
-    session->interaction().SendChannelTargetCommand(static_cast<std::uint16_t>(opcode),
-                                                    *channel_name, target ? target : "");
-  }
-  return 0;
+  // Raised outside the scope so channel_name is destroyed before lua_error longjmps.
+  return luaL_error(L, "Name too long");
 }
 
 int LuaDisplayChannelVoiceCommand(lua_State *L, const char *function_name,

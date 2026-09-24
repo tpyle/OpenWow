@@ -481,55 +481,64 @@ void ApplyCommonFrameMethods(lua_State *L) {
         if (lua_isstring(Ls, 2) != 0) {
           requested_fs_name = lua_tostring(Ls, 2);
         }
-        const std::string resolved_fs_name =
-            ExpandLuaParentNameToken(Ls, self_idx, requested_fs_name);
-        const char *fs_name = resolved_fs_name.empty() ? nullptr : resolved_fs_name.c_str();
-        int draw_layer_id = 2;
-        const bool explicit_draw_layer = lua_isstring(Ls, 3) != 0;
-        if (explicit_draw_layer) {
-          TryParseDrawLayerName(lua_tostring(Ls, 3), &draw_layer_id);
-        }
-        const char *inherited_or_font = lua_isstring(Ls, 4) ? lua_tostring(Ls, 4) : nullptr;
+        bool raise_template_error = false;
+        const int result = [&]() -> int {
+          const std::string resolved_fs_name =
+              ExpandLuaParentNameToken(Ls, self_idx, requested_fs_name);
+          const char *fs_name = resolved_fs_name.empty() ? nullptr : resolved_fs_name.c_str();
+          int draw_layer_id = 2;
+          const bool explicit_draw_layer = lua_isstring(Ls, 3) != 0;
+          if (explicit_draw_layer) {
+            TryParseDrawLayerName(lua_tostring(Ls, 3), &draw_layer_id);
+          }
+          const char *inherited_or_font = lua_isstring(Ls, 4) ? lua_tostring(Ls, 4) : nullptr;
 
-        bool has_named_font = false;
-        TemplateResolveResult inherited_templates;
-        if (inherited_or_font != nullptr && inherited_or_font[0] != '\0') {
-          has_named_font = PushNamedFontObject(Ls, inherited_or_font);
-          if (!has_named_font) {
-            lua_pop(Ls, 1);
-            inherited_templates = ResolveTemplateNodes(Ls, inherited_or_font, "FontString");
-            if (!inherited_templates.ok()) {
-              return RaiseInheritedTemplateError(Ls, 1, "CreateFontString", inherited_templates);
+          bool has_named_font = false;
+          TemplateResolveResult inherited_templates;
+          if (inherited_or_font != nullptr && inherited_or_font[0] != '\0') {
+            has_named_font = PushNamedFontObject(Ls, inherited_or_font);
+            if (!has_named_font) {
+              lua_pop(Ls, 1);
+              inherited_templates = ResolveTemplateNodes(Ls, inherited_or_font, "FontString");
+              if (!inherited_templates.ok()) {
+                PushInheritedTemplateError(Ls, 1, "CreateFontString", inherited_templates);
+                raise_template_error = true;
+                return 0;
+              }
             }
           }
-        }
 
-        CreateFontStringTable(Ls, self_idx);
+          CreateFontStringTable(Ls, self_idx);
 
-        lua_pushstring(Ls, GetDrawLayerNameById(draw_layer_id));
-        lua_setfield(Ls, -2, "__ow_draw_layer");
-        if (fs_name != nullptr) {
-          lua_pushstring(Ls, fs_name);
-          lua_setfield(Ls, -2, "__ow_name");
-          (void)openwow::ui::PublishLuaGlobalValueIfNil(Ls, fs_name, -1);
-        }
-
-        if (has_named_font) {
-          SetBoundFontObject(Ls, -1, -2);
-          CopyNamedFontObjectStyle(Ls, -1, -2);
-          lua_remove(Ls, -2);
-        } else {
-          ApplyResolvedFontStringTemplates(Ls, self_idx, -1, inherited_templates,
-                                           explicit_draw_layer);
-        }
-        if (explicit_draw_layer) {
           lua_pushstring(Ls, GetDrawLayerNameById(draw_layer_id));
           lua_setfield(Ls, -2, "__ow_draw_layer");
+          if (fs_name != nullptr) {
+            lua_pushstring(Ls, fs_name);
+            lua_setfield(Ls, -2, "__ow_name");
+            (void)openwow::ui::PublishLuaGlobalValueIfNil(Ls, fs_name, -1);
+          }
+
+          if (has_named_font) {
+            SetBoundFontObject(Ls, -1, -2);
+            CopyNamedFontObjectStyle(Ls, -1, -2);
+            lua_remove(Ls, -2);
+          } else {
+            ApplyResolvedFontStringTemplates(Ls, self_idx, -1, inherited_templates,
+                                             explicit_draw_layer);
+          }
+          if (explicit_draw_layer) {
+            lua_pushstring(Ls, GetDrawLayerNameById(draw_layer_id));
+            lua_setfield(Ls, -2, "__ow_draw_layer");
+          }
+          SyncRegionDrawLayerEnabled(Ls, -1);
+          TrackRuntimeRegion(Ls, self_idx, -1, "FontString", fs_name,
+                             GetDrawLayerNameById(draw_layer_id));
+          return 1;
+        }();
+        if (raise_template_error) {
+          return lua_error(Ls);
         }
-        SyncRegionDrawLayerEnabled(Ls, -1);
-        TrackRuntimeRegion(Ls, self_idx, -1, "FontString", fs_name,
-                           GetDrawLayerNameById(draw_layer_id));
-        return 1;
+        return result;
       },
       0);
   lua_setfield(L, frame, "CreateFontString");
@@ -545,39 +554,48 @@ void ApplyCommonFrameMethods(lua_State *L) {
         if (lua_isstring(Ls, 2) != 0) {
           requested_tx_name = lua_tostring(Ls, 2);
         }
-        const std::string resolved_tx_name = ExpandLuaParentNameToken(Ls, 1, requested_tx_name);
-        const char *tx_name = resolved_tx_name.empty() ? nullptr : resolved_tx_name.c_str();
+        bool raise_template_error = false;
+        const int result = [&]() -> int {
+          const std::string resolved_tx_name = ExpandLuaParentNameToken(Ls, 1, requested_tx_name);
+          const char *tx_name = resolved_tx_name.empty() ? nullptr : resolved_tx_name.c_str();
 
-        int draw_layer_id = 2;
-        const bool explicit_draw_layer = lua_isstring(Ls, 3) != 0;
-        if (explicit_draw_layer) {
-          TryParseDrawLayerName(lua_tostring(Ls, 3), &draw_layer_id);
-        }
-        const char *inherited = lua_isstring(Ls, 4) ? lua_tostring(Ls, 4) : nullptr;
-        TemplateResolveResult inherited_templates;
-        if (inherited != nullptr && inherited[0] != '\0') {
-          inherited_templates = ResolveTemplateNodes(Ls, inherited, "Texture");
-          if (!inherited_templates.ok()) {
-            return RaiseInheritedTemplateError(Ls, 1, "CreateTexture", inherited_templates);
+          int draw_layer_id = 2;
+          const bool explicit_draw_layer = lua_isstring(Ls, 3) != 0;
+          if (explicit_draw_layer) {
+            TryParseDrawLayerName(lua_tostring(Ls, 3), &draw_layer_id);
           }
-        }
+          const char *inherited = lua_isstring(Ls, 4) ? lua_tostring(Ls, 4) : nullptr;
+          TemplateResolveResult inherited_templates;
+          if (inherited != nullptr && inherited[0] != '\0') {
+            inherited_templates = ResolveTemplateNodes(Ls, inherited, "Texture");
+            if (!inherited_templates.ok()) {
+              PushInheritedTemplateError(Ls, 1, "CreateTexture", inherited_templates);
+              raise_template_error = true;
+              return 0;
+            }
+          }
 
-        CreateTextureTable(Ls, 1);
-        lua_pushinteger(Ls, static_cast<lua_Integer>(draw_layer_id));
-        lua_setfield(Ls, -2, "__ow_draw_layer");
-        if (tx_name != nullptr) {
-          lua_pushstring(Ls, tx_name);
-          lua_setfield(Ls, -2, "__ow_name");
-          (void)openwow::ui::PublishLuaGlobalValueIfNil(Ls, tx_name, -1);
-        }
-        ApplyResolvedTextureTemplates(Ls, -1, inherited_templates, explicit_draw_layer);
-        if (explicit_draw_layer) {
+          CreateTextureTable(Ls, 1);
           lua_pushinteger(Ls, static_cast<lua_Integer>(draw_layer_id));
           lua_setfield(Ls, -2, "__ow_draw_layer");
+          if (tx_name != nullptr) {
+            lua_pushstring(Ls, tx_name);
+            lua_setfield(Ls, -2, "__ow_name");
+            (void)openwow::ui::PublishLuaGlobalValueIfNil(Ls, tx_name, -1);
+          }
+          ApplyResolvedTextureTemplates(Ls, -1, inherited_templates, explicit_draw_layer);
+          if (explicit_draw_layer) {
+            lua_pushinteger(Ls, static_cast<lua_Integer>(draw_layer_id));
+            lua_setfield(Ls, -2, "__ow_draw_layer");
+          }
+          SyncRegionDrawLayerEnabled(Ls, -1);
+          TrackRuntimeRegion(Ls, 1, -1, "Texture", tx_name, GetDrawLayerNameById(draw_layer_id));
+          return 1;
+        }();
+        if (raise_template_error) {
+          return lua_error(Ls);
         }
-        SyncRegionDrawLayerEnabled(Ls, -1);
-        TrackRuntimeRegion(Ls, 1, -1, "Texture", tx_name, GetDrawLayerNameById(draw_layer_id));
-        return 1;
+        return result;
       },
       0);
   lua_setfield(L, frame, "CreateTexture");

@@ -256,8 +256,9 @@ void ApplyModelLightMethods(lua_State *L) {
     const int self_idx = ValidateModelLightSelf(Ls);
     ParsedModelLight light;
     if (!ParseModelLightArguments(Ls, 2, &light)) {
-      const std::string name = GetModelLightUsageObjectName(Ls, self_idx);
-      return luaL_error(Ls, kModelLightUsageSetLight, name.c_str());
+      lua_pushfstring(Ls, kModelLightUsageSetLight,
+                      GetModelLightUsageObjectName(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     auto& model = RequireNativeModel(Ls);
     model.SetLight(light.enabled, light.omni, light.dir_x, light.dir_y,
@@ -277,8 +278,9 @@ void ApplyModelLightMethods(lua_State *L) {
     const int self_idx = ValidateModelLightSelf(Ls);
     ParsedModelLight light;
     if (!ParseModelLightArguments(Ls, 3, &light)) {
-      const std::string name = GetModelLightUsageObjectName(Ls, self_idx);
-      return luaL_error(Ls, kModelLightUsageAddLight, name.c_str());
+      lua_pushfstring(Ls, kModelLightUsageAddLight,
+                      GetModelLightUsageObjectName(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     AppendModelLight(Ls, ModelLightBank::General, GetModelLightSlot(Ls, 2),
                      light);
@@ -290,8 +292,9 @@ void ApplyModelLightMethods(lua_State *L) {
     const int self_idx = ValidateModelLightSelf(Ls);
     ParsedModelLight light;
     if (!ParseModelLightArguments(Ls, 3, &light)) {
-      const std::string name = GetModelLightUsageObjectName(Ls, self_idx);
-      return luaL_error(Ls, kModelLightUsageAddCharacterLight, name.c_str());
+      lua_pushfstring(Ls, kModelLightUsageAddCharacterLight,
+                      GetModelLightUsageObjectName(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     AppendModelLight(Ls, ModelLightBank::Character,
                      GetModelLightSlot(Ls, 2), light);
@@ -303,8 +306,9 @@ void ApplyModelLightMethods(lua_State *L) {
     const int self_idx = ValidateModelLightSelf(Ls);
     ParsedModelLight light;
     if (!ParseModelLightArguments(Ls, 3, &light)) {
-      const std::string name = GetModelLightUsageObjectName(Ls, self_idx);
-      return luaL_error(Ls, kModelLightUsageAddCharacterLight, name.c_str());
+      lua_pushfstring(Ls, kModelLightUsageAddCharacterLight,
+                      GetModelLightUsageObjectName(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     AppendModelLight(Ls, ModelLightBank::Pet, GetModelLightSlot(Ls, 2),
                      light);
@@ -315,8 +319,9 @@ void ApplyModelLightMethods(lua_State *L) {
   lua_pushcfunction(L, [](lua_State *Ls) -> int {
     const int self_idx = ValidateModelLightSelf(Ls);
     if (lua_isnumber(Ls, 2) == 0) {
-      const std::string name = GetObjectNameOrUnnamed(Ls, self_idx);
-      return luaL_error(Ls, "Usage: %s:SetGlow(value)", name.c_str());
+      lua_pushfstring(Ls, "Usage: %s:SetGlow(value)",
+                      GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     const char* type_name =
         openwow::ui::BorrowRawLuaStringField(Ls, self_idx, "__ow_type");
@@ -334,12 +339,14 @@ void ApplyPlayerModelIconTextureMethods(lua_State *L) {
 
   lua_pushcfunction(L, [](lua_State *Ls) -> int {
     if (!lua_isstring(Ls, 2)) {
-      const std::string name =
-          lua_istable(Ls, 1) ? GetObjectNameOrUnnamed(Ls, 1)
-                             : std::string("<unnamed>");
-      return luaL_error(Ls,
-                        "Usage: %s:ReplaceIconTexture(\"texture\")",
+      {
+        const std::string name =
+            lua_istable(Ls, 1) ? GetObjectNameOrUnnamed(Ls, 1)
+                               : std::string("<unnamed>");
+        lua_pushfstring(Ls, "Usage: %s:ReplaceIconTexture(\"texture\")",
                         name.c_str());
+      }
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     if (lua_istable(Ls, 1)) {
       const char *tex = lua_tostring(Ls, 2);

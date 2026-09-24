@@ -337,27 +337,33 @@ int LuaTaxiNodeCost(lua_State* L) {
   }
 
   const auto slot = ReadTaxiDisplaySlotUnchecked(L, 1);
-  const auto state = BuildTaxiSliceState(L);
-  if (slot >= state.nodes.size()) {
-    return luaL_error(L, "Invalid taxi node slot");
+  {
+    const auto state = BuildTaxiSliceState(L);
+    if (slot < state.nodes.size()) {
+      const auto total =
+          CalculateTaxiNodeCost(L, state, slot);
+      lua_pushnumber(L, static_cast<lua_Integer>(total));
+      return 1;
+    }
   }
-  const auto total =
-      CalculateTaxiNodeCost(L, state, slot);
-  lua_pushnumber(L, static_cast<lua_Integer>(total));
-  return 1;
+  // Raised after `state` is destroyed; luaL_error longjmps past C++ destructors.
+  return luaL_error(L, "Invalid taxi node slot");
 }
 
 int LuaTaxiNodePosition(lua_State* L) {
   const auto slot_index =
       ReadTaxiDisplaySlot(L, 1, "Usage: TaxiNodePosition(slot)");
-  const auto state = BuildTaxiSliceState(L);
-  if (slot_index >= state.nodes.size()) {
-    return luaL_error(L, "Invalid taxi node slot");
+  {
+    const auto state = BuildTaxiSliceState(L);
+    if (slot_index < state.nodes.size()) {
+      const auto& node = state.nodes[slot_index];
+      lua_pushnumber(L, static_cast<double>(node.x));
+      lua_pushnumber(L, static_cast<double>(node.y));
+      return 2;
+    }
   }
-  const auto& node = state.nodes[slot_index];
-  lua_pushnumber(L, static_cast<double>(node.x));
-  lua_pushnumber(L, static_cast<double>(node.y));
-  return 2;
+  // Raised after `state` is destroyed; luaL_error longjmps past C++ destructors.
+  return luaL_error(L, "Invalid taxi node slot");
 }
 
 int LuaTaxiNodeGetType(lua_State* L) {
@@ -430,10 +436,17 @@ int LuaTaxiGetDestY(lua_State* L) {
 }
 
 int LuaSetTaxiMap([[maybe_unused]] lua_State* L) {
-  const auto state = BuildTaxiSliceState(L);
-  if (!state.texture_path.empty()) {
-    AssignTaxiTexture(L, ValidateTaxiTextureArgument(L), state.texture_path);
+  bool has_texture = false;
+  {
+    const auto state = BuildTaxiSliceState(L);
+    has_texture = !state.texture_path.empty();
   }
+  if (!has_texture) {
+    return 0;
+  }
+  // Validate (which may raise) while no TaxiSliceState is alive, then rebuild the slice.
+  const int texture_index = ValidateTaxiTextureArgument(L);
+  AssignTaxiTexture(L, texture_index, BuildTaxiSliceState(L).texture_path);
   return 0;
 }
 

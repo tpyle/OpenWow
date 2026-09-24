@@ -254,8 +254,9 @@ void InstallFrameInteractionMethods(lua_State* L) {
 
       if (lua_isnumber(Ls, 2) == 0 || lua_isnumber(Ls, 3) == 0 ||
           lua_isnumber(Ls, 4) == 0 || lua_isnumber(Ls, 5) == 0) {
-        return luaL_error(Ls, "Usage: %s:SetHitRectInsets(left, right, top, bottom)",
-                          GetFrameUsageObjectName(Ls, self_idx).c_str());
+        lua_pushfstring(Ls, "Usage: %s:SetHitRectInsets(left, right, top, bottom)",
+                        GetFrameUsageObjectName(Ls, self_idx).c_str());
+        return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
       }
 
       const lua_Number left = lua_tonumber(Ls, 2);
@@ -383,8 +384,9 @@ void InstallFramePresentationMethods(lua_State* L) {
       lua_pop(Ls, 1);
 
       if (!movable && !resizable) {
-        const std::string frame_name = GetFrameUsageObjectName(Ls, self_idx);
-        return luaL_error(Ls, "Frame %s is not movable or resizable", frame_name.c_str());
+        lua_pushfstring(Ls, "Frame %s is not movable or resizable",
+                        GetFrameUsageObjectName(Ls, self_idx).c_str());
+        return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
       }
 
       const bool user_placed = ScriptReadBoolArgOrDefault(Ls, 2, true);
@@ -463,8 +465,9 @@ void InstallFramePresentationMethods(lua_State* L) {
     lua_pushcfunction(L, [](lua_State *Ls) -> int {
       const int self_idx = ValidateFrameResizeSelf(Ls);
       if (lua_isnumber(Ls, 2) == 0) {
-        return luaL_error(Ls, "Usage: %s:SetDepth(additiveDepth)",
-                          GetFrameUsageObjectName(Ls, self_idx).c_str());
+        lua_pushfstring(Ls, "Usage: %s:SetDepth(additiveDepth)",
+                        GetFrameUsageObjectName(Ls, self_idx).c_str());
+        return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
       }
       const float depth = static_cast<float>(lua_tonumber(Ls, 2));
       lua_pushnumber(Ls, static_cast<lua_Number>(depth));
@@ -607,9 +610,10 @@ void InstallFrameMovementMethods(lua_State* L) {
         return 0;
       }
 
-      const std::string usage_name = GetFrameUsageObjectName(Ls, self_idx);
       if (!GetLuaBooleanField(Ls, self_idx, "__ow_movable")) {
-        return luaL_error(Ls, "Frame %s is not movable", usage_name.c_str());
+        lua_pushfstring(Ls, "Frame %s is not movable",
+                        GetFrameUsageObjectName(Ls, self_idx).c_str());
+        return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
       }
 
       (void)BeginTrackedFrameMoveSizing(Ls, self_idx, GetFrameManagerKey(Ls, self_idx), 4);
@@ -634,9 +638,10 @@ void InstallFrameMovementMethods(lua_State* L) {
         return 0;
       }
 
-      const std::string usage_name = GetFrameUsageObjectName(Ls, self_idx);
       if (!GetLuaBooleanField(Ls, self_idx, "__ow_resizable")) {
-        return luaL_error(Ls, "Frame %s is not resizable", usage_name.c_str());
+        lua_pushfstring(Ls, "Frame %s is not resizable",
+                        GetFrameUsageObjectName(Ls, self_idx).c_str());
+        return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
       }
 
       int mode = 8;

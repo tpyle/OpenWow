@@ -623,19 +623,18 @@ std::string GetCheckedGlueWidgetName(lua_State* state) {
                "Attempt to find 'this' in non-table object (used '.' instead of ':' ?)");
   }
 
-  const auto name = WidgetNameFromArg(state, 1);
-  if (name.empty()) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
+  {
+    auto name = WidgetNameFromArg(state, 1);
+    if (!name.empty()) {
+      auto* runtime = GetWidgetRuntime(state);
+      if (runtime != nullptr &&
+          (IsUiParentName(name) || runtime->GetWidget(name).has_value())) {
+        return name;
+      }
+    }
   }
-
-  auto* runtime = GetWidgetRuntime(state);
-  if (runtime == nullptr) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
-  }
-  if (!IsUiParentName(name) && !runtime->GetWidget(name).has_value()) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
-  }
-  return name;
+  luaL_error(state, "Attempt to find 'this' in non-framescript object");
+  return {};
 }
 
 bool GlueWidgetMatchesFrameType(const GlueWidgetState& widget) {
@@ -713,37 +712,45 @@ void PushAnonymousGlueFrame(lua_State* state,
 }
 
 std::string GetCheckedGlueFrameWidgetName(lua_State* state) {
-  const auto name = GetCheckedGlueWidgetName(state);
-  if (IsUiParentName(name)) {
-    return name;
-  }
+  const char* error = nullptr;
+  {
+    auto name = GetCheckedGlueWidgetName(state);
+    if (IsUiParentName(name)) {
+      return name;
+    }
 
-  auto* runtime = GetWidgetRuntime(state);
-  if (runtime == nullptr) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
+    auto* runtime = GetWidgetRuntime(state);
+    if (runtime == nullptr) {
+      error = "Attempt to find 'this' in non-framescript object";
+    } else {
+      const auto widget = runtime->GetWidget(name);
+      if (!widget.has_value()) {
+        error = "Attempt to find 'this' in non-framescript object";
+      } else if (!GlueWidgetMatchesFrameType(*widget)) {
+        error = "Wrong object type for member function";
+      } else {
+        return name;
+      }
+    }
   }
-
-  const auto widget = runtime->GetWidget(name);
-  if (!widget.has_value()) {
-    luaL_error(state, "Attempt to find 'this' in non-framescript object");
-  }
-  if (!GlueWidgetMatchesFrameType(*widget)) {
-    luaL_error(state, "Wrong object type for member function");
-  }
-  return name;
+  luaL_error(state, "%s", error);
+  return {};
 }
 
 std::string GetCheckedGlueEditBoxWidgetName(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  auto* runtime = GetWidgetRuntime(state);
-  const auto widget = runtime != nullptr && !IsUiParentName(name)
-                          ? runtime->GetWidget(name)
-                          : std::optional<GlueWidgetState>{};
-  if (!widget.has_value() ||
-      !openwow::text::EqualsIgnoreCaseAscii(widget->kind, "EditBox")) {
-    luaL_error(state, "Wrong object type for member function");
+  {
+    auto name = GetCheckedGlueFrameWidgetName(state);
+    auto* runtime = GetWidgetRuntime(state);
+    const auto widget = runtime != nullptr && !IsUiParentName(name)
+                            ? runtime->GetWidget(name)
+                            : std::optional<GlueWidgetState>{};
+    if (widget.has_value() &&
+        openwow::text::EqualsIgnoreCaseAscii(widget->kind, "EditBox")) {
+      return name;
+    }
   }
-  return name;
+  luaL_error(state, "Wrong object type for member function");
+  return {};
 }
 
 bool GlueTypeMatchesRegionObjectType(const char* type_name) {
@@ -769,13 +776,15 @@ std::string GetCheckedGlueRegionWidgetName(lua_State* state) {
     luaL_error(state, "Attempt to find 'this' in non-framescript object");
   }
 
-  const auto name = WidgetNameFromArg(state, 1);
-  if (!name.empty()) {
-    if (IsUiParentName(name)) {
-      return name;
-    }
-    if (runtime->GetWidget(name).has_value()) {
-      return name;
+  {
+    auto name = WidgetNameFromArg(state, 1);
+    if (!name.empty()) {
+      if (IsUiParentName(name)) {
+        return name;
+      }
+      if (runtime->GetWidget(name).has_value()) {
+        return name;
+      }
     }
   }
 

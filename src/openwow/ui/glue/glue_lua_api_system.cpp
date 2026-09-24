@@ -592,11 +592,17 @@ int LuaGetCVar(lua_State *state) {
 
   const char *key = ReadGlueStringArgWithUsage(state, 1, "Usage: GetCVar(\"cvar\")");
   auto &sys = openwow::ui::game::CVarSystem::Instance();
-  const auto snapshot = LookupGlueCVar(sys, key);
-  if (!snapshot.has_value()) {
+  bool found = false;
+  {
+    const auto snapshot = LookupGlueCVar(sys, key);
+    if (snapshot.has_value()) {
+      lua_pushstring(state, snapshot->value.c_str());
+      found = true;
+    }
+  }
+  if (!found) {
     return luaL_error(state, "Couldn't find CVar named '%s'", key);
   }
-  lua_pushstring(state, snapshot->value.c_str());
   return 1;
 }
 
@@ -607,21 +613,31 @@ int LuaSetCVar(lua_State *state) {
 
   const char *key = lua_tostring(state, 1);
   auto &sys = openwow::ui::game::CVarSystem::Instance();
-  const auto snapshot = LookupGlueCVar(sys, key);
-  if (!snapshot.has_value()) {
+  bool found = false;
+  bool read_only = false;
+  {
+    const auto snapshot = LookupGlueCVar(sys, key);
+    if (snapshot.has_value()) {
+      found = true;
+      const auto flags = snapshot->flags;
+      read_only =
+          openwow::ui::game::HasFlag(flags, openwow::ui::game::CVarFlags::ServerSent);
+      if (!read_only) {
+        const char *value = lua_tostring(state, 2);
+        if (value == nullptr) {
+          value = "0";
+        }
+
+        (void)sys.SetRegisteredCVarValueDirect(snapshot->registered_name, value);
+      }
+    }
+  }
+  if (!found) {
     return luaL_error(state, "Couldn't find CVar named '%s'", key);
   }
-  const auto flags = snapshot->flags;
-  if (openwow::ui::game::HasFlag(flags, openwow::ui::game::CVarFlags::ServerSent)) {
+  if (read_only) {
     return luaL_error(state, "\"%s\" is read-only", key);
   }
-
-  const char *value = lua_tostring(state, 2);
-  if (value == nullptr) {
-    value = "0";
-  }
-
-  (void)sys.SetRegisteredCVarValueDirect(snapshot->registered_name, value);
   return 0;
 }
 
@@ -637,14 +653,20 @@ int LuaGetCVarDefault(lua_State *state) {
 
   const char *key = ReadGlueStringArgWithUsage(state, 1, "Usage: GetCVarDefault(\"cvar\")");
   auto &sys = openwow::ui::game::CVarSystem::Instance();
-  const auto snapshot = LookupGlueCVar(sys, key);
-  if (!snapshot.has_value()) {
-    return luaL_error(state, "Couldn't find CVar named '%s'", key);
+  bool found = false;
+  {
+    const auto snapshot = LookupGlueCVar(sys, key);
+    if (snapshot.has_value()) {
+      if (!snapshot->has_default_value) {
+        lua_pushnil(state);
+      } else {
+        lua_pushstring(state, snapshot->default_value.c_str());
+      }
+      found = true;
+    }
   }
-  if (!snapshot->has_default_value) {
-    lua_pushnil(state);
-  } else {
-    lua_pushstring(state, snapshot->default_value.c_str());
+  if (!found) {
+    return luaL_error(state, "Couldn't find CVar named '%s'", key);
   }
   return 1;
 }

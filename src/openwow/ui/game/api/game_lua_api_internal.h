@@ -3516,6 +3516,13 @@ struct ScriptResolvedCurrentSpellQuery {
   int trailing_argument_index = 0;
 };
 
+// Raises "<api_name>(): Invalid spell slot". The name is pushed onto the Lua stack instead of
+// being copied into a std::string, since luaL_error longjmps past C++ destructors.
+inline void RaiseInvalidCurrentSpellSlot(lua_State *L, std::string_view api_name) {
+  lua_pushlstring(L, api_name.data(), api_name.size());
+  luaL_error(L, "%s(): Invalid spell slot", lua_tostring(L, -1));
+}
+
 inline std::optional<ScriptResolvedCurrentSpellQuery>
 ResolveScriptCurrentSpellQuery(lua_State *L, std::string_view api_name) {
   if (lua_isnumber(L, 1)) {
@@ -3528,24 +3535,25 @@ ResolveScriptCurrentSpellQuery(lua_State *L, std::string_view api_name) {
     }
 
     if (slot < 1 || slot > 1024) {
-      luaL_error(L, "%s(): Invalid spell slot", std::string(api_name).c_str());
+      RaiseInvalidCurrentSpellSlot(L, api_name);
       return std::nullopt;
     }
 
     if (!lua_isstring(L, 2)) {
-      luaL_error(L, "%s(): Invalid spell slot", std::string(api_name).c_str());
+      RaiseInvalidCurrentSpellSlot(L, api_name);
       return std::nullopt;
     }
 
+    // Validate before book_selector exists so luaL_error cannot longjmp past it.
+    const bool has_book_selector = IsSpellBookSelector(SafeLuaString(L, 2));
+    if (!has_book_selector && api_name != "IsSpellInRange") {
+      RaiseInvalidCurrentSpellSlot(L, api_name);
+      return std::nullopt;
+    }
     auto book_selector = SafeLuaString(L, 2);
     int trailing_argument_index = 3;
-    if (!IsSpellBookSelector(book_selector)) {
-      if (api_name == "IsSpellInRange") {
-        book_selector = "spell";
-      } else {
-        luaL_error(L, "%s(): Invalid spell slot", std::string(api_name).c_str());
-        return std::nullopt;
-      }
+    if (!has_book_selector) {
+      book_selector = "spell";
     }
 
     return ScriptResolvedCurrentSpellQuery{
@@ -3556,7 +3564,7 @@ ResolveScriptCurrentSpellQuery(lua_State *L, std::string_view api_name) {
   }
 
   if (!lua_isstring(L, 1)) {
-    luaL_error(L, "%s(): Invalid spell slot", std::string(api_name).c_str());
+    RaiseInvalidCurrentSpellSlot(L, api_name);
     return std::nullopt;
   }
 

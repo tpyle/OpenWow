@@ -125,7 +125,7 @@ TemplateResolveResult ResolveTemplateNodes(lua_State *L, const char *inherits,
   return result;
 }
 
-int RaiseInheritedTemplateError(lua_State *L, int owner_index,
+void PushInheritedTemplateError(lua_State *L, int owner_index,
                                 const char *method_name,
                                 const TemplateResolveResult &result) {
   const char* owner_name =
@@ -133,11 +133,10 @@ int RaiseInheritedTemplateError(lua_State *L, int owner_index,
   if (result.recursive) {
     lua_pushfstring(L, "%s:%s(): Recursively inherited node \"%s\"",
                     owner_name, method_name, result.failed_name.c_str());
-    return lua_error(L);
+    return;
   }
   lua_pushfstring(L, "%s:%s(): Couldn't find inherited node \"%s\"",
                   owner_name, method_name, result.failed_name.c_str());
-  return lua_error(L);
 }
 
 }

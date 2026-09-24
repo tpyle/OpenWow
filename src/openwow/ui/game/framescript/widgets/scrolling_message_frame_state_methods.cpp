@@ -39,8 +39,9 @@ void ApplyScrollingMessageFrameStateMethods(lua_State* L) {
   lua_pushcfunction(L, [](lua_State* Ls) -> int {
     const int self_idx = ValidateFrameResizeSelf(Ls);
     if (lua_isnumber(Ls, 2) == 0) {
-      return luaL_error(Ls, "Usage: %s:GetMessageInfo(index[, accessID])",
-                        GetFrameUsageObjectName(Ls, self_idx).c_str());
+      lua_pushfstring(Ls, "Usage: %s:GetMessageInfo(index[, accessID])",
+                      GetFrameUsageObjectName(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     lua_Integer idx =
         static_cast<lua_Integer>(std::max<lua_Number>(lua_tonumber(Ls, 2), 0));
@@ -51,11 +52,12 @@ void ApplyScrollingMessageFrameStateMethods(lua_State* L) {
     lua_getfield(Ls, 1, "__ow_smf_messages");
     if (!lua_istable(Ls, -1)) {
       lua_pop(Ls, 1);
-      return luaL_error(Ls,
-                        "%s:GetMessageInfo - A line with accessID %d and index "
-                        "%d does not exist.",
-                        GetFrameUsageObjectName(Ls, self_idx).c_str(),
-                        static_cast<int>(access_id), static_cast<int>(idx - 1));
+      lua_pushfstring(Ls,
+                      "%s:GetMessageInfo - A line with accessID %d and index "
+                      "%d does not exist.",
+                      GetFrameUsageObjectName(Ls, self_idx).c_str(),
+                      static_cast<int>(access_id), static_cast<int>(idx - 1));
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
 
     lua_getfield(Ls, self_idx, "__ow_smf_num_msg");
@@ -83,11 +85,12 @@ void ApplyScrollingMessageFrameStateMethods(lua_State* L) {
 
     if (!found) {
       lua_pop(Ls, 1);
-      return luaL_error(Ls,
-                        "%s:GetMessageInfo - A line with accessID %d and index "
-                        "%d does not exist.",
-                        GetFrameUsageObjectName(Ls, self_idx).c_str(),
-                        static_cast<int>(access_id), static_cast<int>(idx - 1));
+      lua_pushfstring(Ls,
+                      "%s:GetMessageInfo - A line with accessID %d and index "
+                      "%d does not exist.",
+                      GetFrameUsageObjectName(Ls, self_idx).c_str(),
+                      static_cast<int>(access_id), static_cast<int>(idx - 1));
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
 
     int msg = lua_absindex(Ls, -1);
@@ -102,8 +105,9 @@ void ApplyScrollingMessageFrameStateMethods(lua_State* L) {
   lua_pushcfunction(L, [](lua_State* Ls) -> int {
     const int self_idx = ValidateFrameResizeSelf(Ls);
     if (lua_isnumber(Ls, 2) == 0) {
-      return luaL_error(Ls, "Usage: %s:RemoveMessagesByAccessID(accessID)",
-                        GetFrameUsageObjectName(Ls, self_idx).c_str());
+      lua_pushfstring(Ls, "Usage: %s:RemoveMessagesByAccessID(accessID)",
+                      GetFrameUsageObjectName(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     lua_Integer targetID = static_cast<lua_Integer>(lua_tonumber(Ls, 2));
 

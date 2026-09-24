@@ -70,10 +70,11 @@ void ApplyMessageFrameStateMethods(lua_State *L) {
   lua_pushcfunction(L, [](lua_State *Ls) -> int {
     const int self_idx = ValidateFrameResizeSelf(Ls);
     if (lua_isstring(Ls, 2) == 0) {
-      return luaL_error(
+      lua_pushfstring(
           Ls,
           "Usage: %s:AddMessage(\"text\", [r, g, b,] typeID, backFill, accessID, extraData)",
           GetFrameUsageObjectName(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
 
     const char *text = lua_tostring(Ls, 2);

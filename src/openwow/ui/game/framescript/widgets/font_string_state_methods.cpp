@@ -46,19 +46,20 @@ void ApplyFontStringStateMethods(lua_State *L, int table_idx) {
 
   lua_pushcfunction(L, [](lua_State *Ls) -> int {
     const int self_idx = ValidateTypedFramescriptSelf(Ls, "FontString");
-    const std::string object_name = GetObjectNameOrUnnamed(Ls, self_idx);
     const int argument_type = lua_type(Ls, 2);
 
     if (argument_type == LUA_TTABLE) {
       if (!openwow::ui::game::lua_adapter::HasScriptObjectIdentity(Ls, 2)) {
-        return luaL_error(Ls, "%s:SetFontObject(): Couldn't find 'this' in font object",
-                          object_name.c_str());
+        lua_pushfstring(Ls, "%s:SetFontObject(): Couldn't find 'this' in font object",
+                        GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+        return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
       }
 
       if (!openwow::ui::game::lua_adapter::HasCanonicalScriptObjectType(
               Ls, 2, openwow::ui::widgets::ScriptObjectType::Font)) {
-        return luaL_error(Ls, "%s:SetFontObject(): Wrong object type, expected font",
-                          object_name.c_str());
+        lua_pushfstring(Ls, "%s:SetFontObject(): Wrong object type, expected font",
+                        GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+        return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
       }
 
       SetBoundFontObject(Ls, self_idx, 2);
@@ -70,8 +71,9 @@ void ApplyFontStringStateMethods(lua_State *L, int table_idx) {
     if (argument_type == LUA_TSTRING) {
       const char *font_name = lua_tostring(Ls, 2);
       if (!PushNamedFontObject(Ls, font_name)) {
-        return luaL_error(Ls, "%s:SetFontObject(): Couldn't find font named %s",
-                          object_name.c_str(), font_name);
+        lua_pushfstring(Ls, "%s:SetFontObject(): Couldn't find font named %s",
+                        GetObjectNameOrUnnamed(Ls, self_idx).c_str(), font_name);
+        return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
       }
 
       SetBoundFontObject(Ls, self_idx, -1);
@@ -82,8 +84,9 @@ void ApplyFontStringStateMethods(lua_State *L, int table_idx) {
     }
 
     if (argument_type != LUA_TNONE && argument_type != LUA_TNIL) {
-      return luaL_error(Ls, "Usage: %s:SetFontObject(font or \"font\" or nil)",
-                        object_name.c_str());
+      lua_pushfstring(Ls, "Usage: %s:SetFontObject(font or \"font\" or nil)",
+                      GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
 
     ClearBoundFontObject(Ls, self_idx);
@@ -131,15 +134,17 @@ void ApplyFontStringStateMethods(lua_State *L, int table_idx) {
 
   lua_pushcfunction(L, [](lua_State *Ls) -> int {
     const int self_idx = ValidateTypedFramescriptSelf(Ls, "FontString");
-    const std::string object_name = GetObjectNameOrUnnamed(Ls, self_idx);
     if (lua_isnumber(Ls, 2) == 0) {
-      return luaL_error(Ls, "Usage: %s:SetTextHeight(pixelHeight)", object_name.c_str());
+      lua_pushfstring(Ls, "Usage: %s:SetTextHeight(pixelHeight)",
+                      GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
 
     const float height_pixels = static_cast<float>(lua_tonumber(Ls, 2));
     if (!(height_pixels > kMinPositiveTextHeightPixels)) {
-      return luaL_error(Ls, "%s:SetTextHeight(): invalid texHeight: %f, height must be > 0",
-                        object_name.c_str(), height_pixels);
+      lua_pushfstring(Ls, "%s:SetTextHeight(): invalid texHeight: %f, height must be > 0",
+                      GetObjectNameOrUnnamed(Ls, self_idx).c_str(), height_pixels);
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
 
     lua_pushnumber(Ls, openwow::ui::PixelUiHorizontalCoordinateToStored(height_pixels));
@@ -158,8 +163,9 @@ void ApplyFontStringStateMethods(lua_State *L, int table_idx) {
   lua_pushcfunction(L, [](lua_State *Ls) -> int {
     const int self_idx = ValidateTypedFramescriptSelf(Ls, "FontString");
     if (lua_isnumber(Ls, 2) == 0) {
-      return luaL_error(Ls, "Usage: %s:SetSpacing(spacing)",
-                        GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      lua_pushfstring(Ls, "Usage: %s:SetSpacing(spacing)",
+                      GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
 
     const float spacing_pixels = static_cast<float>(lua_tonumber(Ls, 2));
@@ -195,8 +201,9 @@ void ApplyFontStringStateMethods(lua_State *L, int table_idx) {
     const int self_idx = ValidateTypedFramescriptSelf(Ls, "FontString");
     int draw_layer_id = 0;
     if (lua_isstring(Ls, 2) == 0 || !TryParseDrawLayerName(lua_tostring(Ls, 2), &draw_layer_id)) {
-      return luaL_error(Ls, "Usage: %s:SetDrawLayer(\"layer\")",
-                        GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      lua_pushfstring(Ls, "Usage: %s:SetDrawLayer(\"layer\")",
+                      GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
 
     const char *canonical_layer = GetDrawLayerNameById(draw_layer_id);

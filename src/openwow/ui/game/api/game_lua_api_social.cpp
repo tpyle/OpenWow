@@ -1299,7 +1299,9 @@ void ResetBNetCustomMessageThrottleForTesting() {
   GetBNetCustomMessageThrottleState().Reset();
 }
 
-int LuaSendChatMessage(lua_State *L) {
+// Body of SendChatMessage. Errors are reported through `error` rather than raised here so
+// that every std::string local is destroyed before LuaSendChatMessage longjmps.
+static int SendChatMessageBody(lua_State *L, const char **error) {
   if (!GameUI_CanPerformProtectedAction(protected_action_kind::kChatMessage)) {
     return 0;
   }
@@ -1333,7 +1335,8 @@ int LuaSendChatMessage(lua_State *L) {
 
   ChatMsg type = ChatMsg::kSay;
   if (lua_isstring(L, 2) && !ChatTypeStringToID(msg_type_str.c_str(), &type)) {
-    return luaL_error(L, "SendChatMessage(): Unknown chat type");
+    *error = "SendChatMessage(): Unknown chat type";
+    return 0;
   }
 
   if (message.empty() && type != ChatMsg::kDnd && type != ChatMsg::kAfk) {
@@ -1341,7 +1344,8 @@ int LuaSendChatMessage(lua_State *L) {
   }
 
   if (!openwow::ui::ValidateUtf8String(message.c_str())) {
-    return luaL_error(L, "SendChatMessage(): Chat message must be UTF-8 text");
+    *error = "SendChatMessage(): Chat message must be UTF-8 text";
+    return 0;
   }
 
   std::uint32_t default_language_id = 0;
@@ -1363,12 +1367,14 @@ int LuaSendChatMessage(lua_State *L) {
       dbc = GetDbcLoader(L);
     }
     if (dbc == nullptr) {
-      return luaL_error(L, "SendChatMessage(): Unknown language");
+      *error = "SendChatMessage(): Unknown language";
+      return 0;
     }
 
     const auto requested_language = ::openwow::game::FindChatLanguageByName(*dbc, lang_str);
     if (!requested_language.has_value()) {
-      return luaL_error(L, "SendChatMessage(): Unknown language");
+      *error = "SendChatMessage(): Unknown language";
+      return 0;
     }
 
     if (::openwow::game::GetChatLanguageComprehensionValue(*player, *dbc, requested_language->id) ==
@@ -1381,11 +1387,13 @@ int LuaSendChatMessage(lua_State *L) {
   }
 
   if (type == ChatMsg::kWhisper && target.empty()) {
-    return luaL_error(L, "SendChatMessage(): Whisper message missing target player!");
+    *error = "SendChatMessage(): Whisper message missing target player!";
+    return 0;
   }
 
   if (type == ChatMsg::kChannel && target.empty()) {
-    return luaL_error(L, "SendChatMessage(): Channel send missing channel number");
+    *error = "SendChatMessage(): Channel send missing channel number";
+    return 0;
   }
 
   const auto& group = session->group();
@@ -1461,12 +1469,22 @@ int LuaSendChatMessage(lua_State *L) {
     openwow::ui::TruncateAtNewlineOrPipeN(outgoing_message.data());
     outgoing_message.resize(std::char_traits<char>::length(outgoing_message.c_str()));
     if (!ValidateAndNormalizeSendChatEscapes(&outgoing_message)) {
-      return luaL_error(L, "SendChatMessage(): Invalid escape code in chat message");
+      *error = "SendChatMessage(): Invalid escape code in chat message";
+      return 0;
     }
   }
 
   session->chat_sender().SendTyped(type, language, target, outgoing_message);
   return 0;
+}
+
+int LuaSendChatMessage(lua_State *L) {
+  const char *error = nullptr;
+  const int result = SendChatMessageBody(L, &error);
+  if (error != nullptr) {
+    return luaL_error(L, "%s", error);
+  }
+  return result;
 }
 
 int LuaGetDefaultLanguage(lua_State *L) {
@@ -3474,14 +3492,16 @@ int LuaBNCreateConversation(lua_State *L) {
 
   constexpr auto kToonNameKey = static_cast<std::int32_t>(BNetPresenceKey::kToonName);
   const auto first_presence_id = TruncateLuaNumberToBNetPresenceId(lua_tonumber(L, 1));
-  const auto first_toon_name = api.GetPresenceValue(first_presence_id, kToonNameKey);
-  if (first_toon_name.type != BNetPresenceValue::Type::kToonName) {
+  if (api.GetPresenceValue(first_presence_id, kToonNameKey).type !=
+      BNetPresenceValue::Type::kToonName) {
     return 0;
   }
 
   if (!lua_isnumber(L, 2)) {
     return luaL_error(L, "Usage: BNCreateConversation(id,id)");
   }
+
+  const auto first_toon_name = api.GetPresenceValue(first_presence_id, kToonNameKey);
 
   const auto second_presence_id = TruncateLuaNumberToBNetPresenceId(lua_tonumber(L, 2));
   const auto second_toon_name = api.GetPresenceValue(second_presence_id, kToonNameKey);
@@ -4009,12 +4029,19 @@ int LuaBNGetConversationMemberInfo(lua_State *L) {
 
   const auto zero_based_member_index =
       TruncateLuaNumberToBNetZeroBasedIndex(lua_tonumber(L, 2));
-  const auto members = api.GetConversationMemberList(wrapped_channel);
-  if (zero_based_member_index >= members.size()) {
+  std::int32_t member_presence_id = 0;
+  bool has_member = false;
+  {
+    const auto members = api.GetConversationMemberList(wrapped_channel);
+    if (zero_based_member_index < members.size()) {
+      member_presence_id = members[static_cast<std::size_t>(zero_based_member_index)];
+      has_member = true;
+    }
+  }
+  if (!has_member) {
     return luaL_error(L, "Invalid Index");
   }
 
-  const auto member_presence_id = members[static_cast<std::size_t>(zero_based_member_index)];
   const auto account_presence_id = api.GetAccountPresenceId(member_presence_id);
   lua_pushnumber(L, static_cast<lua_Number>(static_cast<std::uint32_t>(account_presence_id)));
   lua_pushnumber(L, static_cast<lua_Number>(static_cast<std::uint32_t>(member_presence_id)));

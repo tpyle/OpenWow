@@ -117,10 +117,12 @@ int LuaStrSplit(lua_State* state) {
   const char* text = luaL_optstring(state, 2, "");
   const int limit = static_cast<int>(luaL_optinteger(state, 3, 0));
 
-  const std::string input(text);
-  const std::string separator(delimiter);
+  // Views over the (stack-anchored) arguments rather than std::string copies: luaL_error
+  // below longjmps past C++ destructors.
+  const std::string_view input(text);
+  const std::string_view separator(delimiter);
   if (separator.empty()) {
-    lua_pushstring(state, input.c_str());
+    lua_pushlstring(state, input.data(), input.size());
     return 1;
   }
 
@@ -133,19 +135,22 @@ int LuaStrSplit(lua_State* state) {
     }
 
     if (limit > 0 && count >= limit - 1) {
-      lua_pushstring(state, input.substr(offset).c_str());
+      const std::string_view piece = input.substr(offset);
+      lua_pushlstring(state, piece.data(), piece.size());
       ++count;
       break;
     }
 
     const std::size_t next = input.find(separator, offset);
-    if (next == std::string::npos) {
-      lua_pushstring(state, input.substr(offset).c_str());
+    if (next == std::string_view::npos) {
+      const std::string_view piece = input.substr(offset);
+      lua_pushlstring(state, piece.data(), piece.size());
       ++count;
       break;
     }
 
-    lua_pushstring(state, input.substr(offset, next - offset).c_str());
+    const std::string_view piece = input.substr(offset, next - offset);
+    lua_pushlstring(state, piece.data(), piece.size());
     ++count;
     offset = next + separator.size();
   }
@@ -157,16 +162,22 @@ int LuaStrJoin(lua_State* state) {
   const char* delimiter = luaL_checkstring(state, 1);
   const int top = lua_gettop(state);
 
+  // Convert every argument before `joined` exists: a __tostring metamethod can raise, and
+  // Lua errors longjmp past C++ destructors.
+  for (int i = 2; i <= top; ++i) {
+    luaL_tolstring(state, i, nullptr);
+    lua_replace(state, i);
+  }
+
   std::string joined;
   for (int i = 2; i <= top; ++i) {
     if (i > 2) {
       joined += delimiter;
     }
-    const char* part = luaL_tolstring(state, i, nullptr);
+    const char* part = lua_tostring(state, i);
     if (part != nullptr) {
       joined += part;
     }
-    lua_pop(state, 1);
   }
 
   lua_pushstring(state, joined.c_str());
@@ -189,13 +200,18 @@ int LuaStrReplace(lua_State* state) {
 
 int LuaStrConcat(lua_State* state) {
   const int top = lua_gettop(state);
+  // Convert every argument before `joined` exists: a __tostring metamethod can raise, and
+  // Lua errors longjmp past C++ destructors.
+  for (int i = 1; i <= top; ++i) {
+    luaL_tolstring(state, i, nullptr);
+    lua_replace(state, i);
+  }
   std::string joined;
   for (int i = 1; i <= top; ++i) {
-    const char* part = luaL_tolstring(state, i, nullptr);
+    const char* part = lua_tostring(state, i);
     if (part != nullptr) {
       joined += part;
     }
-    lua_pop(state, 1);
   }
   lua_pushstring(state, joined.c_str());
   return 1;

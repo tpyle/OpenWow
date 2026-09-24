@@ -426,16 +426,17 @@ void ApplyButtonMethods(lua_State *L) {
                         lua_adapter::ScriptObjectDisplayName(Ls, 1));
     }
 
-    const auto type_name = openwow::ui::ReadLuaStringField(Ls, 2, "__ow_type");
-    if (!type_name.has_value() || type_name->empty()) {
-      return luaL_error(
-          Ls, "%s:SetFontString(): Couldn't find 'this' in fontstring",
-          lua_adapter::ScriptObjectDisplayName(Ls, 1));
+    const char *type_error = nullptr;
+    {
+      const auto type_name = openwow::ui::ReadLuaStringField(Ls, 2, "__ow_type");
+      if (!type_name.has_value() || type_name->empty()) {
+        type_error = "%s:SetFontString(): Couldn't find 'this' in fontstring";
+      } else if (*type_name != "FontString") {
+        type_error = "%s:SetFontString(): Wrong object type, expected fontstring";
+      }
     }
-    if (*type_name != "FontString") {
-      return luaL_error(
-          Ls, "%s:SetFontString(): Wrong object type, expected fontstring",
-          lua_adapter::ScriptObjectDisplayName(Ls, 1));
+    if (type_error != nullptr) {
+      return luaL_error(Ls, type_error, lua_adapter::ScriptObjectDisplayName(Ls, 1));
     }
 
     BindButtonFontStringRegion(Ls, 1, 2);

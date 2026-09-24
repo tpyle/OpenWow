@@ -36,24 +36,29 @@ int SetLoadedMinimapTexturePath(lua_State *L, const char *method_name, const cha
                                 ClearPathFn &&clear_path,
                                 const char *load_failure_method_name = nullptr) {
   const int self_idx = ValidateTypedFramescriptSelf(L, "Minimap");
-  const std::string object_name = GetObjectNameOrUnnamed(L, self_idx);
   if (lua_isstring(L, 2) == 0) {
-    return luaL_error(L, "Usage: %s:%s(\"file\")", object_name.c_str(), method_name);
+    lua_pushfstring(L, "Usage: %s:%s(\"file\")", GetObjectNameOrUnnamed(L, self_idx).c_str(),
+                    method_name);
+    return luaL_error(L, "%s", lua_tostring(L, -1));
   }
 
   const char *requested_path = lua_tostring(L, 2);
   const bool reject_empty = empty_policy == MinimapTextureEmptyPolicy::kRejectAsUsage &&
                             (requested_path == nullptr || requested_path[0] == '\0');
   if (reject_empty) {
-    return luaL_error(L, "Usage: %s:%s(\"file\")", object_name.c_str(), method_name);
+    lua_pushfstring(L, "Usage: %s:%s(\"file\")", GetObjectNameOrUnnamed(L, self_idx).c_str(),
+                    method_name);
+    return luaL_error(L, "%s", lua_tostring(L, -1));
   }
 
   if (!CanLoadTextureRequest(L, requested_path != nullptr ? requested_path : "")) {
     ClearLuaStringField(L, self_idx, storage_field);
     clear_path(L);
-    return luaL_error(L, "%s:%s(): Couldn't load the file %s", object_name.c_str(),
-                      load_failure_method_name != nullptr ? load_failure_method_name : method_name,
-                      requested_path != nullptr ? requested_path : "");
+    lua_pushfstring(L, "%s:%s(): Couldn't load the file %s",
+                    GetObjectNameOrUnnamed(L, self_idx).c_str(),
+                    load_failure_method_name != nullptr ? load_failure_method_name : method_name,
+                    requested_path != nullptr ? requested_path : "");
+    return luaL_error(L, "%s", lua_tostring(L, -1));
   }
 
   lua_pushvalue(L, 2);
@@ -194,10 +199,10 @@ void ApplyMinimapTextureMethods(lua_State *L) {
 
   lua_pushcfunction(L, [](lua_State *Ls) -> int {
     const int self_idx = ValidateTypedFramescriptSelf(Ls, "Minimap");
-    const std::string object_name = GetObjectNameOrUnnamed(Ls, self_idx);
     if (lua_isstring(Ls, 2) == 0) {
-      return luaL_error(Ls, "Usage: %s:SetPlayerTexture(\"file\")",
-                        object_name.c_str());
+      lua_pushfstring(Ls, "Usage: %s:SetPlayerTexture(\"file\")",
+                      GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     const char *requested = lua_tostring(Ls, 2);
     auto *const minimap_state = MinimapStateOrNull(Ls);
@@ -209,8 +214,9 @@ void ApplyMinimapTextureMethods(lua_State *L) {
       return 0;
     }
     if (!CanLoadTextureRequest(Ls, requested)) {
-      return luaL_error(Ls, "%s:SetPlayerTexture(): Couldn't load the file %s",
-                        object_name.c_str(), requested);
+      lua_pushfstring(Ls, "%s:SetPlayerTexture(): Couldn't load the file %s",
+                      GetObjectNameOrUnnamed(Ls, self_idx).c_str(), requested);
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     if (minimap_state != nullptr) {
       minimap_state->SetPlayerArrowTexturePath(requested);
@@ -224,8 +230,9 @@ void ApplyMinimapTextureMethods(lua_State *L) {
   lua_pushcfunction(L, [](lua_State *Ls) -> int {
     const int self_idx = ValidateTypedFramescriptSelf(Ls, "Minimap");
     if (lua_isnumber(Ls, 2) == 0) {
-      return luaL_error(Ls, "Usage: %s:SetPlayerTextureHeight(height)",
-                        GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      lua_pushfstring(Ls, "Usage: %s:SetPlayerTextureHeight(height)",
+                      GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     const float pixels = static_cast<float>(lua_tonumber(Ls, 2));
     if (auto *const minimap_state = MinimapStateOrNull(Ls)) {
@@ -241,8 +248,9 @@ void ApplyMinimapTextureMethods(lua_State *L) {
   lua_pushcfunction(L, [](lua_State *Ls) -> int {
     const int self_idx = ValidateTypedFramescriptSelf(Ls, "Minimap");
     if (lua_isnumber(Ls, 2) == 0) {
-      return luaL_error(Ls, "Usage: %s:SetPlayerTextureWidth(Width)",
-                        GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      lua_pushfstring(Ls, "Usage: %s:SetPlayerTextureWidth(Width)",
+                      GetObjectNameOrUnnamed(Ls, self_idx).c_str());
+      return luaL_error(Ls, "%s", lua_tostring(Ls, -1));
     }
     const float pixels = static_cast<float>(lua_tonumber(Ls, 2));
     if (auto *const minimap_state = MinimapStateOrNull(Ls)) {

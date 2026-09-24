@@ -185,34 +185,42 @@ int LuaWidget_RegisterForDrag(lua_State* state) {
 }
 
 int LuaWidget_StartSizing(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  bool resizable = GetGlueFrameBooleanField(state, 1, kGlueResizableField);
-  if (auto* runtime = GetWidgetRuntime(state);
-      runtime != nullptr && !IsUiParentName(name)) {
-    resizable = runtime->IsResizable(name);
-  }
-
-  if (!resizable) {
-    return luaL_error(state, "Frame %s is not resizable", name.c_str());
-  }
-
-  int move_sizing_mode = 8;
-  if (lua_isstring(state, 2) != 0) {
-    const char* point_name = lua_tostring(state, 2);
-    int parsed_mode = move_sizing_mode;
-    if (point_name != nullptr && openwow::ui::StringToFramePoint(point_name, &parsed_mode) != 0) {
-      move_sizing_mode = parsed_mode;
+  bool not_resizable = false;
+  {
+    const auto name = GetCheckedGlueFrameWidgetName(state);
+    bool resizable = GetGlueFrameBooleanField(state, 1, kGlueResizableField);
+    if (auto* runtime = GetWidgetRuntime(state);
+        runtime != nullptr && !IsUiParentName(name)) {
+      resizable = runtime->IsResizable(name);
     }
-  }
 
-  if (auto* runtime = GetGlueRuntime(state); runtime != nullptr) {
-    if (runtime->BeginWidgetSizing(name, move_sizing_mode)) {
-      SetGlueFrameBooleanField(state, 1, kGlueUserPlacedField, true);
-      if (auto* widget_runtime = GetWidgetRuntime(state);
-          widget_runtime != nullptr && !IsUiParentName(name)) {
-        widget_runtime->SetUserPlaced(name, true);
+    if (!resizable) {
+      lua_pushfstring(state, "Frame %s is not resizable", name.c_str());
+      not_resizable = true;
+    } else {
+      int move_sizing_mode = 8;
+      if (lua_isstring(state, 2) != 0) {
+        const char* point_name = lua_tostring(state, 2);
+        int parsed_mode = move_sizing_mode;
+        if (point_name != nullptr &&
+            openwow::ui::StringToFramePoint(point_name, &parsed_mode) != 0) {
+          move_sizing_mode = parsed_mode;
+        }
+      }
+
+      if (auto* runtime = GetGlueRuntime(state); runtime != nullptr) {
+        if (runtime->BeginWidgetSizing(name, move_sizing_mode)) {
+          SetGlueFrameBooleanField(state, 1, kGlueUserPlacedField, true);
+          if (auto* widget_runtime = GetWidgetRuntime(state);
+              widget_runtime != nullptr && !IsUiParentName(name)) {
+            widget_runtime->SetUserPlaced(name, true);
+          }
+        }
       }
     }
+  }
+  if (not_resizable) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
   return 0;
 }
@@ -225,24 +233,31 @@ int LuaWidget_StopMovingOrSizing(lua_State* state) {
 }
 
 int LuaWidget_SetUserPlaced(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  bool movable = GetGlueFrameBooleanField(state, 1, kGlueMovableField);
-  bool resizable = GetGlueFrameBooleanField(state, 1, kGlueResizableField);
-  if (auto* runtime = GetWidgetRuntime(state);
-      runtime != nullptr && !IsUiParentName(name)) {
-    movable = runtime->IsMovable(name);
-    resizable = runtime->IsResizable(name);
-  }
+  bool not_movable = false;
+  {
+    const auto name = GetCheckedGlueFrameWidgetName(state);
+    bool movable = GetGlueFrameBooleanField(state, 1, kGlueMovableField);
+    bool resizable = GetGlueFrameBooleanField(state, 1, kGlueResizableField);
+    if (auto* runtime = GetWidgetRuntime(state);
+        runtime != nullptr && !IsUiParentName(name)) {
+      movable = runtime->IsMovable(name);
+      resizable = runtime->IsResizable(name);
+    }
 
-  if (!movable && !resizable) {
-    return luaL_error(state, "Frame %s is not movable or resizable", name.c_str());
+    if (!movable && !resizable) {
+      lua_pushfstring(state, "Frame %s is not movable or resizable", name.c_str());
+      not_movable = true;
+    } else {
+      const bool user_placed = ScriptReadBoolArgOrDefault(state, 2, true);
+      SetGlueFrameBooleanField(state, 1, kGlueUserPlacedField, user_placed);
+      if (auto* runtime = GetWidgetRuntime(state);
+          runtime != nullptr && !IsUiParentName(name)) {
+        runtime->SetUserPlaced(name, user_placed);
+      }
+    }
   }
-
-  const bool user_placed = ScriptReadBoolArgOrDefault(state, 2, true);
-  SetGlueFrameBooleanField(state, 1, kGlueUserPlacedField, user_placed);
-  if (auto* runtime = GetWidgetRuntime(state);
-      runtime != nullptr && !IsUiParentName(name)) {
-    runtime->SetUserPlaced(name, user_placed);
+  if (not_movable) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
   return 0;
 }
@@ -273,13 +288,19 @@ int LuaWidget_IsClampedToScreen(lua_State* state) {
 }
 
 int LuaWidget_SetDepth(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  if (lua_isnumber(state, 2) == 0) {
-    const char* wname = name.empty() ? "<unnamed>" : name.c_str();
-    return luaL_error(state, "Usage: %s:SetDepth(additiveDepth)", wname);
+  bool usage_error = false;
+  {
+    const auto name = GetCheckedGlueFrameWidgetName(state);
+    if (lua_isnumber(state, 2) == 0) {
+      const char* wname = name.empty() ? "<unnamed>" : name.c_str();
+      lua_pushfstring(state, "Usage: %s:SetDepth(additiveDepth)", wname);
+      usage_error = true;
+    } else if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
+      runtime->SetDepth(name, static_cast<float>(lua_tonumber(state, 2)));
+    }
   }
-  if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
-    runtime->SetDepth(name, static_cast<float>(lua_tonumber(state, 2)));
+  if (usage_error) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
   return 0;
 }
@@ -308,13 +329,19 @@ int LuaWidget_GetEffectiveDepth(lua_State* state) {
 }
 
 int LuaWidget_IgnoreDepth(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  if (lua_type(state, 2) != LUA_TBOOLEAN) {
-    const char* wname = name.empty() ? "<unnamed>" : name.c_str();
-    return luaL_error(state, "Usage: %s:IgnoreDepth(ignore)", wname);
+  bool usage_error = false;
+  {
+    const auto name = GetCheckedGlueFrameWidgetName(state);
+    if (lua_type(state, 2) != LUA_TBOOLEAN) {
+      const char* wname = name.empty() ? "<unnamed>" : name.c_str();
+      lua_pushfstring(state, "Usage: %s:IgnoreDepth(ignore)", wname);
+      usage_error = true;
+    } else if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
+      runtime->SetIgnoreDepth(name, lua_toboolean(state, 2) != 0);
+    }
   }
-  if (auto* runtime = GetWidgetRuntime(state); runtime != nullptr) {
-    runtime->SetIgnoreDepth(name, lua_toboolean(state, 2) != 0);
+  if (usage_error) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
   return 0;
 }
@@ -363,9 +390,16 @@ int LuaWidget_GetFrameStrata(lua_State* state) {
 }
 
 int LuaWidget_HasScript(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  if (lua_isstring(state, 2) == 0) {
-    return luaL_error(state, "Usage: %s:HasScript(\"type\")", name.c_str());
+  bool usage_error = false;
+  {
+    const auto name = GetCheckedGlueFrameWidgetName(state);
+    if (lua_isstring(state, 2) == 0) {
+      lua_pushfstring(state, "Usage: %s:HasScript(\"type\")", name.c_str());
+      usage_error = true;
+    }
+  }
+  if (usage_error) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
 
   if (ResolveGlueFrameScriptTypeInfo(state, 1, 2) != nullptr) {
@@ -377,17 +411,25 @@ int LuaWidget_HasScript(lua_State* state) {
 }
 
 int LuaWidget_GetScript(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  if (lua_isstring(state, 2) == 0) {
-    return luaL_error(state, "Usage: %s:GetScript(\"type\")", name.c_str());
+  const openwow::ui::FrameScriptTypeInfo* script_info = nullptr;
+  bool raise_error = false;
+  {
+    const auto name = GetCheckedGlueFrameWidgetName(state);
+    if (lua_isstring(state, 2) == 0) {
+      lua_pushfstring(state, "Usage: %s:GetScript(\"type\")", name.c_str());
+      raise_error = true;
+    } else {
+      script_info = ResolveGlueFrameScriptTypeInfo(state, 1, 2);
+      if (script_info == nullptr) {
+        const char* script_name = lua_tostring(state, 2);
+        lua_pushfstring(state, "%s doesn't have a \"%s\" script", name.c_str(),
+                        script_name != nullptr ? script_name : "");
+        raise_error = true;
+      }
+    }
   }
-
-  const auto* script_info = ResolveGlueFrameScriptTypeInfo(state, 1, 2);
-  if (script_info == nullptr) {
-    const char* script_name = lua_tostring(state, 2);
-    return luaL_error(state, "%s doesn't have a \"%s\" script",
-                      name.c_str(),
-                      script_name != nullptr ? script_name : "");
+  if (raise_error) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
 
   lua_getfield(state, 1, "__ow_scripts");
@@ -403,18 +445,25 @@ int LuaWidget_GetScript(lua_State* state) {
 }
 
 int LuaWidget_HookScript(lua_State* state) {
-  const auto name = GetCheckedGlueFrameWidgetName(state);
-  if (!lua_isstring(state, 2) || lua_type(state, 3) != LUA_TFUNCTION) {
-    return luaL_error(state, "Usage: %s:HookScript(\"type\", function)",
-                      name.c_str());
+  const openwow::ui::FrameScriptTypeInfo* script_info = nullptr;
+  bool raise_error = false;
+  {
+    const auto name = GetCheckedGlueFrameWidgetName(state);
+    if (!lua_isstring(state, 2) || lua_type(state, 3) != LUA_TFUNCTION) {
+      lua_pushfstring(state, "Usage: %s:HookScript(\"type\", function)", name.c_str());
+      raise_error = true;
+    } else {
+      script_info = ResolveGlueFrameScriptTypeInfo(state, 1, 2);
+      if (script_info == nullptr) {
+        const char* script_name = lua_tostring(state, 2);
+        lua_pushfstring(state, "%s doesn't have a \"%s\" script", name.c_str(),
+                        script_name != nullptr ? script_name : "");
+        raise_error = true;
+      }
+    }
   }
-
-  const auto* script_info = ResolveGlueFrameScriptTypeInfo(state, 1, 2);
-  if (script_info == nullptr) {
-    const char* script_name = lua_tostring(state, 2);
-    return luaL_error(state, "%s doesn't have a \"%s\" script",
-                      name.c_str(),
-                      script_name != nullptr ? script_name : "");
+  if (raise_error) {
+    return luaL_error(state, "%s", lua_tostring(state, -1));
   }
 
   lua_getfield(state, 1, "__ow_scripts");
@@ -440,7 +489,8 @@ int LuaWidget_HookScript(lua_State* state) {
 
   lua_pop(state, 1);
   if (auto* runtime = GetGlueRuntime(state); runtime != nullptr) {
-    runtime->InvalidateWidgetScriptCache(name, script_info->canonical_name);
+    runtime->InvalidateWidgetScriptCache(WidgetNameFromArg(state, 1),
+                                         script_info->canonical_name);
   }
   return 0;
 }
