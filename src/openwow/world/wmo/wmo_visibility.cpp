@@ -583,6 +583,15 @@ void ComputeVisibleWmoGroups(
     if (camera_lane || !append) {
       visit_group(seed_group, {});
     } else if (out_sky_visibility != nullptr &&
+               out_sky_visibility->camera_room_open_air) {
+      // From an open-air room (Stormwind's streets are interior groups lit
+      // as exterior), the surrounding exterior walls and roofs are in direct
+      // view, not only through a portal. Their portals are often at street
+      // level, so gating on one being on screen dropped every rooftop as
+      // soon as the camera pitched up. The frustum test in IsExteriorSeed
+      // and the depth buffer handle the rest.
+      visit_group(seed_group, {});
+    } else if (out_sky_visibility != nullptr &&
                out_sky_visibility->terrain_visible) {
       // With the camera inside this WMO, its exterior groups belong to the
       // outside world seen through the rooms' outdoor portals, so draw them
@@ -747,6 +756,9 @@ void ComputeVisibleWmoGroups(
       if (seed_group < groups.size() &&
           (groups[seed_group].flags & kRetailCameraRoomFullSkyFlags) != 0u) {
         admit_sky({}, 0.0f, groups[seed_group].flags);
+        if (out_sky_visibility != nullptr) {
+          out_sky_visibility->camera_room_open_air = true;
+        }
       }
       traverse(seed_group, true);
     }

@@ -70,6 +70,9 @@ struct WmoVisibleGroupPath {
 struct WmoSkyVisibility {
   bool visible{false};
   bool show_local_skybox{false};
+  // The camera's own room is open to the sky (exterior-lit, exterior-sky or
+  // skybox), so the WMO's exterior shell is seen directly, not via portals.
+  bool camera_room_open_air{false};
   WmoPortalClipRect clip_rect{};
   bool terrain_visible{false};
   WmoPortalClipRect terrain_clip_rect{};
