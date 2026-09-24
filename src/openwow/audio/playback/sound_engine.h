@@ -27,7 +27,6 @@ int CacheData_Destroy(void* cache_entry);
 void TSHashTable_UCacheData_Clear(void* hash_table);
 OPENWOW_PRINTF_FORMAT(3, 4)
 void SoundEngine_LogError(SoundEngine& engine, int context, const char* format, ...);
-int ComSatSoundIO_ReadChunked(void* io_obj, int offset, std::uint32_t total_size);
 int SEStreamedSound_PcmSetPosCallback(void* sound_obj_ptr, int new_position);
 double SoundEngine_Custom3DRolloff(float min_dist, float max_dist, float current_dist);
 bool SoundEngine_GetOutputDeviceName(int device_index, char* name_buf, int buf_size, int use_recording);

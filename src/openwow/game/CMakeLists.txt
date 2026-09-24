@@ -212,9 +212,6 @@ openwow_add_component(openwow_game
   chat_system.cpp
   comsat_client.cpp
   comsat_sound_io.cpp
-  comsat_sound_io_sound_engine.cpp
-  comsat_transport_session.cpp
-  comsat_voice_codec_profile.cpp
   voice_chat.cpp
   combat_log_display.cpp
   ignore_system.cpp
@@ -371,13 +368,7 @@ openwow_add_component(openwow_game
   collision_polygon.cpp
   combat_log_messages.cpp
   combat_sounds.cpp
-  comsat_event_callback.cpp
   comsat_sound_output_channel.cpp
-  comsat_voice_codec_lsp_state.cpp
-  comsat_voice_codec_lsp_unquantize.cpp
-  comsat_voice_codec_multipulse_analysis.cpp
-  comsat_voice_codec_post_filter.cpp
-  comsat_voice_codec_resampler_state.cpp
   creature_sound.cpp
   current_area_record.cpp
   delayed_spell_visual_kit.cpp
