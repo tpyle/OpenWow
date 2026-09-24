@@ -204,6 +204,7 @@ std::string ResolveWowIniArchiveLocale(const std::string& locale_token,
 
   if (g_current_locale.language.empty() || g_current_locale.country.empty()) {
     g_current_locale.locale_index = FindWowLocaleIndex(locale_token);
+    g_current_locale.tag = locale_token;
     return locale_token;
   }
 
@@ -218,10 +219,12 @@ std::string ResolveWowIniArchiveLocale(const std::string& locale_token,
       } else {
         DefaultSetCVarString("locale", wow_ini_locale);
       }
+      g_current_locale.tag = wow_ini_locale;
       return wow_ini_locale;
     }
   }
 
+  g_current_locale.tag = locale_token;
   return locale_token;
 }
 

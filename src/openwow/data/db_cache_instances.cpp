@@ -36,11 +36,11 @@ constexpr std::array<WDBCacheType, 13> kClientVersionOrder = {
 };
 
 // The WDB cache lives in Cache/WDB/<locale> under the standard install
-// layout and in WDB/ otherwise. The locale segment is fixed to "enUS"
-// here, matching the previous behaviour; it does not follow the client
-// locale yet.
+// layout (e.g. Cache/WDB/enGB for a British client) and in WDB/ otherwise.
 std::filesystem::path ResolveCacheDirectory() {
-  const std::string path = ProbeCommonArchiveLayout() ? "Cache/WDB/enUS" : "WDB";
+  const std::string &tag = GetCurrentLocaleInfo().tag;
+  const std::string path =
+      GetCacheDirectory(ProbeCommonArchiveLayout(), tag.empty() ? "enUS" : tag);
   (void)openwow::vfs::FileSystem_CreateDirectory(path.c_str(), true);
   return path;
 }

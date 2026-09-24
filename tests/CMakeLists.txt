@@ -38,6 +38,7 @@ add_executable(openwow_tests
   data/wdt_file_tests.cpp
   data/blp_info_tests.cpp
   data/dxt_block_codec_tests.cpp
+  data/wdb_cache_directory_tests.cpp
   # wdt_file.cpp/blp_info.cpp/faction_reaction.cpp are compiled directly
   # here (rather than by linking the full openwow_data_runtime target)
   # because they have no dependency beyond header-only siblings
@@ -50,6 +51,8 @@ add_executable(openwow_tests
   ${PROJECT_SOURCE_DIR}/src/openwow/data/blp/blp_info.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/data/formats/dbc/faction_reaction.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/runtime/scheduling/frame_scheduler.cpp
+  ${PROJECT_SOURCE_DIR}/src/openwow/data/wdb_persistence.cpp
+  ${PROJECT_SOURCE_DIR}/src/openwow/data/wdb_cache.cpp
 )
 
 target_include_directories(openwow_tests PRIVATE

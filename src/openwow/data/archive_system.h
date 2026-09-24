@@ -17,6 +17,10 @@ struct ArchiveLocaleInfo {
   std::string country;
   std::string region;
   int locale_index{-1};
+  /// Locale tag the client settled on (e.g. "enUS", "enGB", "deDE"). Unlike
+  /// locale_index, which maps enGB onto the enUS slot, this keeps the exact
+  /// tag, as needed for per-locale paths such as Cache/WDB/<locale>.
+  std::string tag;
 };
 
 struct ArchiveSystemCallbacks {
