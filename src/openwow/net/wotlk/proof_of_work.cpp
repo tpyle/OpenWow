@@ -108,7 +108,7 @@ bool VerifyRealmProofOfWork(const std::string_view account_name,
 std::optional<std::uint64_t> SolveRealmProofOfWork(
     const std::string_view account_name,
     const RealmAuthChallenge& challenge) {
-  if (challenge.proof_of_work_difficulty > 160) {
+  if (challenge.proof_of_work_difficulty > kMaxSolvableRealmProofOfWorkDifficulty) {
     return std::nullopt;
   }
 

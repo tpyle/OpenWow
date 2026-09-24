@@ -33,6 +33,13 @@ struct RealmAuthChallenge {
     const RealmAuthChallenge& challenge,
     std::uint64_t nonce);
 
+/// Highest proof-of-work difficulty (leading zero bits) the client will try
+/// to solve. Era servers send 1; the expected cost doubles per bit, so an
+/// unbounded server-chosen value could stall the connection thread forever.
+inline constexpr std::uint32_t kMaxSolvableRealmProofOfWorkDifficulty = 24;
+
+/// Finds a nonce meeting the challenge's difficulty, or returns nullopt when
+/// the difficulty exceeds kMaxSolvableRealmProofOfWorkDifficulty.
 [[nodiscard]] std::optional<std::uint64_t> SolveRealmProofOfWork(
     std::string_view account_name,
     const RealmAuthChallenge& challenge);
