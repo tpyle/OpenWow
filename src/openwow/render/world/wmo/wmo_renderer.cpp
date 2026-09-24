@@ -1544,43 +1544,6 @@ const WmoSubmitTelemetry& WmoRenderer::Render(
       draw.submit(view_id, prog);
       ++record_telemetry.submit_count;
       ++telemetry.submit_count;
-
-      if (unified_render_path_) {
-
-        RenderVec4 additive_material_params = material_params;
-        additive_material_params[0] = 1.0f;
-
-        uint64_t additive_state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
-                                  kWmoTransitionPassDepthTestState |
-                                  BGFX_STATE_MSAA | BlendStateForMode(10u);
-        if (!(mat && mat->two_sided)) {
-          additive_state |= kWmoOneSidedCullState;
-        }
-
-        const WmoVsParamBlock additive_vs_params = MakeWmoVsParamBlock(
-            model_mtx, sun_dir_, kZeroWmoParams, kZeroWmoParams,
-            kZeroWmoParams, additive_material_params, extra_params);
-        const WmoFsParamBlock additive_fs_params = MakeWmoFsParamBlock(
-            submitted.group_color, fog_.params, fog_.color, sun_dir_,
-            additive_material_params, extra_params);
-
-        bind_placement_transform();
-        draw.setVertexBuffer(0, submitted.vb);
-        draw.setIndexBuffer(submitted.ib, submitted.start_index,
-                            submitted.index_count);
-        draw.setUniform(shaders.vs_params, additive_vs_params.data(),
-                        static_cast<std::uint16_t>(wmo_vs_param::kCount));
-        draw.setUniform(shaders.fs_params, additive_fs_params.data(),
-                        static_cast<std::uint16_t>(wmo_fs_param::kCount));
-        draw.setTexture(0, shaders.diffuse_sampler, tex, sampler_flags);
-        bind_environment_sampler();
-        BindActiveWorldModelShadowState(false, encoder);
-        draw.setState(additive_state);
-        submit_scissor_for(submitted.clip_rect);
-        draw.submit(view_id, prog);
-        ++record_telemetry.submit_count;
-        ++telemetry.submit_count;
-      }
     }
   };
 
