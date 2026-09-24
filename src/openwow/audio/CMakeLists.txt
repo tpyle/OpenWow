@@ -25,8 +25,6 @@ openwow_add_component(openwow_audio
 
   dsp/freeverb_engine.cpp
 
-  spatial/audio_environment.cpp
-  spatial/spatial_audio.cpp
   voice/voice_chat_audio_setup.cpp
   voice/voice_chat_loopback.cpp
   lifecycle/audio_system_shutdown.cpp
