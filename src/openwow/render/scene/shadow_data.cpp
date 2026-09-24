@@ -18,8 +18,14 @@ namespace {
 
 constexpr std::array<float, kWorldShadowProductCount> kProductHalfExtents{
     20.0f, 40.0f, 160.0f, 640.0f};
+// Receiver depth bias in world units along the light direction. The near
+// products use a small bias so shadows meet the caster's contact point; a
+// larger bias detaches them ("peter-panning"). This relies on the 32-bit
+// float depth format below: 16-bit depth over the 4000-unit caster range
+// quantizes to ~0.06 units and needed ~0.6 to avoid acne.
 constexpr std::array<float, kWorldShadowProductCount> kRawReceiverBias{
-    0.6f, 0.9f, 1.3f, 2.1f};
+    0.15f, 0.3f, 1.3f, 2.1f};
+constexpr bgfx::TextureFormat::Enum kShadowDepthFormat = bgfx::TextureFormat::D32F;
 constexpr std::array<const char*, kWorldShadowProductCount> kSamplerNames{
     "s_worldShadow0", "s_worldShadow1", "s_worldShadow2",
     "s_worldShadow3"};
@@ -90,7 +96,7 @@ bool ShadowRenderData::CreateResources() {
   const auto product_count = active_product_count();
 
   backend_->fallback_depth = bgfx::createTexture2D(
-      1u, 1u, false, 1u, bgfx::TextureFormat::D16,
+      1u, 1u, false, 1u, kShadowDepthFormat,
       BGFX_TEXTURE_RT | BGFX_SAMPLER_COMPARE_LEQUAL);
   // A render target never attached to a framebuffer has undefined contents
   // and (on Vulkan) is never moved to a sampleable layout, so the fallback
@@ -117,7 +123,7 @@ bool ShadowRenderData::CreateResources() {
   }
   for (std::size_t index = 0u; index < product_count; ++index) {
     backend_->framebuffers[index] = bgfx::createFrameBuffer(
-        resolution_, resolution_, bgfx::TextureFormat::D16,
+        resolution_, resolution_, kShadowDepthFormat,
         BGFX_TEXTURE_RT | BGFX_SAMPLER_COMPARE_LEQUAL);
     if (bgfx::isValid(backend_->framebuffers[index])) {
       backend_->depth_textures[index] =
