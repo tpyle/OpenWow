@@ -84,7 +84,6 @@ struct WorldUiLifecycleOperations {
   std::function<void(WorldUiLifecycleEvent)> fire_event;
   std::function<bool()> has_local_player;
   std::function<bool()> prepare_local_player;
-  std::function<void()> run_pre_enter_player_setup;
   std::function<void()> run_post_enter_player_fanout;
   std::function<void(WorldUiStopReason)> prepare_player_leave;
   std::function<void(WorldUiStopReason)> prepare_player_logout;

@@ -67,7 +67,6 @@
 #include "openwow/game/inventory/operations/inventory_commands.h"
 #include "openwow/game/inventory/player_inventory_replica.h"
 #include "openwow/game/knowledge_base.h"
-#include "openwow/game/lcd_system.h"
 #include "openwow/game/loading_screen_world_entry_gate.h"
 #include "openwow/game/localization.h"
 #include "openwow/game/monster_move.h"
@@ -1501,7 +1500,6 @@ openwow::ui::game::WorldUiLifecycleOperations GameLoop::CreateWorldUiLifecycleOp
       .fire_event = [this](const WorldUiLifecycleEvent event) { FireWorldUiLifecycleEvent(event); },
       .has_local_player = [this]() { return HasLocalPlayerForWorldUi(); },
       .prepare_local_player = [this]() { return PrepareLocalPlayerForWorldUi(); },
-      .run_pre_enter_player_setup = [this]() { RunPreEnterLocalPlayerWorldUiSetup(); },
       .run_post_enter_player_fanout = [this]() { RunLocalPlayerWorldUiFanout(); },
       .prepare_player_leave =
           [this](const WorldUiStopReason reason) { PrepareWorldUiForPlayerLeave(reason); },
@@ -2966,12 +2964,6 @@ bool GameLoop::HasLocalPlayerForWorldUi() const {
 bool GameLoop::PrepareLocalPlayerForWorldUi() {
   return game_ui_.is_initialized() &&
          event_bridge_.PublishInitialPlayerUnitState();
-}
-
-void GameLoop::RunPreEnterLocalPlayerWorldUiSetup() {
-  if (const auto *session = world_session(); session != nullptr) {
-    LCD_SetupPlayerClassDisplay(session->objects());
-  }
 }
 
 void GameLoop::RunLocalPlayerWorldUiFanout() {

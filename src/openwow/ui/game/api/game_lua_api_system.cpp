@@ -49,7 +49,6 @@
 #include "openwow/game/actions/bindings/application/binding_profiles.h"
 #include "openwow/game/actions/bindings/adapters/retail/modified_click_adapter.h"
 #include "openwow/game/chat_display.h"
-#include "openwow/game/lcd_system.h"
 #include "openwow/game/movement_info.h"
 #include "openwow/game/object_types.h"
 #include "openwow/game/rest_state.h"
@@ -1498,9 +1497,10 @@ int LuaApi_SetConsoleKey(lua_State *L) {
   return 0;
 }
 
-int LuaApi_SetEuropeanNumbers(lua_State *L) {
-  const bool enabled = ScriptReadBoolArgOrDefault(L, 1, true);
-  openwow::game::LCD_SetEuropeanNumbers(enabled ? 1 : 0);
+// The only consumer of the European-numbers setting was the Logitech LCD
+// panel output, which this client does not support; the call is accepted
+// and ignored so FrameXML's option handling keeps working.
+int LuaApi_SetEuropeanNumbers([[maybe_unused]] lua_State *L) {
   return 0;
 }
 

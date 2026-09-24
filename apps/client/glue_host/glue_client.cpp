@@ -41,7 +41,6 @@
 #include "openwow/game/c_input_control.h"
 #include "openwow/game/input_control.h"
 #include "openwow/game/knowledge_base.h"
-#include "openwow/game/lcd_system.h"
 #include "openwow/game/localization.h"
 #include "openwow/game/object_effect_system.h"
 #include "openwow/game/object_guid.h"
@@ -1964,8 +1963,6 @@ bool GlueClient::InitGlueUI() {
   glue_renderer_.PrewarmTextures(glue_widgets_);
   CompleteGlueStartupTail();
 
-  openwow::game::LCD_Initialize();
-
   SyncLoginEditText(&glue_runtime_, login_screen_);
 
   if (glue_load_.ok) {
@@ -3274,7 +3271,6 @@ void GlueClient::Shutdown() {
   auto &knowledge_base = openwow::game::KnowledgeBase::Get();
   knowledge_base.ShutdownRequestData();
   knowledge_base.ResetSystemMessages();
-  openwow::game::LCD_Shutdown();
 
   glue_renderer_.Shutdown();
   game_loop_.Shutdown();

@@ -131,7 +131,6 @@ bool WorldUiLifecycle::TryActivateLocalPlayer() {
       return false;
     }
   }
-  operations_.run_pre_enter_player_setup();
   if (!IsCurrentGeneration(activating_generation)) {
     return false;
   }

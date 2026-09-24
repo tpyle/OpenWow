@@ -17,7 +17,6 @@
 #include "openwow/game/inventory/player_inventory_replica.h"
 #include "openwow/game/inventory/items/item_definitions.h"
 #include "openwow/game/inventory/items/adapters/retail/item_display_name_formatter.h"
-#include "openwow/game/lcd_system.h"
 #include "openwow/game/localization.h"
 #include "openwow/game/money_display.h"
 #include "openwow/game/object_types.h"
@@ -62,11 +61,6 @@ constexpr int kAuctionWonSystemMessageId = 405;
 constexpr int kAuctionSoldSystemMessageId = 406;
 constexpr int kAuctionExpiredSystemMessageId = 407;
 constexpr int kAuctionRemovedSystemMessageId = 408;
-
-enum class AuctionNotificationDisplayOrigin : std::uint8_t {
-  kImmediate,
-  kDeferredItemTemplate,
-};
 
 constexpr std::uint8_t AuctionSelectionListToRefreshMask(
     const AuctionSelectionList list) {
@@ -202,36 +196,10 @@ std::string BuildAuctionNotificationItemName(
                                                  random_property_id);
 }
 
-void DispatchAuctionNotificationLcdMessage(
-    const std::string &item_name,
-    const int system_message_id,
-    const AuctionNotificationDisplayOrigin origin) {
-  switch (system_message_id) {
-  case kAuctionOutbidSystemMessageId:
-    if (origin == AuctionNotificationDisplayOrigin::kImmediate) {
-      LCD_OnAuctionOutbidNotification(item_name.c_str());
-    }
-    return;
-  case kAuctionWonSystemMessageId:
-    LCD_OnAuctionWonNotification(item_name.c_str());
-    return;
-  case kAuctionSoldSystemMessageId:
-    LCD_OnAuctionSoldNotification(item_name.c_str());
-    return;
-  case kAuctionExpiredSystemMessageId:
-    LCD_OnAuctionExpiredNotification(item_name.c_str());
-    return;
-  default:
-    return;
-  }
-}
-
 void DisplayAuctionNotificationItemMessage(
     const std::string &item_name,
-    const int system_message_id,
-    const AuctionNotificationDisplayOrigin origin) {
+    const int system_message_id) {
   ui::game::DisplaySystemMessage(system_message_id, item_name.c_str());
-  DispatchAuctionNotificationLcdMessage(item_name, system_message_id, origin);
 }
 
 void ResolveAuctionNotificationItemMessage(
@@ -259,8 +227,7 @@ void ResolveAuctionNotificationItemMessage(
             DisplayAuctionNotificationItemMessage(
                 BuildAuctionNotificationItemName(dbc, *resolved_template,
                                                  random_property_id),
-                system_message_id,
-                AuctionNotificationDisplayOrigin::kDeferredItemTemplate);
+                system_message_id);
           }});
   if (item_template == nullptr) {
     return;
@@ -269,8 +236,7 @@ void ResolveAuctionNotificationItemMessage(
   DisplayAuctionNotificationItemMessage(
       BuildAuctionNotificationItemName(dbc, *item_template,
                                        random_property_id),
-      system_message_id,
-      AuctionNotificationDisplayOrigin::kImmediate);
+      system_message_id);
 }
 
 std::uint32_t ClassifyAuctionBrowseTimeLeft(std::uint32_t remaining_ms) {

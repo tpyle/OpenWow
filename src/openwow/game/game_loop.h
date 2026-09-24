@@ -308,7 +308,6 @@ class GameLoop : private openwow::render::api::RendererDeviceLifecycleObserver {
       openwow::ui::game::WorldUiLifecycleEvent event);
   [[nodiscard]] bool HasLocalPlayerForWorldUi() const;
   bool PrepareLocalPlayerForWorldUi();
-  void RunPreEnterLocalPlayerWorldUiSetup();
   void RunLocalPlayerWorldUiFanout();
   void RestoreWorldUiAccountData(
       openwow::ui::game::WorldUiGeneration generation,

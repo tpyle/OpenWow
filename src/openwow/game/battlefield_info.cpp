@@ -7,7 +7,6 @@
 #include "openwow/game/barber_shop.h"
 #include "openwow/game/chat_display.h"
 #include "openwow/game/group_system.h"
-#include "openwow/game/lcd_system.h"
 #include "openwow/game/localization.h"
 #include "openwow/game/object_manager.h"
 #include "openwow/game/query_cache.h"
@@ -443,7 +442,6 @@ bool BattlefieldInfo::HandleBattlefieldStatus(WorldSession &session,
       bg_stats_count_ = 0;
       active_bg_map_id_ = 0;
       active_bg_type_ = 0;
-      LCD_OnBattlefieldStatusCleared();
     }
 
     ui::game::ScriptEventDispatch::Get().FireEventArgs(
@@ -574,7 +572,6 @@ bool BattlefieldInfo::HandleBattlefieldStatus(WorldSession &session,
     faction_filter_ = -1;
     UpdateScoreUI(objects);
     (void)BarberShop::Get().Cancel(session);
-    LCD_OnBattlefieldStatus(objects);
   } else if (active_slot_ == static_cast<std::int32_t>(slot_index)) {
     active_slot_ = -1;
   }

@@ -17,7 +17,6 @@
 #include "openwow/game/inventory/player_inventory_replica.h"
 #include "openwow/game/inventory/items/item_definitions.h"
 #include "openwow/game/inventory/items/adapters/retail/item_display_name_formatter.h"
-#include "openwow/game/lcd_system.h"
 #include "openwow/game/localization.h"
 #include "openwow/game/money_display.h"
 #include "openwow/game/object_types.h"

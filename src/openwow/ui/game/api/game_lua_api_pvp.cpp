@@ -10,7 +10,6 @@
 #include "openwow/game/duel_system.h"
 #include "openwow/game/game_misc_utils.h"
 #include "openwow/game/group_system.h"
-#include "openwow/game/lcd_system.h"
 #include "openwow/game/object_manager.h"
 #include "openwow/game/world_state_manager.h"
 #include "openwow/net/client_services_packet_sender.h"
@@ -821,8 +820,6 @@ int LuaAcceptBattlefieldPort(lua_State *L) {
   session->interaction().SendBattlefieldPort(slot.bg_instance_guid.GetRawValue(), accept);
 
   if (!accept) {
-
-    openwow::game::LCD_OnAcceptBattlefieldPort();
     if (slot.bg_type_id == session->battleground().battlefield_list().bg_type_id) {
       ScriptEventDispatch::Get().FireEvent(events::UPDATE_BATTLEFIELD_STATUS);
     }

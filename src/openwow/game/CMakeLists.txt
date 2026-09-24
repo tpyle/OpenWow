@@ -223,7 +223,6 @@ openwow_add_component(openwow_game
   localization.cpp
   slash_commands.cpp
   simple_script.cpp
-  clcd_connection.cpp
   saved_variables.cpp
   game_settings.cpp
   account_data.cpp
@@ -370,17 +369,7 @@ openwow_add_component(openwow_game
   callee_wrappers.cpp
   ccamera.cpp
   ceffect_c.cpp
-  cez_lcd_page_draw.cpp
-  cez_lcd_page_set_bg_color.cpp
-  cez_lcd_page_timer.cpp
-  cez_lcd_page_update.cpp
-  cez_lcd_subscreen_ctor.cpp
   chat_message_formatters.cpp
-  clcd_base_node.cpp
-  clcd_gfx_base.cpp
-  clcd_gfx_color.cpp
-  clcd_gfx_mono.cpp
-  clcd_text_draw.cpp
   cmirror_slot_bucket.cpp
   collision_polygon.cpp
   combat_log_messages.cpp
@@ -397,7 +386,6 @@ openwow_add_component(openwow_game
   current_area_record.cpp
   delayed_spell_visual_kit.cpp
   descriptor_callback_registry.cpp
-  ez_lcd_page_text.cpp
   game_table.cpp
   gameobject_model_sound_callback.cpp
   gameobject_sound_event.cpp
@@ -407,7 +395,6 @@ openwow_add_component(openwow_game
   input_control.cpp
   inverse_affine_translation.cpp
   is_selected_spell.cpp
-  lcd_system.cpp
   minimap_terrain.cpp
   mirror_callback_node.cpp
   missile_node.cpp
