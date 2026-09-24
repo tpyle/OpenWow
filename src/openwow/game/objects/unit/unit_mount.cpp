@@ -1,5 +1,6 @@
 #include "openwow/game/objects/cgunit.h"
 
+#include "openwow/audio/playback/sound_runtime.h"
 #include "openwow/data/formats/dbc/dbc_loader.h"
 #include "openwow/core/storm_intrusive_list.h"
 #include "openwow/foundation/diagnostics/logging.h"
@@ -30,6 +31,16 @@ namespace {
                  display->scale > 0.0f
              ? display->scale
              : 1.0f;
+}
+
+// SoundEntries 3089, "SpiritWolf (DONOTRENAME)": the sound the original
+// client plays at a unit whenever it dismounts (heard for other players too).
+constexpr std::uint32_t kDismountSoundKitId = 3089u;
+
+void PlayDismountSound(const CGUnit_C &owner) {
+  const auto position = owner.GetPosition();
+  const float sound_position[3] = {position.x, position.y, position.z};
+  (void)owner.sound_runtime().PlaySoundKit(kDismountSoundKitId, sound_position);
 }
 
 }
@@ -120,6 +131,7 @@ void UnitMountComponent::HandleDismountPacket(CGUnit_C &owner) {
   // Dismount() refreshed while the mount display was still cached; refresh
   // again so sound data (footsteps) and footprints come from the rider.
   owner.Presentation().RefreshActiveDisplayRuntimeState();
+  PlayDismountSound(owner);
   owner.UpdateOverlayModel();
   owner.Presentation().RefreshModelBoundsAndEffectsForced();
   owner.SpellVisuals().UpdateObjectEffect();
@@ -192,6 +204,8 @@ void UnitMountComponent::ApplyDisplayChange(
   owner.Presentation().RefreshActiveDisplayRuntimeState();
   if (mount_display_id != 0u && previous_display == 0u) {
     AddHardcodedOneShotEffect(session, owner, HardcodedEffectId::kMountPoof);
+  } else if (mount_display_id == 0u && previous_display != 0u) {
+    PlayDismountSound(owner);
   }
 
   owner.Animation().InvalidateDeferredStandSelection();
