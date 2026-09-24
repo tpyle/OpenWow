@@ -237,6 +237,10 @@ public:
 
   [[nodiscard]] static std::string BuildShoulderTexturePath(std::string_view textureStem);
 
+  /// Full helm texture path for an ItemDisplayInfo texture stem, or empty
+  /// when the item has no helm texture.
+  [[nodiscard]] static std::string BuildHeadTexturePath(std::string_view textureStem);
+
   [[nodiscard]] static std::string BuildHeadModelPath(std::string_view itemModelName,
                                                       std::string_view raceModelToken,
                                                       uint8_t gender);

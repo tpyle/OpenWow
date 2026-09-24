@@ -352,7 +352,8 @@ EquipmentVisuals EquipmentRenderer::ComputeVisuals(
                   openwow::game::EquipmentVisualSystem::BuildHeadModelPath(
                       helm_model_name, race_entry->model_client_prefix,
                       gender));
-          wav.texture_path = helm_texture;
+          wav.texture_path =
+              openwow::game::EquipmentVisualSystem::BuildHeadTexturePath(helm_texture);
           visuals.helm_attachment = wav;
         }
         break;

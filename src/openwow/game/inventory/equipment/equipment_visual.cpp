@@ -397,6 +397,16 @@ std::string EquipmentVisualSystem::BuildShoulderTexturePath(const std::string_vi
   return path;
 }
 
+std::string EquipmentVisualSystem::BuildHeadTexturePath(const std::string_view textureStem) {
+  if (textureStem.empty()) {
+    return {};
+  }
+  std::string path(kHeadModelPathPrefix);
+  path.append(textureStem);
+  path.append(".blp");
+  return path;
+}
+
 std::string EquipmentVisualSystem::BuildHeadModelPath(const std::string_view itemModelName,
                                                       const std::string_view raceModelToken,
                                                       const uint8_t gender) {
