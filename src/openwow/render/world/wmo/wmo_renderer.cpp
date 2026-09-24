@@ -1492,12 +1492,7 @@ const WmoSubmitTelemetry& WmoRenderer::Render(
                     static_cast<std::uint16_t>(wmo_fs_param::kCount));
     draw.setTexture(0, shaders.diffuse_sampler, tex, sampler_flags);
     bind_environment_sampler();
-    // Only outdoor-lit batches receive the sun's shadow map; interior,
-    // window and unlit batches are lit by their baked vertex colours, and
-    // sun shadows projected through the roof left hard-edged patches on
-    // interior floors.
-    BindActiveWorldModelShadowState(
-        !shadow_caster_pass && lighting_mode == WmoLightingMode::Outdoor, encoder);
+    BindActiveWorldModelShadowState(!shadow_caster_pass, encoder);
     draw.setState(state);
     submit_scissor_for(submitted.clip_rect);
     draw.submit(view_id, prog);
@@ -1538,7 +1533,7 @@ const WmoSubmitTelemetry& WmoRenderer::Render(
                       static_cast<std::uint16_t>(wmo_fs_param::kCount));
       draw.setTexture(0, shaders.diffuse_sampler, tex, sampler_flags);
       bind_environment_sampler();
-      BindActiveWorldModelShadowState(false, encoder);
+      BindActiveWorldModelShadowState(true, encoder);
       draw.setState(interior_state);
       submit_scissor_for(submitted.clip_rect);
       draw.submit(view_id, prog);
