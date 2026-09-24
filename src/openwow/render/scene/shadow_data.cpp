@@ -339,8 +339,12 @@ void ShadowRenderData::BindReceiverState(const std::size_t first_product,
   }
   const DrawEncoder draw{encoder};
   for (std::size_t index = 0u; index < kWorldShadowProductCount; ++index) {
+    // When receiving is disabled (notably in the shadow caster passes, which
+    // render into these very maps) bind the fallback: sampling a shadow map
+    // while it is the render target is a feedback loop, and on Vulkan it is
+    // still in the depth-attachment layout.
     const bgfx::TextureHandle texture =
-        index < published_product_count_ &&
+        enabled && index < published_product_count_ &&
                 bgfx::isValid(backend_->depth_textures[index])
             ? backend_->depth_textures[index]
             : backend_->fallback_depth;
@@ -356,7 +360,8 @@ void ShadowRenderData::BindReceiverState(const std::size_t first_product,
       openwow::world::CWorld_GetTerrainShadowModColor();
   const std::array<RenderVec4, 3> parameters{{
       {static_cast<float>(published_product_count_),
-       static_cast<float>(first_product), active ? 1.0f : 0.0f, 0.0f},
+       static_cast<float>(first_product), active ? 1.0f : 0.0f,
+       resolution_ > 0u ? 1.0f / static_cast<float>(resolution_) : 0.0f},
       {kRawReceiverBias[0] / kCasterFar,
        kRawReceiverBias[1] / kCasterFar,
        kRawReceiverBias[2] / kCasterFar,
