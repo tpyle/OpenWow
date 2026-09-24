@@ -977,7 +977,12 @@ void UnitMovementRuntime::InterpolateShadowBlobPosition(float dt) {
       ground_projection_failed_ = false;
       world_position[2] = surface.ground_z;
       projected_surface = surface;
-    } else if (!ground_projection_failed_) {
+    } else {
+      // The model falls back to the server height, so the next probe must
+      // start from there rather than from a floor the unit has left.
+      ground_projection_seeded_ = false;
+    }
+    if (!projected_surface.has_value() && !ground_projection_failed_) {
       ground_projection_failed_ = true;
       diagnostics::Log(
           diagnostics::LogLevel::kWarn,
