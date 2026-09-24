@@ -2778,6 +2778,20 @@ void UnitMovementRuntime::ApplySplineMovementPose(const Vec3 &position,
                                         const bool parent_movement_active,
                                         const std::uint32_t spline_id) {
   const MovementInfo previous_movement = owner_.position_.movement;
+  if (!owner_.IsActiveMover() && spline_active &&
+      spline_id != falling_spline_reported_id_ &&
+      (previous_movement.flags & (kMoveFlagFalling | kMoveFlagFallingFar)) != 0u &&
+      (spline_flags & (SplineFlag::kFalling | SplineFlag::kParabolic)) == 0u) {
+    falling_spline_reported_id_ = spline_id;
+    diagnostics::Log(diagnostics::LogLevel::kWarn,
+                     "unit movement stage=spline-pose reason=fall-flag-on-ground-spline guid=" +
+                         owner_.GetGuid().ToString() + " entry=" +
+                         std::to_string(owner_.GetEntry()) + " spline=" +
+                         std::to_string(spline_id) + " splineFlags=" +
+                         std::to_string(spline_flags) + " moveFlags=" +
+                         std::to_string(previous_movement.flags) + " fallTime=" +
+                         std::to_string(previous_movement.fall_time));
+  }
   const auto animation_base_flags =
       owner_.GetMovementInfo().flags & ~kDirectionalLocomotionMask;
   const auto previous_flags =
