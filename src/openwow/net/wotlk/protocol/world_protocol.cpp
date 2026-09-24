@@ -337,8 +337,10 @@ const RealmInfo& RealmSession::realm() const { return realm_; }
 
 void RealmSession::CancelPendingIo() {
   secondary_stop_requested_.store(true, std::memory_order_release);
+  const bool dropped_by_io =
+      disconnect_notification_pending_.exchange(false, std::memory_order_acq_rel);
   const bool was_connected =
-      connected_.exchange(false, std::memory_order_acq_rel);
+      connected_.exchange(false, std::memory_order_acq_rel) || dropped_by_io;
   const auto primary = PrimaryStream();
   const auto secondary = SecondaryStream();
   if (primary) {
@@ -1069,6 +1071,18 @@ void RealmSession::StopSecondaryConnection() {
   secondary_stop_requested_.store(false, std::memory_order_release);
 }
 
+void RealmSession::AbortConnectionFromIo() {
+  StopSecondaryConnection();
+  if (const auto primary = PrimaryStream()) {
+    primary->client.Disconnect();
+  }
+  if (connected_.exchange(false, std::memory_order_acq_rel)) {
+    disconnect_notification_pending_.store(true, std::memory_order_release);
+  }
+  authenticated_.store(false, std::memory_order_release);
+  phase_.store(RealmSessionPhase::kDisconnected, std::memory_order_release);
+}
+
 void RealmSession::HandleSecondaryDisconnect() {
   std::uint32_t cookie = 0;
   {
@@ -1088,7 +1102,7 @@ RealmSession::ConnectionPacketResult RealmSession::HandleConnectionPacket(
   if (packet.IsOpcode(Opcode::SMSG_REDIRECT_CLIENT)) {
     if (packet.payload.size() < kRedirectPrefixBytes) {
       if (role == ConnectionRole::kPrimary) {
-        Disconnect();
+        AbortConnectionFromIo();
         return ConnectionPacketResult::kFatal;
       }
       HandleSecondaryDisconnect();
@@ -1117,7 +1131,7 @@ RealmSession::ConnectionPacketResult RealmSession::HandleConnectionPacket(
     }
 
     if (packet.payload.size() != kRedirectPayloadBytes) {
-      Disconnect();
+      AbortConnectionFromIo();
       return ConnectionPacketResult::kFatal;
     }
     const auto expected_digest = ComputeSha1PadHmac(
@@ -1125,7 +1139,7 @@ RealmSession::ConnectionPacketResult RealmSession::HandleConnectionPacket(
         payload.subspan<kRedirectAddressBytes, kRedirectPortBytes>());
     if (!std::equal(expected_digest.begin(), expected_digest.end(),
                     packet.payload.begin() + kRedirectPrefixBytes)) {
-      Disconnect();
+      AbortConnectionFromIo();
       return ConnectionPacketResult::kFatal;
     }
     if (!StartSecondaryConnection(address_v4, port, cookie)) {
@@ -1145,7 +1159,7 @@ RealmSession::ConnectionPacketResult RealmSession::HandleConnectionPacket(
     if (role != ConnectionRole::kPrimary || pending || !SecondaryStream() ||
         packet.payload.size() != sizeof(std::uint32_t)) {
       if (role == ConnectionRole::kPrimary) {
-        Disconnect();
+        AbortConnectionFromIo();
         return ConnectionPacketResult::kFatal;
       }
       HandleSecondaryDisconnect();
@@ -1178,7 +1192,7 @@ RealmSession::ConnectionPacketResult RealmSession::HandleConnectionPacket(
       HandleSecondaryDisconnect();
       return ConnectionPacketResult::kConsumed;
     }
-    Disconnect();
+    AbortConnectionFromIo();
     return ConnectionPacketResult::kFatal;
   }
   return ConnectionPacketResult::kDeliver;
@@ -1313,11 +1327,7 @@ bool RealmSession::RecvPacket(
         return false;
       }
       if (!primary || !primary->client.IsConnected()) {
-        StopSecondaryConnection();
-        connected_.store(false, std::memory_order_release);
-        authenticated_.store(false, std::memory_order_release);
-        phase_.store(RealmSessionPhase::kDisconnected,
-                     std::memory_order_release);
+        AbortConnectionFromIo();
       }
       return false;
     }

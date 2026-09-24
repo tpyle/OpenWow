@@ -364,6 +364,10 @@ class RealmSession {
   std::shared_ptr<RealmStream> primary_stream_;
   std::shared_ptr<RealmStream> secondary_stream_;
   std::atomic_bool connected_{false};
+  // Set when the connection was dropped from the I/O path (receive thread)
+  // without running the disconnected callback; the next CancelPendingIo on
+  // the owning thread runs it.
+  std::atomic_bool disconnect_notification_pending_{false};
   std::atomic_bool authenticated_{false};
   std::atomic<RealmSessionPhase> phase_{RealmSessionPhase::kDisconnected};
 
@@ -427,6 +431,10 @@ class RealmSession {
   void PublishSecondaryDisconnect();
   bool TakeSecondaryEvent(WorldPacket& packet, bool& disconnected);
   void StopSecondaryConnection();
+  /// Closes the streams and marks the session disconnected from the I/O
+  /// path. Unlike Disconnect(), it leaves session state and the
+  /// disconnected callback to the owning thread's Disconnect().
+  void AbortConnectionFromIo();
   void JoinSecondaryReceiveThread();
   void HandleSecondaryDisconnect();
   void CompleteConnectionTransfer(ConnectionRole source);
