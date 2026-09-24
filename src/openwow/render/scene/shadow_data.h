@@ -44,6 +44,11 @@ class ShadowRenderData {
   void SetLightDirection(const RenderVec3& surface_to_light) noexcept;
   [[nodiscard]] bool PrepareProduct(std::size_t product_index,
                                     const RenderVec3& target);
+  /// Clears the 1x1 fallback depth map (sampled for shadow slots without a
+  /// published map) to depth 1.0, i.e. fully lit, the first time it is
+  /// called after the resources are created. `view_id` must be a view no
+  /// other pass uses; it is only touched on that one frame.
+  void ClearFallbackDepthOnce(std::uint8_t view_id);
   void BeginShadowDepthPass(std::size_t product_index,
                             std::uint8_t view_id) const;
 
@@ -76,6 +81,7 @@ class ShadowRenderData {
   std::uint8_t quality_{0u};
   std::uint16_t resolution_{1024u};
   std::size_t published_product_count_{0u};
+  bool fallback_cleared_{false};
 };
 
 void SetActiveWorldShadowRenderData(const ShadowRenderData* data) noexcept;

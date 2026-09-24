@@ -232,7 +232,8 @@ constexpr float kWorldStreamingDistanceLowMaximum = 791.666687f;
 constexpr float kWorldStreamingDistanceHighMaximum = 1583.333374f;
 constexpr std::uint64_t kWorldStreamingHighMemoryThreshold = 1ull << 30u;
 constexpr std::uint8_t kStandStateSit = 1;
-constexpr std::uint8_t kWorldShadowViewCount = 4;
+// One view per world shadow map, plus one to clear the fallback shadow map.
+constexpr std::uint8_t kWorldShadowViewCount = 5;
 constexpr std::uint8_t kWorldSceneOpaqueViewCount = 9;
 
 constexpr std::uint8_t kWorldSceneAlphaViewCount = 4;

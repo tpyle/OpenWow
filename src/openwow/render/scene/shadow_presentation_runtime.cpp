@@ -214,6 +214,12 @@ void ShadowPresentationRuntime::Render(
     data_->SetPublishedProductCount(0u);
     return;
   }
+  // The shadow-depth pass reserves one view past the shadow maps for this.
+  const auto fallback_view_value =
+      static_cast<unsigned int>(first_shadow_view) + kWorldShadowProductCount;
+  if (fallback_view_value <= std::numeric_limits<std::uint8_t>::max()) {
+    data_->ClearFallbackDepthOnce(static_cast<std::uint8_t>(fallback_view_value));
+  }
 
   const RenderVec3 target = ResolveTarget(snapshot, object_snapshot);
   const std::size_t product_count = data_->active_product_count();

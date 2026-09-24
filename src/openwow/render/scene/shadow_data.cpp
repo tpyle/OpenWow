@@ -57,6 +57,7 @@ struct ShadowRenderData::BackendResources {
       BGFX_INVALID_HANDLE, BGFX_INVALID_HANDLE, BGFX_INVALID_HANDLE,
       BGFX_INVALID_HANDLE}};
   bgfx::TextureHandle fallback_depth = BGFX_INVALID_HANDLE;
+  bgfx::FrameBufferHandle fallback_framebuffer = BGFX_INVALID_HANDLE;
   bgfx::UniformHandle matrices = BGFX_INVALID_HANDLE;
   bgfx::UniformHandle parameters = BGFX_INVALID_HANDLE;
 };
@@ -91,6 +92,14 @@ bool ShadowRenderData::CreateResources() {
   backend_->fallback_depth = bgfx::createTexture2D(
       1u, 1u, false, 1u, bgfx::TextureFormat::D16,
       BGFX_TEXTURE_RT | BGFX_SAMPLER_COMPARE_LEQUAL);
+  // A render target never attached to a framebuffer has undefined contents
+  // and (on Vulkan) is never moved to a sampleable layout, so the fallback
+  // gets its own framebuffer and is cleared once in ClearFallbackDepthOnce.
+  if (bgfx::isValid(backend_->fallback_depth)) {
+    backend_->fallback_framebuffer =
+        bgfx::createFrameBuffer(1u, &backend_->fallback_depth, false);
+  }
+  fallback_cleared_ = false;
   backend_->matrices = bgfx::createUniform(
       "u_worldShadowMtx", bgfx::UniformType::Mat4,
       static_cast<std::uint16_t>(kWorldShadowProductCount));
@@ -98,6 +107,7 @@ bool ShadowRenderData::CreateResources() {
       bgfx::createUniform("u_worldShadowParams", bgfx::UniformType::Vec4, 3u);
 
   bool valid = bgfx::isValid(backend_->fallback_depth) &&
+               bgfx::isValid(backend_->fallback_framebuffer) &&
                bgfx::isValid(backend_->matrices) &&
                bgfx::isValid(backend_->parameters);
   for (std::size_t index = 0u; index < kWorldShadowProductCount; ++index) {
@@ -151,6 +161,11 @@ void ShadowRenderData::DestroyResources() {
       sampler = BGFX_INVALID_HANDLE;
     }
   }
+  if (bgfx::isValid(backend_->fallback_framebuffer)) {
+    bgfx::destroy(backend_->fallback_framebuffer);
+    backend_->fallback_framebuffer = BGFX_INVALID_HANDLE;
+  }
+  fallback_cleared_ = false;
   if (bgfx::isValid(backend_->fallback_depth)) {
     bgfx::destroy(backend_->fallback_depth);
     backend_->fallback_depth = BGFX_INVALID_HANDLE;
@@ -242,6 +257,20 @@ bool ShadowRenderData::PrepareProduct(const std::size_t product_index,
   bx::mtxMul(receiver_matrices_[product_index].data(), view_projection.data(),
              clip_to_texture.data());
   return true;
+}
+
+void ShadowRenderData::ClearFallbackDepthOnce(const std::uint8_t view_id) {
+  if (fallback_cleared_ || !resources_valid() ||
+      !bgfx::isValid(backend_->fallback_framebuffer)) {
+    return;
+  }
+  bgfx::setViewName(view_id, "shadow_fallback_clear");
+  bgfx::setViewMode(view_id, bgfx::ViewMode::Default);
+  bgfx::setViewClear(view_id, BGFX_CLEAR_DEPTH, 0x00000000u, 1.0f, 0u);
+  bgfx::setViewRect(view_id, 0u, 0u, 1u, 1u);
+  bgfx::setViewFrameBuffer(view_id, backend_->fallback_framebuffer);
+  bgfx::touch(view_id);
+  fallback_cleared_ = true;
 }
 
 void ShadowRenderData::BeginShadowDepthPass(

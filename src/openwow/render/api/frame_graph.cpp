@@ -85,7 +85,7 @@ FrameGraphPass& FrameGraph::AddPass(FrameGraphPassId id, RenderExtent extent,
 
 void FrameGraph::BuildDefaultWorldFrame(RenderExtent extent, ViewId first_view_id) {
   Reset(first_view_id);
-  AddPass(FrameGraphPassId::ShadowDepth, extent, 4u);
+  AddPass(FrameGraphPassId::ShadowDepth, extent, 5u);  // 4 shadow maps + fallback clear
   AddPass(FrameGraphPassId::Reflection, extent);
   AddPass(FrameGraphPassId::Refraction, extent);
   AddPass(FrameGraphPassId::SceneOpaque, extent);
