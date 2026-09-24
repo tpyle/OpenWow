@@ -117,6 +117,9 @@ void UnitMountComponent::HandleDismountPacket(CGUnit_C &owner) {
   owner.State().ClearSpellStateFlags(CGUnit_C::kSpellStateSuppressMountFootprint);
   Dismount(owner, true);
   SetCachedDisplayForSpell(0u);
+  // Dismount() refreshed while the mount display was still cached; refresh
+  // again so sound data (footsteps) and footprints come from the rider.
+  owner.Presentation().RefreshActiveDisplayRuntimeState();
   owner.UpdateOverlayModel();
   owner.Presentation().RefreshModelBoundsAndEffectsForced();
   owner.SpellVisuals().UpdateObjectEffect();
