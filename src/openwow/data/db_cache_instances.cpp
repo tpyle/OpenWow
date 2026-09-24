@@ -1,10 +1,12 @@
 #include "openwow/data/db_cache_instances.h"
 
 #include "openwow/data/archive_system.h"
-#include "openwow/data/db_cache_core.h"
+#include "openwow/data/startup_filesystem_state.h"
+#include "openwow/vfs/adapters/filesystem/native_filesystem.h"
 
 #include <array>
 #include <filesystem>
+#include <string>
 
 namespace openwow::data {
 namespace {
@@ -33,9 +35,13 @@ constexpr std::array<WDBCacheType, 13> kClientVersionOrder = {
     WDBCacheType::ArenaTeam,
 };
 
+// The WDB cache lives in Cache/WDB/<locale> under the standard install
+// layout and in WDB/ otherwise. The locale segment is fixed to "enUS"
+// here, matching the previous behaviour; it does not follow the client
+// locale yet.
 std::filesystem::path ResolveCacheDirectory() {
-  char path[260]{};
-  DBCache_GetCacheDirectory(path);
+  const std::string path = ProbeCommonArchiveLayout() ? "Cache/WDB/enUS" : "WDB";
+  (void)openwow::vfs::FileSystem_CreateDirectory(path.c_str(), true);
   return path;
 }
 

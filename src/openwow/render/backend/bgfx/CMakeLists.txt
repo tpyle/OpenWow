@@ -373,7 +373,6 @@ add_library(openwow_render_bgfx
   ${PROJECT_SOURCE_DIR}/src/openwow/render/models/characters/model_portrait.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/models/animation/attachment_graph.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/models/animation/m2_attachment_transform.cpp
-  ${PROJECT_SOURCE_DIR}/src/openwow/render/effects/spell_visuals/spell_visual_data.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/scene/shadow_data.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/scene/shadow_presentation_runtime.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/world/presentation/world_presentation_scene.cpp
@@ -393,8 +392,6 @@ add_library(openwow_render_bgfx
   ${PROJECT_SOURCE_DIR}/src/openwow/render/resources/fonts/font_string_flags.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/resources/fonts/glyph_atlas.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/ui/ui_text_escapes.cpp
-  ${PROJECT_SOURCE_DIR}/src/openwow/render/ui/ui_render_context.cpp
-  ${PROJECT_SOURCE_DIR}/src/openwow/render/ui/ui_animation.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/world/environment/celestial_renderer.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/ui/ui_renderer.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/ui/ui_shaders.cpp

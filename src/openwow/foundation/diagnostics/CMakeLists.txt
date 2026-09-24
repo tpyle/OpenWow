@@ -1,5 +1,4 @@
 add_library(openwow_foundation_diagnostics
-  error.cpp
   logging.cpp
 )
 

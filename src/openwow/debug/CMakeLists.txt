@@ -8,8 +8,6 @@ openwow_add_component(openwow_debug_runtime
   control/debug_control_json_codec.cpp
   diagnostics/debug_console.cpp
   diagnostics/error_handler.cpp
-  capture/frame_replay_archive.cpp
-  diagnostics/profiler.cpp
   inspection/render_debug.cpp
 )
 target_link_libraries(openwow_debug_runtime PRIVATE

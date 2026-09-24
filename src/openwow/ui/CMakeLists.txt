@@ -12,10 +12,6 @@ openwow_add_component(openwow_ui_runtime
   script_cvar_ranges.cpp
   framexml_debug.cpp
   script_object_lookup.cpp
-  frame_script_registry.cpp
-  widget_factory.cpp
-  anchor_system.cpp
-  strata_manager.cpp
   lua_debug_legacy.cpp
   name_declension_lua.cpp
   runtime/diagnostics/frame_script_profiling.cpp
@@ -46,7 +42,6 @@ openwow_add_component(openwow_ui_runtime
   screens/realm_list_screen.cpp
   screens/character_select_screen.cpp
   screens/character_create_screen.cpp
-  screens/loading_screen.cpp
   toc_parser.cpp
   addon_manager.cpp
   ui_enum_helpers.cpp
@@ -57,7 +52,6 @@ openwow_add_component(openwow_ui_runtime
   xml/frame_xml_document_order.cpp
   xml/frame_xml_parser.cpp
   xml/owned_xml_document_parser.cpp
-  xml/xml_encoding_big2.cpp
   xml/xml_tree.cpp
   xml/xml_tree_file_loader.cpp
   animation/animation.cpp
@@ -299,10 +293,8 @@ openwow_add_component(openwow_ui_runtime
   game/autocomplete.cpp
   game/minimap_system.cpp
   game/world_map_system.cpp
-  unit_frame_data.cpp
   target_frame_data.cpp
   game/tooltip_builder.cpp
-  loading_screen.cpp
   widgets/simple_html.cpp
   widgets/simple_edit_box.cpp
   widgets/script_object.cpp
@@ -372,7 +364,6 @@ openwow_add_component(openwow_ui_runtime
   widgets/simple_font_string.cpp
   widgets/simple_message_frame.cpp
   widgets/simple_render.cpp
-  widgets/ui_script_helpers.cpp
   xml/xml_value_helpers.cpp
 )
 target_link_libraries(openwow_ui_runtime PRIVATE

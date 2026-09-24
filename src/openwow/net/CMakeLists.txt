@@ -1,19 +1,15 @@
 openwow_add_component(openwow_net
   transport/tcp_client.cpp
-  world_session.cpp
   auth/auth_session.cpp
   auth/login_file_transfer_packet.cpp
-  transport/connection_manager.cpp
   protocol/packet_compression.cpp
   transport/packet_queue.cpp
   transport/network_recv_thread.cpp
   transport/latency_tracker.cpp
-  protocol/opcode_dispatch.cpp
   auth/logon_challenge_packet.cpp
   auth/login_matrix_challenge.cpp
   auth/login_pin_challenge.cpp
   auth/login_token_challenge.cpp
-  adapters/presentation/realm_list_display.cpp
   adapters/presentation/char_enum_display.cpp
   adapters/diagnostics/packet_log.cpp
   wotlk/protocol/auth_protocol.cpp
@@ -28,13 +24,9 @@ openwow_add_component(openwow_net
   wotlk/protocol/realm_connection_packets.cpp
   wotlk/protocol/world_protocol.cpp
   wotlk/movement.cpp
-  wotlk/quests.cpp
   wotlk/spell_packets.cpp
   wotlk/combat_packets.cpp
   wotlk/protocol/packet_sender.cpp
-  wotlk/grunt_bnet_token_response.cpp
-  wotlk/grunt_realm_list_handler.cpp
-  wotlk/login_object.cpp
   bot_detect.cpp
   bot_detect_wrappers.cpp
   serialization/cdatastore_ops.cpp
@@ -49,7 +41,6 @@ openwow_add_component(openwow_net
   login_survey_download.cpp
   login_survey_result.cpp
   os_url_download.cpp
-  wotlk/grunt_chunked_data_transfer.cpp
   wotlk/net_event_queue.cpp
   wotlk/realm_connection.cpp
   wotlk/wow_client_connection.cpp

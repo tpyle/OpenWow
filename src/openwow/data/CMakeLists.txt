@@ -10,11 +10,9 @@ openwow_add_component(openwow_data_runtime
   terrain/wdl_file.cpp
   wmo/wmo_file.cpp
   formats/dbc/dbc_loader.cpp
-  formats/dbc/transport_dbc_index.cpp
   formats/dbc/dbc_table_registry.cpp
   formats/dbc/faction_reaction.cpp
   blp/blp_info.cpp
-  game_data_validator.cpp
   startup_filesystem_state.cpp
   archive_system.cpp
   loading/dbc_locale_adapter.cpp
@@ -24,20 +22,14 @@ openwow_add_component(openwow_data_runtime
   wdb_persistence.cpp
   texture_cache.cpp
   blp/blp_texture_loader.cpp
-  cache/quest_cache_record.cpp
-  area_table_store.cpp
   image/jpeg_decoder.cpp
   map/heightmap_query.cpp
-  map/map_loader.cpp
   async_file_read.cpp
   streaming_init.cpp
   blp/blp_mip.cpp
   image/tga_loader.cpp
   blp/blp_dxt_blit_short.cpp
-  db_cache_core.cpp
-  db_cache_hashtable.cpp
   db_cache_instances.cpp
-  db_client_object.cpp
   dbc_loader.cpp
   map/coarse_height_query.cpp
 )

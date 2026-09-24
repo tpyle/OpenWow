@@ -3,7 +3,6 @@ openwow_add_component(openwow_game_calendar_runtime
   adapters/protocol/calendar_handler.cpp
   application/calendar_system.cpp
   composition/calendar_lua_registration.cpp
-  rules/calendar_dynamic_holiday_hash.cpp
 )
 target_link_libraries(openwow_game_calendar_runtime PRIVATE
 

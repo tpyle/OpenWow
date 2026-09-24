@@ -1,4 +1,3 @@
-add_subdirectory(dynamic_libraries)
 add_subdirectory(filesystem)
 
 openwow_add_component(openwow_platform_runtime

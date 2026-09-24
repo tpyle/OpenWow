@@ -12,17 +12,6 @@ target_include_directories(openwow_game_actions_bindings_model INTERFACE
 )
 target_compile_features(openwow_game_actions_bindings_model INTERFACE cxx_std_20)
 
-add_library(openwow_game_actions_application
-  application/action_command_service.cpp
-)
-target_include_directories(openwow_game_actions_application PUBLIC
-  ${PROJECT_SOURCE_DIR}/include
-)
-target_link_libraries(openwow_game_actions_application PUBLIC
-  openwow_game_actions_model
-)
-target_compile_features(openwow_game_actions_application PUBLIC cxx_std_20)
-
 add_library(openwow_game_held_cursor
   held_cursor/held_cursor.cpp
 )

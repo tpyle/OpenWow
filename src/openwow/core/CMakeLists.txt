@@ -2,11 +2,9 @@ openwow_add_component(openwow_engine_core
   locale_system.cpp
   screenshot_system.cpp
   matrix_transform.cpp
-  string_interner.cpp
   window_manager.cpp
   display_settings.cpp
   game_subsystems.cpp
-  memory_pool_manager.cpp
   storm_tls.cpp
   storm_thread.cpp
   storm_memory.cpp
@@ -38,7 +36,6 @@ openwow_add_component(openwow_engine_core
   storm_big.cpp
   storm_cmd.cpp
   storm_comp.cpp
-  storm_debug.cpp
   storm_region.cpp
   storm_sync.cpp
   storm_utils.cpp
@@ -54,7 +51,6 @@ target_link_libraries(openwow_engine_core PRIVATE
   openwow_input
   openwow_lua
   openwow_net
-  openwow_platform_dynamic_libraries
   openwow_platform_filesystem
   openwow_platform_runtime
   openwow_storage_persistence
