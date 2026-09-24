@@ -270,50 +270,6 @@ struct ComSatPendingTalkerPlayback {
   std::size_t frame_count{0};
 };
 
-struct ComSatDatagramEndpoint {
-  static constexpr std::uint32_t kIpv4SockaddrLength = 16;
-  static constexpr std::size_t kStorageSize = 128;
-
-  std::uint32_t length{kIpv4SockaddrLength};
-  std::array<std::byte, kStorageSize> storage{};
-
-  [[nodiscard]] static ComSatDatagramEndpoint Ipv4Any(std::uint16_t host_port);
-  [[nodiscard]] static ComSatDatagramEndpoint Ipv4Loopback(std::uint16_t host_port);
-
-  [[nodiscard]] std::uint16_t PortHostOrder() const;
-  [[nodiscard]] std::uint32_t AddressV4NetworkOrder() const;
-};
-
-class ComSatDatagramSocket {
-public:
-  using NativeHandle = std::uintptr_t;
-
-  ComSatDatagramSocket();
-  ~ComSatDatagramSocket();
-
-  ComSatDatagramSocket(const ComSatDatagramSocket &) = delete;
-  ComSatDatagramSocket &operator=(const ComSatDatagramSocket &) = delete;
-  ComSatDatagramSocket(ComSatDatagramSocket &&other) noexcept;
-  ComSatDatagramSocket &operator=(ComSatDatagramSocket &&other) noexcept;
-
-  [[nodiscard]] bool Bind(std::uint16_t host_port);
-  [[nodiscard]] int SendTo(const ComSatDatagramEndpoint &endpoint, const char *buffer,
-                           int length) const;
-  [[nodiscard]] bool ReceiveFrom(ComSatDatagramEndpoint &endpoint, char *buffer,
-                                 std::size_t &in_out_length) const;
-  [[nodiscard]] NativeHandle native_handle() const noexcept {
-    return native_socket_handle_;
-  }
-  [[nodiscard]] bool IsOpen() const noexcept;
-
-private:
-  static constexpr NativeHandle kInvalidSocketHandle = static_cast<NativeHandle>(-1);
-
-  void Close() noexcept;
-
-  NativeHandle native_socket_handle_{kInvalidSocketHandle};
-};
-
 void ComSatSoundIO_Initialize(ComSatSoundIOState &state, std::uint32_t max_players,
                               float master_vol);
 
@@ -476,9 +432,5 @@ ComSatSoundIO_DecodePackedVoiceBatch(const std::uint8_t *buffer, std::size_t buf
                                      ComSatVariableBitrateVoiceBatch &batch);
 
 [[nodiscard]] bool ComSatSoundIO_FlushPendingVoiceBatch(ComSatPendingVoiceBatch &pending_batch);
-
-bool ComSatSoundIO_SetSocketQOS(std::uintptr_t socket_handle);
-
-[[nodiscard]] std::unique_ptr<ComSatDatagramSocket> ComSatSoundIO_CreateSocketWrapper();
 
 }

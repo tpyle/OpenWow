@@ -47,7 +47,6 @@ constexpr std::uint32_t kComSatShutdownGracePeriodMs = 3000u;
 
 constexpr std::uint32_t kComSatDriverSlotTableCapacity = 4u;
 constexpr float kComSatDriverInitialMasterVolume = 1.0f;
-constexpr std::uint16_t kComSatDriverLocalBindPort = 0u;
 constexpr char kEnableVoiceChatCVarName[] = "EnableVoiceChat";
 constexpr char kEnableMicrophoneCVarName[] = "EnableMicrophone";
 constexpr char kVoiceChatModeCVarName[] = "VoiceChatMode";
@@ -106,9 +105,7 @@ struct ComSatSoundRuntime {
   void Reset() {
     sound_io = ComSatSoundIOState{};
     output_channel.reset();
-    datagram_socket.reset();
     driver_created = false;
-    datagram_socket_bound = false;
   }
 
   void Initialize(openwow::audio::SoundEngine &engine) {
@@ -125,20 +122,10 @@ struct ComSatSoundRuntime {
     } else {
       output_channel.reset();
     }
-    datagram_socket = ComSatSoundIO_CreateSocketWrapper();
-    if (datagram_socket != nullptr) {
-      datagram_socket_bound = datagram_socket->Bind(kComSatDriverLocalBindPort);
-    }
     driver_created = output_channel != nullptr;
   }
 
-  [[nodiscard]] bool datagram_socket_open() const {
-    return datagram_socket != nullptr && datagram_socket->IsOpen();
-  }
-
   bool driver_created{false};
-  bool datagram_socket_bound{false};
-  std::unique_ptr<ComSatDatagramSocket> datagram_socket;
   std::unique_ptr<ComSatSoundOutputChannel> output_channel;
   ComSatSoundIOState sound_io;
 };
@@ -1500,11 +1487,6 @@ bool CVar_EnableVoiceChat_OnChanged(openwow::audio::SoundRuntime& sound_runtime,
   return true;
 }
 
-void ComSat_ThreadProc() {
-
-  openwow::diagnostics::Log(openwow::diagnostics::LogLevel::kInfo, "ComSat: thread proc (stub, not started)");
-}
-
 void VoiceChat_HandlePushToTalkReassign() {
   s_ptt_key_code = -1;
   s_ptt_mouse_button = 0;
@@ -1699,8 +1681,6 @@ ComSatRuntimeStateSnapshot VoiceChat_GetComSatRuntimeStateSnapshot() {
       .driver_created = s_comsat_sound_runtime.driver_created,
       .sound_io_initialized = s_comsat_sound_runtime.sound_io.initialized,
       .sound_io_slot_count = static_cast<std::uint32_t>(s_comsat_sound_runtime.sound_io.slots.size()),
-      .datagram_socket_open = s_comsat_sound_runtime.datagram_socket_open(),
-      .datagram_socket_bound = s_comsat_sound_runtime.datagram_socket_bound,
   };
 }
 

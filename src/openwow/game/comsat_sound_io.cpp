@@ -10,21 +10,6 @@
 #include <new>
 #include <utility>
 
-#ifdef _WIN32
-
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
-#include <windows.h>
-#pragma comment(lib, "ws2_32.lib")
-#else
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
-
 namespace openwow::game {
 class ComSatSoundIOBridge {
 public:
@@ -47,22 +32,6 @@ constexpr std::size_t kComSatPlaybackBlocksPerUpdate = 5u;
 constexpr std::uint32_t kComSatPlaybackDecoderResyncPeriod = 32u;
 constexpr double kComSatPlaybackFrameDurationSeconds = 0.1;
 constexpr std::uint8_t kComSatDefaultSelectionValue = 0x80u;
-
-#ifdef _WIN32
-using SocketHandle = SOCKET;
-constexpr SocketHandle kInvalidSocket = INVALID_SOCKET;
-#else
-using SocketHandle = int;
-constexpr SocketHandle kInvalidSocket = -1;
-#endif
-
-SocketHandle NativeToSocketHandle(const ComSatDatagramSocket::NativeHandle native_handle) {
-  return static_cast<SocketHandle>(native_handle);
-}
-
-ComSatDatagramSocket::NativeHandle SocketHandleToNative(const SocketHandle handle) {
-  return static_cast<ComSatDatagramSocket::NativeHandle>(handle);
-}
 
 std::size_t ResolveTalkerSlotIndex(const std::uint32_t talker_id) {
   return static_cast<std::size_t>(static_cast<std::uint8_t>(talker_id));
@@ -566,74 +535,6 @@ private:
   std::size_t bit_offset_{0};
   std::size_t consumed_bits_{0};
 };
-
-sockaddr *EndpointSockAddr(ComSatDatagramEndpoint &endpoint) {
-  return reinterpret_cast<sockaddr *>(endpoint.storage.data());
-}
-
-const sockaddr *EndpointSockAddr(const ComSatDatagramEndpoint &endpoint) {
-  return reinterpret_cast<const sockaddr *>(endpoint.storage.data());
-}
-
-sockaddr_in *EndpointSockAddrIn(ComSatDatagramEndpoint &endpoint) {
-  return reinterpret_cast<sockaddr_in *>(endpoint.storage.data());
-}
-
-const sockaddr_in *EndpointSockAddrIn(const ComSatDatagramEndpoint &endpoint) {
-  return reinterpret_cast<const sockaddr_in *>(endpoint.storage.data());
-}
-
-void ResetIpv4Endpoint(ComSatDatagramEndpoint &endpoint, const std::uint32_t address_network_order,
-                       const std::uint16_t host_port) {
-  endpoint.length = sizeof(sockaddr_in);
-  endpoint.storage.fill(std::byte{0});
-  auto *address = EndpointSockAddrIn(endpoint);
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-  address->sin_len = static_cast<decltype(address->sin_len)>(sizeof(sockaddr_in));
-#endif
-  address->sin_family = AF_INET;
-  address->sin_port = htons(host_port);
-  address->sin_addr.s_addr = address_network_order;
-}
-
-void SetSocketNonBlocking(const SocketHandle handle) {
-  if (handle == kInvalidSocket) {
-    return;
-  }
-#ifdef _WIN32
-  u_long mode = 1;
-  ioctlsocket(handle, FIONBIO, &mode);
-#else
-  const int flags = fcntl(handle, F_GETFL, 0);
-  if (flags >= 0) {
-    fcntl(handle, F_SETFL, flags | O_NONBLOCK);
-  }
-#endif
-}
-
-void CloseSocketHandle(const SocketHandle handle) {
-  if (handle == kInvalidSocket) {
-    return;
-  }
-#ifdef _WIN32
-  closesocket(handle);
-#else
-  ::close(handle);
-#endif
-}
-
-void SetSocketReceiveBufferSize(const SocketHandle handle, const int size) {
-  if (handle == kInvalidSocket) {
-    return;
-  }
-  setsockopt(handle, SOL_SOCKET, SO_RCVBUF,
-#ifdef _WIN32
-             reinterpret_cast<const char *>(&size),
-#else
-             &size,
-#endif
-             sizeof(size));
-}
 
 class NullComSatSoundIOBridge final : public ComSatSoundIOBridge {
 public:
@@ -1814,158 +1715,6 @@ bool ComSatSoundIO_FlushPendingVoiceBatch(ComSatPendingVoiceBatch &pending_batch
                              packet.data(), bytes_written);
   ClearPendingVoiceFrames(pending_batch);
   return true;
-}
-
-bool ComSatSoundIO_SetSocketQOS(const std::uintptr_t socket_handle) {
-#ifdef _WIN32
-  HMODULE library = LoadLibraryA("ws2_32.dll");
-  if (!library) {
-    return false;
-  }
-
-  using WSAIoctlFn = int(WSAAPI *)(SOCKET, DWORD, LPVOID, DWORD, LPVOID, DWORD, LPDWORD,
-                                   LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
-  const auto qos_ioctl = reinterpret_cast<WSAIoctlFn>(GetProcAddress(library, "WSAIoctl"));
-  if (!qos_ioctl) {
-    FreeLibrary(library);
-    return false;
-  }
-
-  DWORD bytes_returned = 0;
-  DWORD zero = 0;
-  qos_ioctl(NativeToSocketHandle(socket_handle), 0x98000004u, &zero, sizeof(zero), nullptr, 0,
-            &bytes_returned, nullptr, nullptr);
-  FreeLibrary(library);
-  return true;
-#else
-  (void)socket_handle;
-  return false;
-#endif
-}
-
-ComSatDatagramEndpoint ComSatDatagramEndpoint::Ipv4Any(const std::uint16_t host_port) {
-  ComSatDatagramEndpoint endpoint;
-  ResetIpv4Endpoint(endpoint, htonl(INADDR_ANY), host_port);
-  return endpoint;
-}
-
-ComSatDatagramEndpoint ComSatDatagramEndpoint::Ipv4Loopback(const std::uint16_t host_port) {
-  ComSatDatagramEndpoint endpoint;
-  ResetIpv4Endpoint(endpoint, htonl(INADDR_LOOPBACK), host_port);
-  return endpoint;
-}
-
-std::uint16_t ComSatDatagramEndpoint::PortHostOrder() const {
-  return ntohs(EndpointSockAddrIn(*this)->sin_port);
-}
-
-std::uint32_t ComSatDatagramEndpoint::AddressV4NetworkOrder() const {
-  return EndpointSockAddrIn(*this)->sin_addr.s_addr;
-}
-
-ComSatDatagramSocket::ComSatDatagramSocket() {
-  native_socket_handle_ = SocketHandleToNative(::socket(AF_INET, SOCK_DGRAM, 0));
-  if (!IsOpen()) {
-    return;
-  }
-
-  ComSatSoundIO_SetSocketQOS(native_socket_handle_);
-  SetSocketNonBlocking(NativeToSocketHandle(native_socket_handle_));
-  SetSocketReceiveBufferSize(NativeToSocketHandle(native_socket_handle_), 0x8000);
-}
-
-ComSatDatagramSocket::~ComSatDatagramSocket() {
-  Close();
-}
-
-ComSatDatagramSocket::ComSatDatagramSocket(ComSatDatagramSocket &&other) noexcept
-    : native_socket_handle_(other.native_socket_handle_) {
-  other.native_socket_handle_ = kInvalidSocketHandle;
-}
-
-ComSatDatagramSocket &ComSatDatagramSocket::operator=(ComSatDatagramSocket &&other) noexcept {
-  if (this == &other) {
-    return *this;
-  }
-
-  Close();
-  native_socket_handle_ = other.native_socket_handle_;
-  other.native_socket_handle_ = kInvalidSocketHandle;
-  return *this;
-}
-
-bool ComSatDatagramSocket::Bind(const std::uint16_t host_port) {
-  if (!IsOpen()) {
-    return false;
-  }
-
-  const int reuse_address = 1;
-  setsockopt(NativeToSocketHandle(native_socket_handle_), SOL_SOCKET, SO_REUSEADDR,
-#ifdef _WIN32
-             reinterpret_cast<const char *>(&reuse_address),
-#else
-             &reuse_address,
-#endif
-             sizeof(reuse_address));
-
-  auto endpoint = ComSatDatagramEndpoint::Ipv4Any(host_port);
-  return ::bind(NativeToSocketHandle(native_socket_handle_), EndpointSockAddr(endpoint),
-                static_cast<socklen_t>(endpoint.length)) != -1;
-}
-
-int ComSatDatagramSocket::SendTo(const ComSatDatagramEndpoint &endpoint, const char *buffer,
-                                 const int length) const {
-  if (!IsOpen()) {
-    return -1;
-  }
-
-  return static_cast<int>(::sendto(NativeToSocketHandle(native_socket_handle_), buffer, length, 0,
-                                   EndpointSockAddr(endpoint),
-                                   static_cast<socklen_t>(endpoint.length)));
-}
-
-bool ComSatDatagramSocket::ReceiveFrom(ComSatDatagramEndpoint &endpoint, char *buffer,
-                                       std::size_t &in_out_length) const {
-  if (!buffer) {
-    return false;
-  }
-
-  std::memset(buffer, 0, in_out_length);
-  if (!IsOpen()) {
-    return false;
-  }
-
-  socklen_t from_length = static_cast<socklen_t>(std::min<std::size_t>(
-      endpoint.length == 0 ? endpoint.storage.size() : endpoint.length, endpoint.storage.size()));
-  const auto received =
-      ::recvfrom(NativeToSocketHandle(native_socket_handle_), buffer,
-                 static_cast<int>(std::min<std::size_t>(
-                     in_out_length, static_cast<std::size_t>(std::numeric_limits<int>::max()))),
-                 0, EndpointSockAddr(endpoint), &from_length);
-  if (received <= 0) {
-    return false;
-  }
-
-  endpoint.length = from_length;
-  in_out_length = static_cast<std::size_t>(received);
-  return true;
-}
-
-bool ComSatDatagramSocket::IsOpen() const noexcept {
-  return native_socket_handle_ != kInvalidSocketHandle;
-}
-
-void ComSatDatagramSocket::Close() noexcept {
-  if (!IsOpen()) {
-    return;
-  }
-
-  CloseSocketHandle(NativeToSocketHandle(native_socket_handle_));
-  native_socket_handle_ = kInvalidSocketHandle;
-}
-
-std::unique_ptr<ComSatDatagramSocket> ComSatSoundIO_CreateSocketWrapper() {
-  return std::unique_ptr<ComSatDatagramSocket>(new (std::nothrow) ComSatDatagramSocket());
 }
 
 }

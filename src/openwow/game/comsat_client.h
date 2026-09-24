@@ -1,5 +1,14 @@
 #pragma once
 
+// Client-side voice chat state ("ComSat" is the original client's name for
+// its voice subsystem). This covers what works without a voice server: the
+// voice CVars and their change handlers, microphone and voice-activation
+// settings, input/output device selection, the push-to-talk binding, the
+// microphone loopback test and volume ducking, plus tracking of the voice
+// sessions and speakers that SMSG_VOICE_SESSION_* packets report. There is
+// no network transport or voice codec: era servers do not run a voice
+// server, so no voice audio is ever sent or received.
+
 #include <cstdint>
 
 namespace openwow::audio {
@@ -66,8 +75,6 @@ struct ComSatRuntimeStateSnapshot {
   bool driver_created{false};
   bool sound_io_initialized{false};
   std::uint32_t sound_io_slot_count{0};
-  bool datagram_socket_open{false};
-  bool datagram_socket_bound{false};
 };
 
 void VoiceChat_BindRegisteredCVars(openwow::audio::SoundRuntime& sound_runtime);
@@ -144,7 +151,6 @@ bool CVar_EnableVoiceChat_OnChanged(openwow::audio::SoundRuntime& sound_runtime,
                                     const char *old_value,
                                     const char *new_value);
 
-void ComSat_ThreadProc();
 
 void VoiceChat_HandlePushToTalkReassign();
 
