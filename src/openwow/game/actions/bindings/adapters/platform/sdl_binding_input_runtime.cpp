@@ -149,6 +149,38 @@ bool SdlBindingInputRuntime::KeyUp(const std::string_view key_name) {
       WithoutMatchedModifiers(state, held.matched_chord.value()));
 }
 
+bool SdlBindingInputRuntime::ReleaseHeldKey(const std::string_view key_name) {
+  if (key_name.empty()) return false;
+  if (IsModifierKey(key_name)) {
+    if (modifier_state_sink_) {
+      modifier_state_sink_(key_name, false);
+    }
+    return true;
+  }
+  const auto it = held_keys_.find(BindingKey(BaseKey(key_name)));
+  if (it == held_keys_.end()) {
+    return false;
+  }
+  const HeldBinding held = it->second;
+  held_keys_.erase(it);
+  const auto state = static_cast<std::uint16_t>(
+      held.modifier_state | static_cast<std::uint16_t>(SDL_GetModState()));
+  (void)DispatchCommand(
+      held.command, false, "",
+      WithoutMatchedModifiers(state, held.matched_chord.value()));
+  return true;
+}
+
+void SdlBindingInputRuntime::ReleaseAllHeldKeys() {
+  auto held_keys = std::move(held_keys_);
+  held_keys_.clear();
+  for (const auto& [key, held] : held_keys) {
+    (void)DispatchCommand(
+        held.command, false, "",
+        WithoutMatchedModifiers(held.modifier_state, held.matched_chord.value()));
+  }
+}
+
 bool SdlBindingInputRuntime::MouseButtonDown(
     const std::uint32_t button_flag,
     const std::uint16_t modifier_state) {

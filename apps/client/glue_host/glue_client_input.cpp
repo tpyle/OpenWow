@@ -185,10 +185,23 @@ void GlueClient::ReleaseInWorldMouseButtons() {
 void GlueClient::PumpPendingWindowEvents() {
   SDL_Event event;
 
+  openwow::platform::PendingWindowEventQueue::Entry pending_event;
+  // The queue overwrites its oldest entry when full, so dispatch what is
+  // queued before it fills rather than losing a key or button event after
+  // a long frame.
+  const auto make_room = [&]() {
+    while (running_ && pending_window_events_.Size() >=
+                           openwow::platform::PendingWindowEventQueue::kMaxPendingEvents &&
+           pending_window_events_.TryDequeue(pending_event)) {
+      HandleEvent(pending_event.event);
+    }
+  };
+
   bool have_pending_motion = false;
   SDL_Event pending_motion{};
   const auto flush_pending_motion = [&]() {
     if (have_pending_motion) {
+      make_room();
       pending_window_events_.Enqueue(pending_motion, openwow::core::GameClock::GetTickCount32());
       have_pending_motion = false;
     }
@@ -209,11 +222,11 @@ void GlueClient::PumpPendingWindowEvents() {
       continue;
     }
     flush_pending_motion();
+    make_room();
     pending_window_events_.Enqueue(event, openwow::core::GameClock::GetTickCount32());
   }
   flush_pending_motion();
 
-  openwow::platform::PendingWindowEventQueue::Entry pending_event;
   while (pending_window_events_.TryDequeue(pending_event)) {
     HandleEvent(pending_event.event);
     if (!running_) {
@@ -261,6 +274,7 @@ void GlueClient::ApplyWindowFocusChange(const bool focused) {
   } else {
     if (mode_ == UiMode::kInWorld) {
       ReleaseInWorldMouseButtons();
+      game_loop_.binding_input().ReleaseAllHeldKeys();
     } else {
       openwow::platform::WindowManager::Get().ResetMouseButtonCapture();
     }
@@ -731,17 +745,23 @@ void GlueClient::HandleEvent(const SDL_Event &event) {
   }
 
   if (event.type == SDL_KEYUP && mode_ == UiMode::kInWorld) {
-    if (game_loop_.game_ui().is_initialized() &&
-        game_loop_.game_ui().input_router().HandleKeyUp(
-            static_cast<std::uint32_t>(event.key.keysym.scancode))) {
-      UpdateTextInputState();
-      return;
-    }
-
     const std::string key_name =
         openwow::game::actions::bindings::adapters::platform::SdlScancodeToBindingChord(
             event.key.keysym.scancode,
             static_cast<std::uint16_t>(event.key.keysym.mod));
+    if (game_loop_.game_ui().is_initialized() &&
+        game_loop_.game_ui().input_router().HandleKeyUp(
+            static_cast<std::uint32_t>(event.key.keysym.scancode))) {
+      // The UI consumed the key-up (e.g. an edit box took focus while a
+      // movement key was held), but the binding pressed before that must
+      // still be released or it stays held.
+      if (!key_name.empty()) {
+        game_loop_.binding_input().ReleaseHeldKey(key_name);
+      }
+      UpdateTextInputState();
+      return;
+    }
+
     if (!key_name.empty() &&
         game_loop_.binding_input().KeyUp(key_name)) {
       return;

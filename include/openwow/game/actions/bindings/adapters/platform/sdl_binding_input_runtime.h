@@ -31,6 +31,14 @@ class SdlBindingInputRuntime {
 
   [[nodiscard]] bool KeyDown(std::string_view key_name);
   [[nodiscard]] bool KeyUp(std::string_view key_name);
+  /// Releases the binding held for `key_name` (or reports a modifier
+  /// release) without resolving a new binding. Used when the UI consumed a
+  /// key-up, so a binding pressed before focus moved is never left held.
+  /// Returns true when something was released.
+  bool ReleaseHeldKey(std::string_view key_name);
+  /// Dispatches the release of every held key binding, e.g. when the window
+  /// loses focus and the matching key-ups will never arrive.
+  void ReleaseAllHeldKeys();
   [[nodiscard]] bool MouseButtonDown(std::uint32_t button_flag,
                                      std::uint16_t modifier_state);
   [[nodiscard]] bool MouseButtonUp(std::uint32_t button_flag,
