@@ -964,13 +964,15 @@ void WowClientConnection_HandleReconnect(WowClientConnection* self,
         return;
     }
 
-    self->secondary_connection = AllocateConnection(self);
-
     const auto expected_digest = ComputeReconnectDigest(*self, new_addr, new_port);
     std::array<std::uint8_t, kTransferDigestSize> packet_digest{};
     CDataStore_GetBytes(store, packet_digest.data(), packet_digest.size());
 
-    if (packet_digest != expected_digest ||
+    // Validate before allocating: a rejected redirect must not leave a
+    // stale secondary connection behind for HandleTransferRedirect to find,
+    // and a redirect is only honoured on the primary connection.
+    if (connection != self->primary_connection ||
+        packet_digest != expected_digest ||
         !CDataStore_AtEnd(store) ||
         store.read_pos > store.write_pos) {
         if (connection) {
@@ -979,6 +981,7 @@ void WowClientConnection_HandleReconnect(WowClientConnection* self,
         return;
     }
 
+    self->secondary_connection = AllocateConnection(self);
     if (self->secondary_connection) {
         WowConnection_Connect(self->secondary_connection, new_addr, new_port, -1);
     }
