@@ -591,6 +591,10 @@ private:
   std::optional<WmoAreaGroupRef> last_presentation_room_;
   bool last_presentation_outdoors_{true};
   std::uint64_t wmo_camera_room_transition_{0};
+  // Rate-limited diagnostic of the camera room's visible group set, logged
+  // whenever the set changes so rendering gaps can be replayed offline.
+  mutable std::vector<std::uint16_t> camera_visibility_log_groups_;
+  mutable std::chrono::steady_clock::time_point camera_visibility_log_time_{};
 
   WorldStreamingOwnership streaming_ownership_;
   std::unordered_set<std::uint64_t> active_wdl_wmo_owners_;

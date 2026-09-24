@@ -1,10 +1,14 @@
 #include "openwow/world/presentation/world_presentation_snapshot.h"
 
 #include "openwow/data/wmo/wmo_file.h"
+#include "openwow/foundation/diagnostics/logging.h"
 #include "openwow/world/streaming/world_map.h"
 
 #include <algorithm>
 #include <array>
+#include <chrono>
+#include <cstdio>
+#include <string>
 #include <limits>
 #include <span>
 #include <vector>
@@ -148,6 +152,55 @@ WorldPresentationSnapshot WorldMap::BuildPresentationSnapshot(
           camera_lane_walked[item_index] != 0u);
     }
     ++item_index;
+  }
+
+  // Log the camera room's drawn groups with enough state (camera, view
+  // projection, placement matrix) to replay the portal traversal offline.
+  if (camera_cache_entry != nullptr &&
+      camera_cache_entry->containing_group.has_value()) {
+    const WmoAreaGroupRef& room = *camera_cache_entry->containing_group;
+    std::size_t index = 0;
+    for (const auto& [placement, instance] : wmo_instances_) {
+      if (placement != room.placement) {
+        ++index;
+        continue;
+      }
+      std::vector<std::uint16_t> groups;
+      for (const WmoVisibleGroupPath& path :
+           snapshot.world_models[index].wmo_visible_group_paths) {
+        groups.push_back(path.group_index);
+      }
+      std::sort(groups.begin(), groups.end());
+      groups.erase(std::unique(groups.begin(), groups.end()), groups.end());
+      const auto now = std::chrono::steady_clock::now();
+      if (groups != camera_visibility_log_groups_ &&
+          now - camera_visibility_log_time_ >= std::chrono::milliseconds(250)) {
+        camera_visibility_log_groups_ = groups;
+        camera_visibility_log_time_ = now;
+        const auto floats = [](const float* values, std::size_t count) {
+          std::string out;
+          char buffer[32];
+          for (std::size_t i = 0; i < count; ++i) {
+            std::snprintf(buffer, sizeof(buffer), i == 0 ? "%.6g" : ",%.6g",
+                          static_cast<double>(values[i]));
+            out += buffer;
+          }
+          return out;
+        };
+        std::string message =
+            "WMO camera visibility: placement=" +
+            std::to_string(instance.placement_stable_id) + " room=" +
+            std::to_string(room.group_index) + " camera=(" +
+            floats(camera.position.data(), 3u) + ") model=[" +
+            floats(instance.model_matrix.data(), 16u) + "] viewproj=[" +
+            floats(view_projection.data(), 16u) + "] groups=";
+        for (std::size_t i = 0; i < groups.size(); ++i) {
+          message += (i == 0 ? "" : ",") + std::to_string(groups[i]);
+        }
+        diagnostics::Log(diagnostics::LogLevel::kInfo, message);
+      }
+      break;
+    }
   }
   return snapshot;
 }
