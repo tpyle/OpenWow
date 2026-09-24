@@ -75,6 +75,18 @@ openwow::render::CharacterAppearance MakeCharacterAppearance(
     appearance.equipment[slot].inventory_type = character.equipment[slot].inv_type;
     appearance.equipment[slot].enchant_visual = character.equipment[slot].enchant_id;
   }
+  // SMSG_CHAR_ENUM character flags carrying the Show Helm / Show Cloak
+  // choice; a hidden item is not displayed on the character-select model.
+  constexpr std::uint32_t kCharFlagHideHelm = 0x400u;
+  constexpr std::uint32_t kCharFlagHideCloak = 0x800u;
+  constexpr std::size_t kHeadSlot = 0u;
+  constexpr std::size_t kBackSlot = 14u;
+  if ((character.char_flags & kCharFlagHideHelm) != 0u) {
+    appearance.equipment[kHeadSlot] = {};
+  }
+  if ((character.char_flags & kCharFlagHideCloak) != 0u) {
+    appearance.equipment[kBackSlot] = {};
+  }
   return appearance;
 }
 

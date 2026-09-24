@@ -15,6 +15,7 @@
 #include "openwow/game/objects/cgdynamicobject.h"
 #include "openwow/game/objects/cgplayer.h"
 #include "openwow/game/objects/cgunit.h"
+#include "openwow/game/player_chat_flags.h"
 #include "openwow/game/player_control_runtime.h"
 #include "openwow/game/player_name_desc.h"
 #include "openwow/game/threat_system.h"
@@ -624,6 +625,19 @@ void WorldPresentationPublisher::SyncEquipment(const game::WorldObject &object,
   } else {
     SyncVirtualItemWeapons(unit, cache);
     equipment_scratch_.items = cache.virtual_item_weapons;
+  }
+
+  // Show Helm / Show Cloak: the player's hide flags suppress the head and
+  // back items for display only, exactly as corpses do with their own
+  // hide flags.
+  if (object.GetTypeId() == game::TypeID::kPlayer) {
+    const auto player_flags = static_cast<const game::CGPlayer_C &>(object).GetPlayerFlags();
+    if ((player_flags & game::PlayerFlagBits::kHideHelm) != 0u) {
+      equipment_scratch_.items[render::kSlotHead] = {};
+    }
+    if ((player_flags & game::PlayerFlagBits::kHideCloak) != 0u) {
+      equipment_scratch_.items[render::kSlotBack] = {};
+    }
   }
 
   equipment_scratch_assembled_ = true;
