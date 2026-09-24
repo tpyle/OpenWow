@@ -1971,11 +1971,18 @@ LuaRunResult GlueLuaRuntime::DispatchRegisteredEvent(
   call_args.push_back(MakeLuaString(event_name));
   call_args.insert(call_args.end(), extra_args.begin(), extra_args.end());
 
+  // One handler's error must not keep the event from later widgets, and a
+  // widget unregistered by an earlier handler in this dispatch is skipped,
+  // matching the in-game EventDispatcher. The first failure is reported.
   LuaRunResult result{.ok = true, .error = {}};
   for (const auto& widget : targets) {
-    result = RunWidgetEvent(widget, "OnEvent", widget + ".OnEvent", call_args);
-    if (!result.ok) {
-      break;
+    if (!IsEventRegistered(widget, event_name)) {
+      continue;
+    }
+    auto widget_result =
+        RunWidgetEvent(widget, "OnEvent", widget + ".OnEvent", call_args);
+    if (!widget_result.ok && result.ok) {
+      result = std::move(widget_result);
     }
   }
 
