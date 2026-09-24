@@ -43,7 +43,6 @@ openwow_add_component(openwow_game
   objects/unit/unit_state_queries.cpp
   update_object_parser.cpp
   update_field_event_mapper.cpp
-  cmirror_compact_lookup.cpp
   unit_descriptor_callbacks.cpp
   flyable_area.cpp
   keybind_system.cpp
@@ -136,12 +135,7 @@ openwow_add_component(openwow_game
   gossip_manager.cpp
   trainer_system.cpp
   trainer_window.cpp
-  spell_flyout.cpp
-  spell_flyout_panel.cpp
-  stance_bar.cpp
   commerce/merchants/merchant_interaction.cpp
-  dialog_frame.cpp
-  quest_log_detail.cpp
   skill_line_ability_lookup.cpp
   spellbook_catalog.cpp
   spellbook_system.cpp
@@ -153,15 +147,11 @@ openwow_add_component(openwow_game
   commerce/mail/mail_compose_state.cpp
   commerce/auctions/adapters/protocol/auction_packet_codec.cpp
   commerce/auctions/auction_interaction.cpp
-  commerce/auctions/auction_detail_display.cpp
-  commerce/auctions/auction_display.cpp
   lfg_manager.cpp
   aura_manager.cpp
   aura_tracker.cpp
   unit_frame_data.cpp
   chat_bubble.cpp
-  emote_visual.cpp
-  chr_races_dbc_helpers.cpp
   display_info_resolver.cpp
   cast_bar_tracker.cpp
   power_display.cpp
@@ -177,13 +167,9 @@ openwow_add_component(openwow_game
   battleground_manager.cpp
   taxi_system.cpp
   taxi_runtime_slice.cpp
-  death_system.cpp
   bg_queue.cpp
   barber_shop.cpp
-  barber_shop_detail.cpp
   model_preview.cpp
-  dk_creation.cpp
-  race_class_info.cpp
   misc_handler.cpp
   tutorial_system.cpp
   query_cache.cpp
@@ -193,7 +179,6 @@ openwow_add_component(openwow_game
   monster_move.cpp
   party_stats.cpp
   taxi_handler.cpp
-  taxi_flight_camera.cpp
   hyperlink.cpp
   commerce/merchants/adapters/protocol/merchant_result_packet_codec.cpp
   commerce/merchants/merchant_requirements.cpp
@@ -209,7 +194,6 @@ openwow_add_component(openwow_game
   instance_handler.cpp
   inspect_handler.cpp
   commerce/banking/adapters/protocol/guild_bank_protocol_session_state.cpp
-  commerce/banking/guild_bank_detail.cpp
   petition_handler.cpp
   inventory/items/item_interactions.cpp
   inventory/items/item_protocol.cpp
@@ -217,9 +201,7 @@ openwow_add_component(openwow_game
   vehicle_aim_controller.cpp
   vehicle_handler.cpp
   arena_handler.cpp
-  arena_scoreboard_detail.cpp
   battlefield_mgr.cpp
-  battlefield_map.cpp
   pet_handler.cpp
   gm_survey.cpp
   gm_ticket_handler.cpp
@@ -236,25 +218,17 @@ openwow_add_component(openwow_game
   comsat_transport_session.cpp
   comsat_voice_codec_profile.cpp
   voice_chat.cpp
-  lfg_role_check.cpp
   combat_log_display.cpp
   ignore_system.cpp
   localization.cpp
-  chat_filter.cpp
   slash_commands.cpp
   simple_script.cpp
   clcd_connection.cpp
-  notification_system.cpp
   saved_variables.cpp
   game_settings.cpp
   account_data.cpp
   warden_client.cpp
-  check_executable_signature.cpp
   event_scheduler.cpp
-  cast_bar.cpp
-  spell_cast_bar.cpp
-  target_cast_bar.cpp
-  channel_display.cpp
   spell_range.cpp
   spell_targeting.cpp
   guild_system.cpp
@@ -262,140 +236,48 @@ openwow_add_component(openwow_game
   commerce/auctions/auction_state.cpp
   commerce/auctions/auction_sell_state.cpp
   commerce/auctions/auction_query_state.cpp
-  achievement_progress.cpp
   quest_reward.cpp
-  reputation_bar.cpp
-  xp_tracker.cpp
   money_display.cpp
   arena_team.cpp
   pvp_info.cpp
-  instance_reset.cpp
-  graveyard_system.cpp
-  death_display.cpp
-  death_state.cpp
-  spirit_healer.cpp
-  corpse_run.cpp
-  res_sickness.cpp
   vehicle_system.cpp
-  collection_system.cpp
-  guild_roster.cpp
   group_system.cpp
-  ready_check.cpp
-  summon_system.cpp
   lfg_system.cpp
-  dungeon_finder.cpp
-  dungeon_finder_data.cpp
-  random_dungeon_reward.cpp
-  deserter_tracker.cpp
-  world_state_flags.cpp
   faction_system.cpp
-  quest_tracker.cpp
   bg_scoreboard.cpp
   reputation_manager.cpp
-  reputation_detail.cpp
   currency_system.cpp
-  currency_display.cpp
   honor_system.cpp
-  token_system.cpp
-  pvp_currency.cpp
   profession_system.cpp
-  totem_bar.cpp
-  fishing_system.cpp
-  gathering_node.cpp
   tracking_system.cpp
   minimap_system.cpp
   zone_text_system.cpp
-  map_exploration.cpp
-  fog_of_war.cpp
-  discovery_system.cpp
-  world_map_display.cpp
-  zone_text_display.cpp
-  dual_spec.cpp
-  dual_spec_ui.cpp
-  dual_spec_display.cpp
-  pet_talent.cpp
   pet_system.cpp
   pet_action_bar.cpp
-  pet_state.cpp
-  hunter_pet.cpp
-  warlock_pet.cpp
   inventory/equipment/equipment_sets.cpp
-  commerce/banking/bank_interaction.cpp
   inventory/items/item_definitions.cpp
   inventory/items/item_acquisition_rules.cpp
   inventory/items/item_use_requirements.cpp
   title_system.cpp
-  inspect_system.cpp
   nameplate_damage_flash.cpp
   tooltip_builder.cpp
   paper_doll.cpp
-  char_panel_stats.cpp
   player_unit_frame_data.cpp
-  stat_tooltip.cpp
-  dressing_room.cpp
   model_frame_data.cpp
-  cinematic_data.cpp
   world_environment_state.cpp
-  world_spawner.cpp
   collision_system.cpp
   map_streamer.cpp
   realm_list.cpp
-  realm_info.cpp
   queue_position.cpp
-  latency_monitor.cpp
-  connection_status.cpp
   statistics_tracker.cpp
-  world_pvp.cpp
   chat_link.cpp
-  world_state_display.cpp
   quest_poi.cpp
-  map_objective.cpp
-  timer_bar.cpp
-  absorb_tracker.cpp
-  power_bar_data.cpp
-  rune_system.cpp
-  help_system.cpp
-  report_player.cpp
-  raid_marker.cpp
-  world_marker.cpp
-  focus_target.cpp
-  focus_target_frame.cpp
-  assist_target.cpp
-  buff_frame.cpp
-  buff_frame_display.cpp
-  debuff_display.cpp
-  debuff_type_display.cpp
-  aura_timer.cpp
-  weapon_buff_display.cpp
-  inspect_honor.cpp
-  armory_export.cpp
-  guild_log.cpp
-  char_services.cpp
-  server_message.cpp
-  motd_system.cpp
   duel_system.cpp
-  pvp_flag_manager.cpp
   contested_area.cpp
-  sanctuary.cpp
   movement_callbacks.cpp
   transport_manager.cpp
-  login_scene_controller.cpp
-  loading_progress.cpp
-  loading_screen_controller.cpp
-  error_frame_display.cpp
-  motd_display.cpp
-  server_message_handler.cpp
   minimap_ping.cpp
-  raid_warning.cpp
-  raid_warning_display.cpp
-  boss_warning.cpp
-  boss_mod_timer.cpp
-  encounter_journal.cpp
-  encounter_journal_data.cpp
-  lfg_queue_status.cpp
   click_to_move.cpp
-  attack_range_raycast_state.cpp
-  object_registry.cpp
   unit_data_view.cpp
   session/unit_token_resolver.cpp
   unit_query_bridge.cpp
@@ -403,50 +285,15 @@ openwow_add_component(openwow_game
   quest_query_bridge.cpp
   aura_lua_bridge.cpp
   power_lua_bridge.cpp
-  guild_lua_bridge.cpp
-  currency_lua_bridge.cpp
   chat_lua_bridge.cpp
-  player_data_view.cpp
-  gameobject_data_view.cpp
-  game_time.cpp
   rest_state.cpp
-  play_time.cpp
-  skill_display.cpp
   player_name_desc.cpp
   unit_name_display.cpp
-  addon_saved_vars.cpp
-  inspect_detail_display.cpp
-  inspect_display.cpp
   vehicle_seat_ui.cpp
-  arena_team_display.cpp
-  guild_roster_display.cpp
-  threat_display.cpp
-  combo_point_display.cpp
-  eclipse_display.cpp
-  soul_shard_display.cpp
-  inventory/loot/auto_loot.cpp
   group_frame_layout.cpp
-  raid_frame_layout.cpp
-  party_invite_display.cpp
-  ready_check_display.cpp
-  commerce/banking/bank_frame.cpp
-  keyring_display.cpp
-  ammo_display.cpp
-  instance_lock_display.cpp
-  raid_difficulty_vote.cpp
-  dungeon_difficulty_ui.cpp
-  heroic_display.cpp
-  summon_request.cpp
-  warlock_portal.cpp
   mirror_timer.cpp
-  petition_display.cpp
-  cinematic_controller.cpp
-  cutscene_controller.cpp
   declined_words.cpp
   name_validation.cpp
-  collection_display.cpp
-  spell_error_display.cpp
-  bg_specific_display.cpp
   bg/bg_warsong_gulch.cpp
   bg/bg_arathi_basin.cpp
   bg/bg_alterac_valley.cpp
@@ -454,28 +301,13 @@ openwow_add_component(openwow_game
   bg/bg_strand_of_the_ancients.cpp
   bg/bg_isle_of_conquest.cpp
   bg/bg_instance.cpp
-  vote_kick_display.cpp
-  spell_pushback.cpp
-  diminishing_returns.cpp
-  threat_table_display.cpp
-  aggro_range_display.cpp
   inventory/items/adapters/retail/item_display_name_formatter.cpp
   inventory/items/item_link_parser.cpp
-  hyperlink_system.cpp
   inventory/loot/adapters/ui/loot_roll_result_presenter.cpp
   inventory/equipment/equipment_durability.cpp
-  repair_interaction.cpp
-  stance_bar_display.cpp
-  wintergrasp_display.cpp
-  addon_error_handler.cpp
-  keybinding_ui_display.cpp
-  lua_error_display.cpp
-  mount_model_preview.cpp
   pet_action_bar_display.cpp
-  title_display_system.cpp
   spell_target_validation.cpp
   spell_aura_candidate_validation.cpp
-  spell_chain_jump.cpp
   spell_usability.cpp
   spell_c_internals.cpp
   spellbook_private_usability.cpp
@@ -487,7 +319,6 @@ openwow_add_component(openwow_game
   spell_channel_runtime.cpp
   spell_cost_and_range.cpp
   spell_missile_runtime.cpp
-  spell_proc_runtime.cpp
   spell_cast_execution.cpp
   spell_missile.cpp
   spell_visual_pipeline.cpp
@@ -496,13 +327,11 @@ openwow_add_component(openwow_game
   aura_application.cpp
   proc_manager.cpp
   character_component_backend.cpp
-  character_component_bc1_sse.cpp
   tabard_renderer.cpp
   char_sections.cpp
   inventory/equipment/equipment_visual.cpp
   inventory/equipment/equipment_visual_data.cpp
   barber_shop_data.cpp
-  pet_equip_suppress_aura.cpp
   account_msg.cpp
   dressup_model.cpp
   inventory/operations/inventory_commands.cpp
@@ -546,16 +375,12 @@ openwow_add_component(openwow_game
   cez_lcd_page_timer.cpp
   cez_lcd_page_update.cpp
   cez_lcd_subscreen_ctor.cpp
-  cgunit_guild_tabard_callback.cpp
-  character_model_frame.cpp
   chat_message_formatters.cpp
-  class_name_resolver.cpp
   clcd_base_node.cpp
   clcd_gfx_base.cpp
   clcd_gfx_color.cpp
   clcd_gfx_mono.cpp
   clcd_text_draw.cpp
-  cmirror_field_span.cpp
   cmirror_slot_bucket.cpp
   collision_polygon.cpp
   combat_log_messages.cpp
@@ -573,7 +398,6 @@ openwow_add_component(openwow_game
   delayed_spell_visual_kit.cpp
   descriptor_callback_registry.cpp
   ez_lcd_page_text.cpp
-  fog_volume_system.cpp
   game_table.cpp
   gameobject_model_sound_callback.cpp
   gameobject_sound_event.cpp
@@ -583,7 +407,6 @@ openwow_add_component(openwow_game
   input_control.cpp
   inverse_affine_translation.cpp
   is_selected_spell.cpp
-  inventory/items/item_class_subclass_predicate.cpp
   lcd_system.cpp
   minimap_terrain.cpp
   mirror_callback_node.cpp
@@ -597,21 +420,15 @@ openwow_add_component(openwow_game
   player_descriptor_callbacks.cpp
   player_npc_interaction.cpp
   player_unit_field_event_callbacks.cpp
-  quest_item_progress.cpp
-  quest_log_refresh.cpp
   quest_runtime_state.cpp
   quest_xp_calc.cpp
-  ray_face_intersection.cpp
   recent_cast_tracker.cpp
   skill_dbc_helpers.cpp
-  skybox_blend_system.cpp
   snow_area.cpp
   spell_missile_visual_create.cpp
-  spell_visual_kit_input.cpp
   spell_visual_system.cpp
   tabard_frame.cpp
   taint_system.cpp
-  terrain_blend_layer.cpp
   tracked_unit_state_slice.cpp
   tumor.cpp
   unit_combat.cpp
@@ -620,9 +437,6 @@ openwow_add_component(openwow_game
   vehicle.cpp
   voice_chat_active_speaker_hash.cpp
   warden_module.cpp
-  warden_os_callbacks.cpp
-  warden_pe_loader.cpp
-  water_surface_system.cpp
   world_screen_effects.cpp
 )
 target_link_libraries(openwow_game PRIVATE

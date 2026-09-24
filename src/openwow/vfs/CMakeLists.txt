@@ -5,9 +5,7 @@ openwow_add_component(openwow_vfs_runtime
   retail/retail_path_resolver.cpp
   retail/file_stack/file_stack_abi.cpp
   retail/file_stack/file_stack_provider.cpp
-  retail/io_unit/checksum_unit.cpp
   retail/io_unit/io_unit_compat.cpp
-  retail/io_unit/write_planner.cpp
   retail/runtime_file.cpp
   retail/runtime_file_registry.cpp
   retail/sfile_archive.cpp

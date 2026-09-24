@@ -9,7 +9,6 @@ openwow_add_component(openwow_net
   transport/network_recv_thread.cpp
   transport/latency_tracker.cpp
   protocol/opcode_dispatch.cpp
-  adapters/presentation/session_state_display.cpp
   auth/logon_challenge_packet.cpp
   auth/login_matrix_challenge.cpp
   auth/login_pin_challenge.cpp
@@ -29,15 +28,11 @@ openwow_add_component(openwow_net
   wotlk/protocol/realm_connection_packets.cpp
   wotlk/protocol/world_protocol.cpp
   wotlk/movement.cpp
-  wotlk/interaction.cpp
   wotlk/quests.cpp
-  wotlk/spells.cpp
   wotlk/spell_packets.cpp
   wotlk/combat_packets.cpp
   wotlk/protocol/packet_sender.cpp
-  wotlk/grunt_bnet_module_info.cpp
   wotlk/grunt_bnet_token_response.cpp
-  wotlk/grunt_bnet_kick_handler.cpp
   wotlk/grunt_realm_list_handler.cpp
   wotlk/login_object.cpp
   bot_detect.cpp
@@ -54,10 +49,7 @@ openwow_add_component(openwow_net
   login_survey_download.cpp
   login_survey_result.cpp
   os_url_download.cpp
-  wotlk/grunt_auth_verify.cpp
   wotlk/grunt_chunked_data_transfer.cpp
-  wotlk/grunt_pending_request_queue.cpp
-  wotlk/grunt_xfer_data.cpp
   wotlk/net_event_queue.cpp
   wotlk/realm_connection.cpp
   wotlk/wow_client_connection.cpp

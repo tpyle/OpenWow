@@ -324,7 +324,6 @@ add_library(openwow_render_bgfx
   ${PROJECT_SOURCE_DIR}/src/openwow/render/resources/textures/texture_manager.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/resources/textures/texture_mip_upload.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/resources/textures/texture_slice_arrays.cpp
-  ${PROJECT_SOURCE_DIR}/src/openwow/render/resources/textures/texture_streamer.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/m2/m2_animator.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/m2/m2_cpu_skinning.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/m2/m2_particle_system.cpp
@@ -344,7 +343,6 @@ add_library(openwow_render_bgfx
   ${PROJECT_SOURCE_DIR}/src/openwow/render/effects/particles/particle_system.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/models/characters/portrait_renderer.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/resources/readback/pixel_readback.cpp
-  ${PROJECT_SOURCE_DIR}/src/openwow/render/ui/ui_render_pipeline.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/m2/m2_animation_selection.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/m2/m2_animation_runtime.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/m2/m2_instance_store.cpp
@@ -380,7 +378,6 @@ add_library(openwow_render_bgfx
   ${PROJECT_SOURCE_DIR}/src/openwow/render/scene/shadow_presentation_runtime.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/world/presentation/world_presentation_scene.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/m2/m2_ribbon_emitter.cpp
-  ${PROJECT_SOURCE_DIR}/src/openwow/render/resources/shaders/sky_shader_data.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/geometry/vertex_cache_optimizer.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/world/wmo/wmo_mesh.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/render/world/wmo/wmo_renderer.cpp
@@ -502,13 +499,3 @@ target_link_libraries(openwow_render_bgfx PRIVATE SDL2::SDL2)
 add_dependencies(openwow_render_bgfx openwow_shaders)
 openwow_configure_target(openwow_render_bgfx)
 
-add_library(openwow_render_bgfx_imgui
-  ${PROJECT_SOURCE_DIR}/src/openwow/render/backend/bgfx/bgfx_imgui_renderer.cpp
-  ${PROJECT_SOURCE_DIR}/src/openwow/render/backend/bgfx/bgfx_imgui_renderer.h
-)
-target_include_directories(openwow_render_bgfx_imgui PRIVATE
-  ${PROJECT_SOURCE_DIR}/src
-)
-target_link_libraries(openwow_render_bgfx_imgui PUBLIC openwow_render_bgfx)
-target_link_libraries(openwow_render_bgfx_imgui PRIVATE imgui::imgui)
-openwow_configure_target(openwow_render_bgfx_imgui)

@@ -1,5 +1,4 @@
 openwow_add_component(openwow_audio
-  playback/sfx_pool.cpp
   playback/sound_engine.cpp
   playback/sound_engine_capture.cpp
   playback/sound_engine_dsp.cpp
@@ -20,13 +19,10 @@ openwow_add_component(openwow_audio
   resources/sound_entry_resolver.cpp
 
   codecs/audio_decoder.cpp
-  codecs/adpcm/ima_adpcm_decoder.cpp
-  codecs/adpcm/vag_adpcm_decoder.cpp
   codecs/ogg/ogg_logical_streams.cpp
   codecs/ogg/vorbis_header_parity.cpp
   codecs/wav/wav_decoder.cpp
 
-  dsp/dsp_mixing_matrix.cpp
   dsp/freeverb_engine.cpp
 
   spatial/audio_environment.cpp

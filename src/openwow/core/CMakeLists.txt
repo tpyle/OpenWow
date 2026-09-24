@@ -1,20 +1,12 @@
 openwow_add_component(openwow_engine_core
-  session_manager.cpp
-  wtf_config.cpp
   locale_system.cpp
   screenshot_system.cpp
   matrix_transform.cpp
   string_interner.cpp
-  blizzard_hash_map_key.cpp
-  blizzard_hash_map.cpp
-  game_loop.cpp
-  system_manager.cpp
-  game_state_machine.cpp
   window_manager.cpp
   display_settings.cpp
   game_subsystems.cpp
   memory_pool_manager.cpp
-  runtime_config.cpp
   storm_tls.cpp
   storm_thread.cpp
   storm_memory.cpp
@@ -37,23 +29,16 @@ openwow_add_component(openwow_engine_core
   client_misc.cpp
   init_subsystems.cpp
   client_init_funcs.cpp
-  csimple_bit_array.cpp
-  dynamic_string.cpp
   file_stack_log_banner.cpp
   io_unit_container.cpp
-  lmem_pool.cpp
   login_state_handler.cpp
   mpq_internals.cpp
-  rcstring.cpp
   screenshot_jpeg_writer.cpp
   screenshot_watermark.cpp
   storm_big.cpp
-  storm_bitmap.cpp
   storm_cmd.cpp
   storm_comp.cpp
   storm_debug.cpp
-  storm_huffman.cpp
-  storm_lock.cpp
   storm_region.cpp
   storm_sync.cpp
   storm_utils.cpp

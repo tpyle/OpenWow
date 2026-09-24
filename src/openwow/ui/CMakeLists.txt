@@ -11,7 +11,6 @@ openwow_add_component(openwow_ui_runtime
   game/debug/ui_debug_snapshot.cpp
   script_cvar_ranges.cpp
   framexml_debug.cpp
-  frame_pool.cpp
   script_object_lookup.cpp
   frame_script_registry.cpp
   widget_factory.cpp
@@ -48,10 +47,8 @@ openwow_add_component(openwow_ui_runtime
   screens/character_select_screen.cpp
   screens/character_create_screen.cpp
   screens/loading_screen.cpp
-  error_display.cpp
   toc_parser.cpp
   addon_manager.cpp
-  addon_profiler.cpp
   ui_enum_helpers.cpp
   framexml/framexml_parser.cpp
   framexml_font_registry.cpp
@@ -91,7 +88,6 @@ openwow_add_component(openwow_ui_runtime
   glue/glue_widget_runtime_props.cpp
   glue/glue_widget_runtime_layout.cpp
   glue/glue_widget_runtime_text.cpp
-  glue/glue_widget_renderer.cpp
   glue/glue_charselect_scene.cpp
   glue/character_creation.cpp
   glue/glue_lua_runtime.cpp
@@ -305,11 +301,9 @@ openwow_add_component(openwow_ui_runtime
   game/world_map_system.cpp
   unit_frame_data.cpp
   target_frame_data.cpp
-  world_frame.cpp
   game/tooltip_builder.cpp
   loading_screen.cpp
   widgets/simple_html.cpp
-  widgets/editbox_impl.cpp
   widgets/simple_edit_box.cpp
   widgets/script_object.cpp
   widgets/status_bar.cpp
@@ -320,11 +314,8 @@ openwow_add_component(openwow_ui_runtime
   widgets/simple_frame.cpp
   widgets/simple_texture.cpp
   widgets/widget_xml_helpers.cpp
-  widgets/backdrop.cpp
   widgets/simple_cooldown.cpp
   widgets/simple_color_select.cpp
-  tooltip_display.cpp
-  focus_frame_display.cpp
   game/chat_frame_manager.cpp
   game/ui_error_manager.cpp
   addons_data.cpp
@@ -345,7 +336,6 @@ openwow_add_component(openwow_ui_runtime
   game/world_state_ui_sync.cpp
   surfaces/game/runtime/npc_interaction_controller.cpp
   surfaces/game/runtime/corpse_position_query.cpp
-  surfaces/game/runtime/targeting_escape_controller.cpp
   surfaces/game/runtime/system_message_dispatch.cpp
   surfaces/game/runtime/world_object_picker.cpp
   surfaces/game/runtime/zone_ui_state.cpp
@@ -359,7 +349,6 @@ openwow_add_component(openwow_ui_runtime
   frame_script_shared_bindings.cpp
   runtime/lua/frame_script_native_modules.cpp
   production_lua_surface.cpp
-  framescript_lua_loader.cpp
   game/game_ui_scale.cpp
   game/runtime/layout_persistence.cpp
   game/runtime/lua_frame_projection.cpp
@@ -381,11 +370,9 @@ openwow_add_component(openwow_ui_runtime
   widgets/edit_history.cpp
   widgets/simple_font.cpp
   widgets/simple_font_string.cpp
-  widgets/simple_frame_anim.cpp
   widgets/simple_message_frame.cpp
   widgets/simple_render.cpp
   widgets/ui_script_helpers.cpp
-  xml/xml_expat_string_util.cpp
   xml/xml_value_helpers.cpp
 )
 target_link_libraries(openwow_ui_runtime PRIVATE

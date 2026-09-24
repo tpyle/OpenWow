@@ -14,8 +14,6 @@ openwow_add_component(openwow_data_runtime
   formats/dbc/dbc_table_registry.cpp
   formats/dbc/faction_reaction.cpp
   blp/blp_info.cpp
-  terrain/adt_chunk_info.cpp
-  wmo/wmo_group_info.cpp
   game_data_validator.cpp
   startup_filesystem_state.cpp
   archive_system.cpp
@@ -26,15 +24,11 @@ openwow_add_component(openwow_data_runtime
   wdb_persistence.cpp
   texture_cache.cpp
   blp/blp_texture_loader.cpp
-  spell_dbc_store.cpp
   cache/quest_cache_record.cpp
-  creature_display_store.cpp
-  map_dbc_store.cpp
   area_table_store.cpp
   image/jpeg_decoder.cpp
   map/heightmap_query.cpp
   map/map_loader.cpp
-  map/tile_streaming.cpp
   async_file_read.cpp
   streaming_init.cpp
   blp/blp_mip.cpp

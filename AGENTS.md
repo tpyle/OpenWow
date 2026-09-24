@@ -240,8 +240,8 @@ libraries, a few single-file units with no heavy dependencies are compiled
 straight into it (see the comment in `tests/CMakeLists.txt`); follow that
 pattern for new pure-logic tests. Most gameplay, UI and rendering code has
 no unit tests yet; `apps/client/scenarios/` (above) remains the integration
-harness. The filenames `terrain_aabb_test.{h,cpp}` (`data`) and
-`sfile_test_support.{h,cpp}` (`vfs/retail`) are runtime helpers, not tests.
+harness. `sfile_test_support.{h,cpp}` (`vfs/retail`) is a runtime helper,
+not a test.
 
 ## Build system
 
