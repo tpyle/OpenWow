@@ -428,12 +428,19 @@ bool ParseMh2o(const BinaryReader &r, size_t data_offset, uint32_t data_size, Ad
     SMLiquidChunk lc{};
     std::memcpy(&lc, hdr_span->data(), sizeof(SMLiquidChunk));
 
-    if (lc.layer_count == 0 || lc.offset_instances == 0)
+    if (lc.layer_count == 0 || lc.offset_instances == 0 || lc.offset_instances >= data_size)
       continue;
 
     auto &water_chunk = adt.water_chunks[i];
 
-    for (uint32_t layer = 0; layer < lc.layer_count; ++layer) {
+    // Instances live inside the MH2O chunk, so a layer count larger than
+    // what fits there is malformed; bounding it also keeps a hostile count
+    // from spinning this loop billions of times.
+    const uint32_t layers_that_fit =
+        (data_size - lc.offset_instances) / static_cast<uint32_t>(sizeof(SMLiquidInstance));
+    const uint32_t layer_count = std::min(lc.layer_count, layers_that_fit);
+
+    for (uint32_t layer = 0; layer < layer_count; ++layer) {
       const size_t inst_offset =
           data_offset + lc.offset_instances + static_cast<size_t>(layer) * sizeof(SMLiquidInstance);
       auto inst_span = r.ReadBytes(inst_offset, sizeof(SMLiquidInstance));
