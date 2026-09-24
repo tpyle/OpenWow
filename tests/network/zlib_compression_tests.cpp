@@ -116,3 +116,24 @@ TEST_CASE("DecompressZlib (raw overload) reports a buffer error when the output 
       DecompressZlib(output.data(), &output_size, compressed.data(), compressed.size());
   CHECK(result == ZlibResult::kBufferError);
 }
+
+TEST_CASE("IsPlausibleZlibInflatedSize bounds a declared size by deflate's maximum ratio",
+          "[network][zlib]") {
+  using openwow::network::serialization::IsPlausibleZlibInflatedSize;
+  using openwow::network::serialization::kZlibMaxInflateRatio;
+  CHECK(IsPlausibleZlibInflatedSize(10, 10 * kZlibMaxInflateRatio));
+  CHECK_FALSE(IsPlausibleZlibInflatedSize(10, 10 * kZlibMaxInflateRatio + 1));
+  CHECK_FALSE(IsPlausibleZlibInflatedSize(6, 0xFFFFFFFFu));
+  CHECK_FALSE(IsPlausibleZlibInflatedSize(0, 1));
+  CHECK(IsPlausibleZlibInflatedSize(0, 0));
+  CHECK(IsPlausibleZlibInflatedSize(static_cast<std::size_t>(-1), static_cast<std::size_t>(-1)));
+}
+
+TEST_CASE("IsPlausibleZlibInflatedSize accepts a real highly-compressible payload",
+          "[network][zlib]") {
+  using namespace openwow::network::serialization;
+  const std::vector<std::uint8_t> zeros(1 << 20, 0);
+  const auto compressed = CompressZlib(zeros.data(), zeros.size(), ZlibCompressionLevel::kBestCompression);
+  REQUIRE_FALSE(compressed.empty());
+  CHECK(IsPlausibleZlibInflatedSize(compressed.size(), zeros.size()));
+}

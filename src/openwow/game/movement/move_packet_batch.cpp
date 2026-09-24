@@ -1,4 +1,5 @@
 #include "openwow/game/movement/move_packet_batch.h"
+#include "openwow/network/serialization/zlib_compression.h"
 
 #include <zlib.h>
 
@@ -60,7 +61,9 @@ bool DecodeCompressedMovePacketBatch(
   }
 
   const auto stream_size = static_cast<std::size_t>(ReadU32(data));
-  if (stream_size == 0u) {
+  if (stream_size == 0u ||
+      !openwow::network::serialization::IsPlausibleZlibInflatedSize(
+          len - sizeof(std::uint32_t), stream_size)) {
     return false;
   }
   std::vector<std::uint8_t> stream(stream_size);

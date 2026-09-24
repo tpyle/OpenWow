@@ -693,6 +693,13 @@ DecompressUpdateObjectPayload(const std::uint8_t *data, const std::size_t len) {
       (static_cast<std::uint32_t>(data[1]) << 8u) |
       (static_cast<std::uint32_t>(data[2]) << 16u) |
       (static_cast<std::uint32_t>(data[3]) << 24u);
+  if (!openwow::network::serialization::IsPlausibleZlibInflatedSize(len - 4,
+                                                                    uncompressed_size)) {
+    openwow::diagnostics::Log(openwow::diagnostics::LogLevel::kWarn,
+                              "CompressedUpdateObject: implausible uncompressed size " +
+                                  std::to_string(uncompressed_size));
+    return std::nullopt;
+  }
 
   std::vector<std::uint8_t> decompressed(
       std::max<std::size_t>(uncompressed_size, 1u));

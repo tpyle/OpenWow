@@ -340,6 +340,12 @@ std::vector<std::uint8_t> AccountData::Compress(const std::string& data) {
 std::string AccountData::Decompress(const std::vector<std::uint8_t>& compressed,
                                     std::uint32_t uncompressed_size) {
   if (compressed.empty() || uncompressed_size == 0) return {};
+  if (!network::serialization::IsPlausibleZlibInflatedSize(compressed.size(),
+                                                           uncompressed_size)) {
+    Log(LogLevel::kWarn, "AccountData: implausible uncompressed size " +
+                             std::to_string(uncompressed_size));
+    return {};
+  }
 
   std::string result(uncompressed_size, '\0');
   uLongf dest_len = uncompressed_size;
