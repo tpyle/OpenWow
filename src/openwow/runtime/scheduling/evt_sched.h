@@ -11,24 +11,23 @@
 namespace openwow::core {
 
 struct EvtSchedGlobals {
-  uint32_t dword_B417C4 = 0;
-  uint32_t dword_B417D4 = 0;
-  void *dword_B417D8 = nullptr;
-  void *dword_B417DC = nullptr;
-  uint32_t dword_B417CC = 0;
-  uint32_t dword_B417C8 = 0;
-  uint32_t dword_B417D0 = 0;
-  uint32_t dword_B417E0 = 0;
-  uint32_t dword_B41810 = 0;
-  uint32_t dword_B41814 = 0;
-  void *dword_B41818 = nullptr;
-  uint32_t dword_B4181C = 0;
-  uint32_t dword_B41820 = 0;
-  uint32_t dword_B41824 = 0;
-  std::atomic<int32_t> dword_AC0DC0{0};
+  uint32_t primary_slot_active_context = 0;
+  uint32_t rounded_slot_count = 0;
+  void *thread_slots = nullptr;
+  void *slot_critical_sections = nullptr;
+  uint32_t saved_thread_priority = 0;
+  uint32_t main_worker_slot = 0;
+  uint32_t interactive_context_count = 0;
+  uint32_t init_mode = 0;
+  uint32_t worker_handle_capacity = 0;
+  uint32_t worker_handle_count = 0;
+  void *worker_handles = nullptr;
+  uint32_t worker_handle_growth_quantum = 0;
+  uint32_t has_ready_event = 0;
+  uint32_t has_shutdown_event = 0;
 };
 
-struct EvtContextIdaState {
+struct EvtContextLegacyState {
   uint32_t tick_ms = 0;
   uint32_t next_wake_tick_ms = 0;
   uint32_t flags_word = 0;
@@ -46,7 +45,7 @@ struct EvtTimerDispatchArgs {
   uint32_t current_tick_ms = 0;
 };
 
-void InitEvtSchedulerConfig(uint32_t thread_count, int32_t a2);
+void InitEvtSchedulerConfig(uint32_t thread_count, int32_t init_mode);
 
 void InitEvtSchedulerConfig_CaptureStartupInputState();
 
@@ -60,9 +59,10 @@ int InitEventScheduler_Thunk();
 
 int InitEventScheduler();
 
-int EvtSched_WorkerThreadProc(uint32_t flags, int32_t a2);
+int EvtSched_WorkerThreadProc(uint32_t flags, int32_t reserved);
 
-int CreateEventContext_Thunk(int a1, int a2, int a3, int a4, uint32_t a5);
+int CreateEventContext_Thunk(int interactive, int enter_cb, int exit_cb, int idle_time,
+                             uint32_t flags);
 
 uint32_t EvtContextTls_GetCurrentHandle();
 
@@ -98,15 +98,15 @@ void *EvtContext_DeletingDtor(void *ctx, char delete_flag);
 
 void EvtContext_RegisterHandler(void *ctx, int type, int callback, int param, float priority);
 
-void EvtSched_Init(uint32_t thread_count, int32_t a2);
+void EvtSched_Init(uint32_t thread_count, int32_t init_mode);
 
 void EvtSched_Shutdown();
 
 int EvtSched_SubmitContext(void *ctx);
 
-int EvtSched_SubmitContext_callee_47E3D0(void *cs, void *ctx);
+int EvtSched_RegisterSubmittedContext(void *cs, void *ctx);
 
-void *EvtSched_Shutdown_callee_47DE50(void *arr);
+void *EvtSched_AppendWorkerThreadHandleSlot(void *arr);
 
 int EvtSched_ShutdownWaitProc(void *event_handle);
 
@@ -145,7 +145,7 @@ int32_t EvtContext_GetMsUntilNextTimer(int ctx, uint32_t current_tick_ms);
 bool EvtTimer_ProcessDueTimers(int ctx, uint32_t current_tick_ms);
 
 uint32_t EvtTimer_Register(int ctx, uint32_t interval_ms, int callback, int param, int destroy_cb,
-                           int a6, int a7, int a8);
+                           int destroy_arg0, int destroy_arg1, int destroy_arg2);
 
 namespace detail {
 

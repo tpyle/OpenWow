@@ -13,11 +13,11 @@ namespace openwow::render {
 namespace {
 
 bool ParseDesktopGammaEnabledValue(std::string_view value) {
-  return openwow::core::ParseSignedDecimalLikeSub76F0D0(value) != 0u;
+  return openwow::core::ParseSignedDecimal(value) != 0u;
 }
 
 float ParseGammaCorrectedValue(std::string_view value) {
-  const double parsed = openwow::core::ParseFloatLikeSub76FB80(value);
+  const double parsed = openwow::core::ParseDecimalFloat(value);
   return parsed < 0.001 ? 1.0f : static_cast<float>(parsed);
 }
 

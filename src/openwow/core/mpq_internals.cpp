@@ -888,7 +888,7 @@ bool IsInvalidAttributeMd5Digest(const std::uint8_t* digest16) {
 }
 
 bool SFileFreeBlock(void* block) {
-    SMemFree(block, ".\\SFile.cpp", 565, 0);
+    SMemFree(block, __FILE__, __LINE__, 0);
     return true;
 }
 

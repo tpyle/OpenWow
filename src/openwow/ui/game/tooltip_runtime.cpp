@@ -77,19 +77,19 @@
 namespace openwow::ui::game {
 using namespace tooltip_internal;
 
-int CGTooltip_OnItemUpdate([[maybe_unused]] uint64_t guid, [[maybe_unused]] int a2,
-                           [[maybe_unused]] int a3, [[maybe_unused]] int a4,
+int CGTooltip_OnItemUpdate([[maybe_unused]] uint64_t guid, [[maybe_unused]] int arg2,
+                           [[maybe_unused]] int arg3, [[maybe_unused]] int arg4,
                            [[maybe_unused]] void *tooltip) {
   return 1;
 }
 
-int CGTooltip_OnSpellUpdate([[maybe_unused]] uint64_t guid, [[maybe_unused]] int a2,
-                            [[maybe_unused]] int a3, [[maybe_unused]] int a4,
+int CGTooltip_OnSpellUpdate([[maybe_unused]] uint64_t guid, [[maybe_unused]] int arg2,
+                            [[maybe_unused]] int arg3, [[maybe_unused]] int arg4,
                             [[maybe_unused]] void *tooltip) {
   return 1;
 }
 
-void CGTooltip_OnGuildQueryResolved([[maybe_unused]] int a1, [[maybe_unused]] int a2,
+void CGTooltip_OnGuildQueryResolved([[maybe_unused]] int arg1, [[maybe_unused]] int arg2,
                                     [[maybe_unused]] void *tooltip, bool loaded) {
   if (!loaded) {
     return;
@@ -115,8 +115,8 @@ void CGTooltip_OnGuildQueryResolved([[maybe_unused]] int a1, [[maybe_unused]] in
   ts.NotifyContentChanged();
 }
 
-void CGTooltip_OnSpellTooltipAsyncItemResolved([[maybe_unused]] int a1,
-                                                [[maybe_unused]] int a2,
+void CGTooltip_OnSpellTooltipAsyncItemResolved([[maybe_unused]] int arg1,
+                                                [[maybe_unused]] int arg2,
                                                 [[maybe_unused]] void *tooltip,
                                                 bool loaded) {
   if (!loaded) {
@@ -146,8 +146,8 @@ void CGTooltip_OnSpellTooltipAsyncItemResolved([[maybe_unused]] int a1,
   ts.NotifyContentChanged();
 }
 
-void CGTooltip_OnQuestTemplateResolved([[maybe_unused]] int a1,
-                                       [[maybe_unused]] int a2,
+void CGTooltip_OnQuestTemplateResolved([[maybe_unused]] int arg1,
+                                       [[maybe_unused]] int arg2,
                                        [[maybe_unused]] void *tooltip,
                                        bool loaded) {
   if (!loaded) {
@@ -167,8 +167,8 @@ void CGTooltip_OnQuestTemplateResolved([[maybe_unused]] int a1,
   ts.NotifyContentChanged();
 }
 
-void CGTooltip_OnAchievementNameResolved([[maybe_unused]] int a1,
-                                          [[maybe_unused]] int a2,
+void CGTooltip_OnAchievementNameResolved([[maybe_unused]] int arg1,
+                                          [[maybe_unused]] int arg2,
                                           [[maybe_unused]] void *tooltip,
                                           bool loaded) {
   if (!loaded) {

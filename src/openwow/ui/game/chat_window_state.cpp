@@ -98,7 +98,7 @@ void AssignDefaultMessageGroupRange(ChatWindowInfo& window,
   }
 }
 
-void ResetWindowToIdaDefaults(ChatWindowInfo& window) {
+void ResetWindowToDefaults(ChatWindowInfo& window) {
   window.name.clear();
   window.font_size = 0.0f;
   window.r = 0.0f;
@@ -123,7 +123,7 @@ void ResetWindowToIdaDefaults(ChatWindowInfo& window) {
 
 void ApplyResetChatWindowsDefaults(std::array<ChatWindowInfo, kMaxChatWindows>& windows) {
   for (auto& window : windows) {
-    ResetWindowToIdaDefaults(window);
+    ResetWindowToDefaults(window);
   }
 
   windows[0].shown = true;

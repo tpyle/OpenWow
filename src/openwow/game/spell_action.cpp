@@ -647,11 +647,11 @@ bool SpellAction_PlaceGlyphInSocket(WorldSession& session, int socket_index) {
 }
 
 void SpellAction_CastTalentGroupSpell(const WorldSession& session,
-                                      std::uint32_t spell_id, int a4, int a5,
-                                      int a6) {
-  (void)a4;
-  (void)a5;
-  (void)a6;
+                                      std::uint32_t spell_id, int arg4, int arg5,
+                                      int arg6) {
+  (void)arg4;
+  (void)arg5;
+  (void)arg6;
 
   auto *player = session.objects().GetActivePlayer();
   if (player == nullptr) {

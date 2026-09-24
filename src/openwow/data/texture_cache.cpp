@@ -389,7 +389,7 @@ void CTextureCacheRow_FreeAsyncReadBuffer(
 
   void* const read_buffer = async_read->readBuffer;
   AsyncFileRead_DestroyObject(async_read);
-  (void)core::SMemFree(read_buffer, "..\\..\\Common\\TextureCache.cpp", 100, 0);
+  (void)core::SMemFree(read_buffer, __FILE__, __LINE__, 0);
 }
 
 std::optional<TextureCacheRowHeaderState> ParseTextureCacheRowHeaderState(

@@ -32,7 +32,7 @@ struct ArenaTeamCacheRecord {
 };
 
 static_assert(sizeof(ArenaTeamCacheRecord) == 124,
-              "ArenaTeamCacheRecord must match IDA record size (124 bytes)");
+              "ArenaTeamCacheRecord must match the 124-byte cache record");
 
 }
 

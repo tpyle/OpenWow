@@ -19,7 +19,7 @@ struct TimingMethodSelection {
     int validation_result = 0;
 };
 
-[[nodiscard]] constexpr std::string_view TimingMethodNameFromIdaValue(
+[[nodiscard]] constexpr std::string_view TimingMethodNameFromCVarValue(
     int value) noexcept {
     switch (value) {
         case -1: return "[Not Set]";
@@ -31,7 +31,7 @@ struct TimingMethodSelection {
 }
 
 [[nodiscard]] constexpr std::string_view TimingMethodName(TimingMethod m) noexcept {
-    return TimingMethodNameFromIdaValue(static_cast<int>(m));
+    return TimingMethodNameFromCVarValue(static_cast<int>(m));
 }
 
 [[nodiscard]] constexpr TimingMethod TimingMethodFromCVarValue(int value) noexcept {

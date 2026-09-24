@@ -20,7 +20,7 @@ ThreatWarningContext ThreatWarningState::BuildContext(
     const openwow::game::WorldSession* const session,
     const std::string_view cvar_value) {
   ThreatWarningContext context;
-  context.mode = openwow::core::ParseSignedDecimalLikeSub76F0D0(cvar_value);
+  context.mode = openwow::core::ParseSignedDecimal(cvar_value);
   context.has_party_or_raid = openwow::game::GroupSystem::Get().IsInGroup();
 
   if (session != nullptr) {

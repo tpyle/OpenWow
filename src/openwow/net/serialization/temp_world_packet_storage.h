@@ -7,8 +7,6 @@
 
 namespace openwow::net {
 
-inline constexpr std::uint32_t kVtable_CDataStore_TempWorldPacket = 0x9E2148;
-
 struct CDataStoreTempWorldPacket {
   CDataStore store{};
 
@@ -112,7 +110,7 @@ inline int* CDataStore__CleanupTempWorldPacketStorage(
     }
     packet->pooled_block_base = 0;
   } else if (*data != nullptr) {
-    core::SMemFree(*data, kCDataStoreSourceFile, 263, 0);
+    core::SMemFree(*data, __FILE__, __LINE__, 0);
   }
 
   *data = nullptr;

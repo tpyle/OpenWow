@@ -19,8 +19,8 @@ struct QuestDialogCloseState {
 
 [[nodiscard]] QuestDialogCloseState GetActiveQuestDialogCloseState(const QuestManager &quests);
 
-void CloseQuestDialogLikeIda58CA70(WorldSession &session, const QuestDialogCloseState &dialog,
-                                   bool keep_dialog_open,
-                                   bool notify_server_for_shared_player_dialog);
+void CloseQuestDialog(WorldSession &session, const QuestDialogCloseState &dialog,
+                      bool keep_dialog_open,
+                      bool notify_server_for_shared_player_dialog);
 
 }

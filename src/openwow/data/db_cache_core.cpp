@@ -42,38 +42,32 @@ OPENWOW_PRINTF_FORMAT(3, 4) static void SStrPrintf(char *dest, unsigned int max_
   va_end(args);
 }
 
-static constexpr const char *kCreatureStatsSource =
-    "d:\\BuildServer\\WoW\\1\\work\\WoW-code\\branches\\"
-    "wow-patch-3_3_5_A-BNet\\WoW\\Source\\Object/CreatureStats.h";
+static constexpr const char *kCreatureStatsSource = "db_cache.creature_stats";
 
-static constexpr const char *kGameObjectStatsSource =
-    "d:\\BuildServer\\WoW\\1\\work\\WoW-code\\branches\\"
-    "wow-patch-3_3_5_A-BNet\\WoW\\Source\\Object/GameObjectStats.h";
+static constexpr const char *kGameObjectStatsSource = "db_cache.gameobject_stats";
 
 static constexpr const char *kGameObjectDbCacheHashTag =
-    "AUDBCACHEHASH<DBCache<GameObjectStats_C>,int,VHASHKEY_INT>";
+    "db_cache.gameobject.hash_entry";
 
-static constexpr const char *kItemStatsSource =
-    "d:\\BuildServer\\WoW\\1\\work\\WoW-code\\branches\\"
-    "wow-patch-3_3_5_A-BNet\\WoW\\Source\\Object/ItemStats.h";
+static constexpr const char *kItemStatsSource = "db_cache.item_stats";
 
 static constexpr const char *kItemStatsDbCacheHashTag =
-    "AUDBCACHEHASH<DBCache<ItemStats_C>,int,VHASHKEY_INT>";
+    "db_cache.item.hash_entry";
 
 static constexpr const char *kDanceCacheDbCacheHashTag =
-    "AUDBCACHEHASH<DBCache<DanceCache>,int,VHASHKEY_INT>";
+    "db_cache.dance.hash_entry";
 
 static constexpr const char *kItemTextCacheDbCacheHashTag =
-    "AUDBCACHEHASH<DBCache<ItemTextCache_C>,unsigned __int64,CHashKeyGUID>";
+    "db_cache.item_text.hash_entry";
 
 static constexpr const char *kWardenCachedModuleDbCacheHashTag =
-    "AUDBCACHEHASH<DBCache<WardenCachedModule>,CWardenKey,CWardenKey>";
+    "db_cache.warden_module.hash_entry";
 
 static constexpr const char *kCGPetitionDbCacheHashTag =
-    ".?AUDBCACHEHASH@?$DBCache@VCGPetition@@HVHASHKEY_INT@@@@";
+    "db_cache.petition.hash_entry";
 
 static constexpr const char *kArenaTeamCacheDbCacheHashTag =
-    ".?AUDBCACHEHASH@?$DBCache@VArenaTeamCache@@HVHASHKEY_INT@@@@";
+    "db_cache.arena_team.hash_entry";
 
 static bool HasCommonArchiveLayout() {
   return ProbeCommonArchiveLayout();
@@ -107,8 +101,8 @@ namespace {
 using StormIntrusiveLinkWords = openwow::core::StormIntrusiveLinkWords<std::uintptr_t>;
 using StormIntrusiveListRootWords = openwow::core::StormIntrusiveListRootWords<std::uintptr_t>;
 
-static constexpr const char *kDbCacheCallbackTag = "au::DBCACHECALLBACK";
-static constexpr const char *kDbCacheReverseEntryTag = "au::ReverseEntry";
+static constexpr const char *kDbCacheCallbackTag = "db_cache.callback";
+static constexpr const char *kDbCacheReverseEntryTag = "db_cache.reverse_entry";
 
 struct DBCacheCallbackNodeStorage {
   StormIntrusiveLinkWords link{};
@@ -471,36 +465,36 @@ void DestroyCreatureStatsPayload(CreatureStatsPayload &payload) {
 
   for (void *owned_block : payload.auxiliary_owned_blocks) {
     if (owned_block != nullptr) {
-      SMemFree(owned_block, kCreatureStatsSource, 19, 0);
+      SMemFree(owned_block, kCreatureStatsSource, __LINE__, 0);
     }
   }
 
   if (payload.primary_owned_block != nullptr) {
-    SMemFree(payload.primary_owned_block, kCreatureStatsSource, 20, 0);
+    SMemFree(payload.primary_owned_block, kCreatureStatsSource, __LINE__, 0);
   }
 
   if (payload.secondary_owned_block != nullptr) {
-    SMemFree(payload.secondary_owned_block, kCreatureStatsSource, 21, 0);
+    SMemFree(payload.secondary_owned_block, kCreatureStatsSource, __LINE__, 0);
   }
 }
 
 void DestroyGameObjectStatsPayload(GameObjectStatsPayload &payload) {
   for (void *&name_ptr : payload.name_ptrs) {
     if (name_ptr != nullptr) {
-      SMemFree(name_ptr, kGameObjectStatsSource, 24, 0);
+      SMemFree(name_ptr, kGameObjectStatsSource, __LINE__, 0);
     }
   }
 
   if (payload.icon_name != nullptr) {
-    SMemFree(payload.icon_name, kGameObjectStatsSource, 26, 0);
+    SMemFree(payload.icon_name, kGameObjectStatsSource, __LINE__, 0);
   }
 
   if (payload.cast_bar_caption != nullptr) {
-    SMemFree(payload.cast_bar_caption, kGameObjectStatsSource, 27, 0);
+    SMemFree(payload.cast_bar_caption, kGameObjectStatsSource, __LINE__, 0);
   }
 
   if (payload.unk1 != nullptr) {
-    SMemFree(payload.unk1, kGameObjectStatsSource, 28, 0);
+    SMemFree(payload.unk1, kGameObjectStatsSource, __LINE__, 0);
   }
 }
 
@@ -511,12 +505,12 @@ void DestroyItemStatsPayload(ItemStatsPayload &payload) {
 
   for (void *&owned_block : payload.auxiliary_owned_blocks) {
     if (owned_block != nullptr) {
-      SMemFree(owned_block, kItemStatsSource, 21, 0);
+      SMemFree(owned_block, kItemStatsSource, __LINE__, 0);
     }
   }
 
   if (payload.primary_owned_block != nullptr) {
-    SMemFree(payload.primary_owned_block, kItemStatsSource, 22, 0);
+    SMemFree(payload.primary_owned_block, kItemStatsSource, __LINE__, 0);
   }
 }
 
@@ -651,7 +645,7 @@ void DBCache_Load_NameCache(void *dest, const void *source) {
 
 void TSExplicitList_LightArrayRoot_ResizeCapacity(void *list, unsigned int new_size) {
   ResizeExplicitListLightArrayRootStorage(*static_cast<TSExplicitListLightArrayRootList *>(list),
-                                          new_size, "av::TSExplicitList");
+                                          new_size, "db_cache.hash_list");
 }
 
 void CEquipmentSet_Serialize(const CEquipmentSetRecord &record,
@@ -709,19 +703,19 @@ void TSExplicitList_UDBCACHEHASH_Realloc(void *list, unsigned int new_size, cons
                                           new_size, debug_tag);
 }
 
-static constexpr const char *kTag_VCre = "av::TSExplicitList<UDBCACHEHASH,DBCache::VCre>";
-static constexpr const char *kTag_VGam = "av::TSExplicitList<UDBCACHEHASH,DBCache::VGam>";
-static constexpr const char *kTag_VIte = "av::TSExplicitList<UDBCACHEHASH,DBCache::VIte>";
-static constexpr const char *kTag_VNPC = "av::TSExplicitList<UDBCACHEHASH,DBCache::VNPC>";
-static constexpr const char *kTag_VNam = "av::TSExplicitList<UDBCACHEHASH,DBCache::VNam>";
-static constexpr const char *kTag_VGui = "av::TSExplicitList<UDBCACHEHASH,DBCache::VGui>";
-static constexpr const char *kTag_VQue = "av::TSExplicitList<UDBCACHEHASH,DBCache::VQue>";
-static constexpr const char *kTag_VPag = "av::TSExplicitList<UDBCACHEHASH,DBCache::VPag>";
-static constexpr const char *kTag_VPet = "av::TSExplicitList<UDBCACHEHASH,DBCache::VPet>";
-static constexpr const char *kTag_VCGP = "av::TSExplicitList<UDBCACHEHASH,DBCache::VCGP>";
-static constexpr const char *kTag_VWar = "av::TSExplicitList<UDBCACHEHASH,DBCache::VWar>";
-static constexpr const char *kTag_VAre = "av::TSExplicitList<UDBCACHEHASH,DBCache::VAre>";
-static constexpr const char *kTag_VDan = "av::TSExplicitList<UDBCACHEHASH,DBCache::VDan>";
+static constexpr const char *kTag_VCre = "db_cache.creature.hash_list";
+static constexpr const char *kTag_VGam = "db_cache.gameobject.hash_list";
+static constexpr const char *kTag_VIte = "db_cache.item.hash_list";
+static constexpr const char *kTag_VNPC = "db_cache.npc_text.hash_list";
+static constexpr const char *kTag_VNam = "db_cache.name.hash_list";
+static constexpr const char *kTag_VGui = "db_cache.guild.hash_list";
+static constexpr const char *kTag_VQue = "db_cache.quest.hash_list";
+static constexpr const char *kTag_VPag = "db_cache.page_text.hash_list";
+static constexpr const char *kTag_VPet = "db_cache.pet_name.hash_list";
+static constexpr const char *kTag_VCGP = "db_cache.petition.hash_list";
+static constexpr const char *kTag_VWar = "db_cache.warden_module.hash_list";
+static constexpr const char *kTag_VAre = "db_cache.arena_team.hash_list";
+static constexpr const char *kTag_VDan = "db_cache.dance.hash_list";
 
 void TSExplicitList_UDBCACHEHASH_VCre_Realloc(void *list, unsigned int new_size) {
   TSExplicitList_UDBCACHEHASH_Realloc(list, new_size, kTag_VCre);
@@ -767,18 +761,18 @@ void TSExplicitList_UREVERSEENTRY_DestroyAll(void *list, const char *debug_tag) 
   DestroyExplicitListLightArrayRoots(list, debug_tag);
 }
 
-static constexpr const char *kRTag_VCr = "av::TSExplicitList<UREVERSEENTRY,DBCache::VCr>";
-static constexpr const char *kRTag_VGa = "av::TSExplicitList<UREVERSEENTRY,DBCache::VGa>";
-static constexpr const char *kRTag_VIt = "av::TSExplicitList<UREVERSEENTRY,DBCache::VIt>";
-static constexpr const char *kRTag_VNP = "av::TSExplicitList<UREVERSEENTRY,DBCache::VNP>";
-static constexpr const char *kRTag_VGu = "av::TSExplicitList<UREVERSEENTRY,DBCache::VGu>";
-static constexpr const char *kRTag_VQu = "av::TSExplicitList<UREVERSEENTRY,DBCache::VQu>";
-static constexpr const char *kRTag_VPa = "av::TSExplicitList<UREVERSEENTRY,DBCache::VPa>";
-static constexpr const char *kRTag_VPe = "av::TSExplicitList<UREVERSEENTRY,DBCache::VPe>";
-static constexpr const char *kRTag_VCG = "av::TSExplicitList<UREVERSEENTRY,DBCache::VCG>";
-static constexpr const char *kRTag_VWa = "av::TSExplicitList<UREVERSEENTRY,DBCache::VWa>";
-static constexpr const char *kRTag_VAr = "av::TSExplicitList<UREVERSEENTRY,DBCache::VAr>";
-static constexpr const char *kRTag_VDa = "av::TSExplicitList<UREVERSEENTRY,DBCache::VDa>";
+static constexpr const char *kRTag_VCr = "db_cache.creature.reverse_list";
+static constexpr const char *kRTag_VGa = "db_cache.gameobject.reverse_list";
+static constexpr const char *kRTag_VIt = "db_cache.item.reverse_list";
+static constexpr const char *kRTag_VNP = "db_cache.npc_text.reverse_list";
+static constexpr const char *kRTag_VGu = "db_cache.guild.reverse_list";
+static constexpr const char *kRTag_VQu = "db_cache.quest.reverse_list";
+static constexpr const char *kRTag_VPa = "db_cache.page_text.reverse_list";
+static constexpr const char *kRTag_VPe = "db_cache.pet_name.reverse_list";
+static constexpr const char *kRTag_VCG = "db_cache.petition.reverse_list";
+static constexpr const char *kRTag_VWa = "db_cache.warden_module.reverse_list";
+static constexpr const char *kRTag_VAr = "db_cache.arena_team.reverse_list";
+static constexpr const char *kRTag_VDa = "db_cache.dance.reverse_list";
 
 void TSExplicitList_UREVERSEENTRY_VCr_DestroyAll(void *list) {
   TSExplicitList_UREVERSEENTRY_DestroyAll(list, kRTag_VCr);
@@ -864,7 +858,7 @@ void DBCACHEHASH_VCreatureStats_ScalarDeletingDestructor(void *entry) {
   }
 
   DBCACHEHASH_VCreatureStats_Destroy(entry);
-  SMemFree(entry, "AUDBCACHEHASH<DBCache<CreatureStats_C>,int,VHASHKEY_INT>", -2, 0);
+  SMemFree(entry, "db_cache.creature.hash_entry", -2, 0);
 }
 
 void DBCACHEHASH_VGameObjectStats_Destroy(void *entry) {

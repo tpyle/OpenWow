@@ -32,11 +32,11 @@ constexpr std::array<CmdDefInitEntry, 16> kInitCommandLineDefinitions{{
 }};
 
 void* Prop_Alloc() {
-    return SMemAlloc(76, ".\\Prop.cpp", 0x30, 8);
+    return SMemAlloc(76, __FILE__, __LINE__, 8);
 }
 
 void Storm_OperatorDelete(void* block) {
-    (void)SMemFree(block, ".\\MemoryStorm.cpp", 94, 0);
+    (void)SMemFree(block, __FILE__, __LINE__, 0);
 }
 
 void FrameXML_OperatorDelete(void* block) {
@@ -201,13 +201,13 @@ void FreeEvtContextTlsSlot() {
     StormTls::Instance().FreeSlot(g_evt_context_tls_slot);
 }
 
-bool InitSCritical_callee_47CBC0() {
+bool InitEvtContextTlsSlot() {
     g_evt_context_tls_slot = StormTls::Instance().AllocSlot();
     return SetEvtContextTlsValue(nullptr);
 }
 
 void InitSCriticalRetail() {
-    InitSCritical_callee_47CBC0();
+    InitEvtContextTlsSlot();
 
 }
 

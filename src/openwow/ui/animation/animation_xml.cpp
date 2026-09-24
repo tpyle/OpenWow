@@ -38,7 +38,7 @@ static bool IcaseEq(const char *a, const char *b) {
 }
 
 static float ParseFloat(const char *s) {
-  return static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(s));
+  return static_cast<float>(openwow::core::ParseDecimalFloat(s));
 }
 
 static void ParseOriginOffsetNode(const XmlNode &origin_node, float *out_x, float *out_y) {

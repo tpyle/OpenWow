@@ -37,7 +37,7 @@ bool UiFasterValidationCallback(const std::string&,
                                 const std::string&,
                                 const std::string& new_value) {
   const auto result = ApplyUiFasterMode(
-      openwow::core::ParseSignedDecimalLikeSub76F0D0(new_value));
+      openwow::core::ParseSignedDecimal(new_value));
   return result.accepted;
 }
 
@@ -84,7 +84,7 @@ UiFasterCallbackResult ApplyCurrentUiFasterCVar(
   }
 
   return ApplyUiFasterMode(
-      openwow::core::ParseSignedDecimalLikeSub76F0D0(cvars.GetCVar("UIFaster")));
+      openwow::core::ParseSignedDecimal(cvars.GetCVar("UIFaster")));
 }
 
 void RegisterUiFasterCVarCallback(openwow::ui::game::CVarSystem& cvars) {

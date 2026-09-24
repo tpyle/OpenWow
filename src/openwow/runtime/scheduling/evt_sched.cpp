@@ -344,7 +344,7 @@ struct EvtContextRuntime {
   };
 
   uint32_t handle = 0;
-  EvtContextIdaState ida = {};
+  EvtContextLegacyState legacy_state = {};
   TlsBinding tls_binding = {};
   CallbackHandle frame_pump_handle = CallbackHandle::Invalid;
   void *legacy_storage = nullptr;
@@ -441,13 +441,13 @@ bool GetCachedActiveWindowClientRect(WindowClientRect *out_rect) {
 }
 
 void SyncEvtSchedulerInitBackingPointersLocked() {
-  g_evt.dword_B417D8 = g_evt_thread_slots.empty() ? nullptr : g_evt_thread_slots.data();
-  g_evt.dword_B417DC =
+  g_evt.thread_slots = g_evt_thread_slots.empty() ? nullptr : g_evt_thread_slots.data();
+  g_evt.slot_critical_sections =
       g_evt_slot_critical_sections.empty() ? nullptr : g_evt_slot_critical_sections.front().get();
-  g_evt.dword_B41818 =
+  g_evt.worker_handles =
       g_evt_worker_thread_handles.empty() ? nullptr : g_evt_worker_thread_handles.data();
-  g_evt.dword_B41820 = g_evt_ready_event ? 1u : 0u;
-  g_evt.dword_B41824 = g_evt_shutdown_event ? 1u : 0u;
+  g_evt.has_ready_event = g_evt_ready_event ? 1u : 0u;
+  g_evt.has_shutdown_event = g_evt_shutdown_event ? 1u : 0u;
 }
 
 void ResetEvtSchedulerEvent(std::unique_ptr<SEvent> &event) {
@@ -465,25 +465,25 @@ void ResetEvtSchedulerInitSliceLocked() {
   g_evt_worker_thread_handles.clear();
   g_evt_ready_event.reset();
   g_evt_shutdown_event.reset();
-  g_evt.dword_B417C4 = 0;
-  g_evt.dword_B417C8 = 0;
-  g_evt.dword_B417D4 = 0;
-  g_evt.dword_B417CC = 0;
-  g_evt.dword_B417E0 = 0;
-  g_evt.dword_B41810 = 0;
-  g_evt.dword_B41814 = 0;
-  g_evt.dword_B4181C = 0;
+  g_evt.primary_slot_active_context = 0;
+  g_evt.main_worker_slot = 0;
+  g_evt.rounded_slot_count = 0;
+  g_evt.saved_thread_priority = 0;
+  g_evt.init_mode = 0;
+  g_evt.worker_handle_capacity = 0;
+  g_evt.worker_handle_count = 0;
+  g_evt.worker_handle_growth_quantum = 0;
   SyncEvtSchedulerInitBackingPointersLocked();
 }
 
 uint32_t ResolveEvtWorkerHandleGrowthQuantumLocked(uint32_t requested_count) {
-  if (g_evt.dword_B4181C != 0) {
-    return g_evt.dword_B4181C;
+  if (g_evt.worker_handle_growth_quantum != 0) {
+    return g_evt.worker_handle_growth_quantum;
   }
 
   if (requested_count >= 64) {
-    g_evt.dword_B4181C = 64;
-    return g_evt.dword_B4181C;
+    g_evt.worker_handle_growth_quantum = 64;
+    return g_evt.worker_handle_growth_quantum;
   }
 
   uint32_t quantum = requested_count;
@@ -509,24 +509,24 @@ uint32_t RoundUpToQuantum(uint32_t requested_count, uint32_t quantum) {
 }
 
 void EvtSched_ResizeWorkerHandleArrayLocked(uint32_t new_capacity) {
-  if (new_capacity == g_evt.dword_B41810 &&
+  if (new_capacity == g_evt.worker_handle_capacity &&
       g_evt_worker_thread_handles.size() == static_cast<std::size_t>(new_capacity)) {
     return;
   }
 
-  const uint32_t preserved_count = std::min(g_evt.dword_B41814, new_capacity);
+  const uint32_t preserved_count = std::min(g_evt.worker_handle_count, new_capacity);
   std::vector<EvtWorkerThreadHandleSlotStorage> rebuilt(
       static_cast<std::size_t>(new_capacity));
   for (uint32_t index = 0; index < preserved_count; ++index) {
     rebuilt[index] = std::move(g_evt_worker_thread_handles[index]);
   }
   g_evt_worker_thread_handles.swap(rebuilt);
-  g_evt.dword_B41810 = static_cast<uint32_t>(g_evt_worker_thread_handles.size());
+  g_evt.worker_handle_capacity = static_cast<uint32_t>(g_evt_worker_thread_handles.size());
   SyncEvtSchedulerInitBackingPointersLocked();
 }
 
 void EnsureEvtWorkerThreadHandleCapacityLocked(uint32_t requested_count) {
-  if (requested_count <= g_evt.dword_B41810) {
+  if (requested_count <= g_evt.worker_handle_capacity) {
     return;
   }
 
@@ -535,13 +535,13 @@ void EnsureEvtWorkerThreadHandleCapacityLocked(uint32_t requested_count) {
 }
 
 EvtWorkerThreadHandleSlotStorage *AppendEvtWorkerThreadHandleSlotLocked() {
-  const uint32_t requested_count = g_evt.dword_B41814 + 1;
-  if (requested_count > g_evt.dword_B41810) {
+  const uint32_t requested_count = g_evt.worker_handle_count + 1;
+  if (requested_count > g_evt.worker_handle_capacity) {
     EnsureEvtWorkerThreadHandleCapacityLocked(requested_count);
   }
 
-  auto *slot = &g_evt_worker_thread_handles[g_evt.dword_B41814];
-  ++g_evt.dword_B41814;
+  auto *slot = &g_evt_worker_thread_handles[g_evt.worker_handle_count];
+  ++g_evt.worker_handle_count;
   SyncEvtSchedulerInitBackingPointersLocked();
   return slot;
 }
@@ -577,9 +577,9 @@ void MirrorLegacyEvtContextState(const EvtContextRuntime &context) {
 
   StoreLegacyU32(context.legacy_storage, kLegacyEvtContextStateOffset,
                  static_cast<uint32_t>(context.state));
-  StoreLegacyU32(context.legacy_storage, kLegacyEvtContextTickOffset, context.ida.tick_ms);
+  StoreLegacyU32(context.legacy_storage, kLegacyEvtContextTickOffset, context.legacy_state.tick_ms);
 
-  uint32_t flags_word = context.ida.flags_word;
+  uint32_t flags_word = context.legacy_state.flags_word;
   if (context.enter_dispatched) {
     flags_word |= 1u;
   }
@@ -592,10 +592,10 @@ void MirrorLegacyEvtContextSchedulingState(const EvtContextRuntime &context) {
   }
 
   StoreLegacyU32(context.legacy_storage, kLegacyEvtContextNextWakeTickOffset,
-                 context.ida.next_wake_tick_ms);
+                 context.legacy_state.next_wake_tick_ms);
   StoreLegacyU32(context.legacy_storage, kLegacyEvtContextWeightOffset, context.weight);
   StoreLegacyU32(context.legacy_storage, kLegacyEvtContextWeightMirrorOffset,
-                 context.ida.weight_mirror);
+                 context.legacy_state.weight_mirror);
   StoreLegacyU32(context.legacy_storage, kLegacyEvtContextLoadRebalancePendingOffset,
                  context.load_rebalance_pending ? 1u : 0u);
 }
@@ -736,13 +736,13 @@ void DestroyEvtContextRuntime(const std::shared_ptr<EvtContextRuntime> &context,
   }
 
   if (context->profile_object != nullptr) {
-    (void)SMemFree(context->profile_object, ".\\Prop.cpp", 0x30, 0);
+    (void)SMemFree(context->profile_object, __FILE__, __LINE__, 0);
     context->profile_object = nullptr;
   }
 
   if (delete_legacy_storage && context->owns_legacy_storage &&
       context->legacy_storage != nullptr) {
-    (void)SMemFree(context->legacy_storage, ".\\EvtSched.cpp", 0x3AD, 0);
+    (void)SMemFree(context->legacy_storage, __FILE__, __LINE__, 0);
   }
 
   context->handle = 0;
@@ -1326,8 +1326,8 @@ void DestroyEvtThreadSlotRuntime(uint32_t slot_index,
     return;
   }
 
-  if (slot_index == g_evt.dword_B417C8) {
-    g_evt.dword_B417C4 = 0;
+  if (slot_index == g_evt.main_worker_slot) {
+    g_evt.primary_slot_active_context = 0;
   }
   g_evt_thread_slots[slot_index].reset();
   SyncEvtSchedulerInitBackingPointersLocked();
@@ -1354,8 +1354,8 @@ bool ShouldContextSortBefore(uint32_t lhs_handle, uint32_t rhs_handle) {
   if (!lhs || !rhs) {
     return lhs_handle < rhs_handle;
   }
-  if (lhs->ida.next_wake_tick_ms != rhs->ida.next_wake_tick_ms) {
-    return lhs->ida.next_wake_tick_ms <= rhs->ida.next_wake_tick_ms;
+  if (lhs->legacy_state.next_wake_tick_ms != rhs->legacy_state.next_wake_tick_ms) {
+    return lhs->legacy_state.next_wake_tick_ms <= rhs->legacy_state.next_wake_tick_ms;
   }
   return lhs->handle <= rhs->handle;
 }
@@ -1457,8 +1457,8 @@ uint32_t DequeueQueuedContextAtIndexLocked(const std::shared_ptr<EvtThreadSlotRu
 uint32_t DequeueQueuedContextFromSlot(uint32_t slot_index) {
   const auto slot = FindEvtThreadSlot(slot_index);
   if (!slot) {
-    if (slot_index == g_evt.dword_B417C8) {
-      g_evt.dword_B417C4 = 0;
+    if (slot_index == g_evt.main_worker_slot) {
+      g_evt.primary_slot_active_context = 0;
     }
     return 0;
   }
@@ -1471,8 +1471,8 @@ uint32_t DequeueQueuedContextFromSlot(uint32_t slot_index) {
     }
   }
 
-  if (slot_index == g_evt.dword_B417C8) {
-    g_evt.dword_B417C4 = context_handle;
+  if (slot_index == g_evt.main_worker_slot) {
+    g_evt.primary_slot_active_context = context_handle;
   }
   return context_handle;
 }
@@ -1481,8 +1481,8 @@ std::vector<std::shared_ptr<EvtContextRuntime>>
 DrainQueuedContextsForSlotShutdown(uint32_t slot_index) {
   const auto slot = FindEvtThreadSlot(slot_index);
   if (!slot) {
-    if (slot_index == g_evt.dword_B417C8) {
-      g_evt.dword_B417C4 = 0;
+    if (slot_index == g_evt.main_worker_slot) {
+      g_evt.primary_slot_active_context = 0;
     }
     return {};
   }
@@ -1499,8 +1499,8 @@ DrainQueuedContextsForSlotShutdown(uint32_t slot_index) {
     }
   }
 
-  if (slot_index == g_evt.dword_B417C8) {
-    g_evt.dword_B417C4 = 0;
+  if (slot_index == g_evt.main_worker_slot) {
+    g_evt.primary_slot_active_context = 0;
   }
 
   std::vector<std::shared_ptr<EvtContextRuntime>> drained_contexts;
@@ -1580,8 +1580,9 @@ void ReleaseContextWorkerSlot(const std::shared_ptr<EvtContextRuntime> &context)
     }
   }
 
-  if (context->worker_slot_index == g_evt.dword_B417C8 && g_evt.dword_B417C4 == context->handle) {
-    g_evt.dword_B417C4 = 0;
+  if (context->worker_slot_index == g_evt.main_worker_slot &&
+      g_evt.primary_slot_active_context == context->handle) {
+    g_evt.primary_slot_active_context = 0;
   }
 
   context->slot_load_accounted = false;
@@ -1595,17 +1596,17 @@ bool RescheduleContextOnWorkerSlot(const std::shared_ptr<EvtContextRuntime> &con
     return false;
   }
 
-  const bool wake_changed = context->ida.next_wake_tick_ms != wake_tick_ms;
+  const bool wake_changed = context->legacy_state.next_wake_tick_ms != wake_tick_ms;
   if (wake_changed) {
-    context->ida.next_wake_tick_ms = wake_tick_ms;
+    context->legacy_state.next_wake_tick_ms = wake_tick_ms;
     if (context->queued_context_index != kInvalidQueuedContextIndex) {
       RemoveContextFromQueuedSlot(context);
     }
   }
 
-  if (context->ida.weight_mirror != queued_weight) {
+  if (context->legacy_state.weight_mirror != queued_weight) {
     const uint32_t active_weight = context->weight;
-    context->ida.weight_mirror = queued_weight;
+    context->legacy_state.weight_mirror = queued_weight;
     const uint32_t weight_delta = queued_weight > active_weight ? queued_weight - active_weight
                                                                 : active_weight - queued_weight;
     context->load_rebalance_pending = weight_delta >= (active_weight >> 3);
@@ -1631,8 +1632,8 @@ bool RescheduleContextOnWorkerSlot(const std::shared_ptr<EvtContextRuntime> &con
       current_slot->total_weight = current_slot->total_weight > context->weight
                                        ? current_slot->total_weight - context->weight
                                        : 0;
-      context->weight = context->ida.weight_mirror;
-      context->ida.weight = context->weight;
+      context->weight = context->legacy_state.weight_mirror;
+      context->legacy_state.weight = context->weight;
       current_slot->total_weight += context->weight;
       RecomputeWorkerSlotAverageLocked(*current_slot);
     }
@@ -1718,10 +1719,11 @@ bool SubmitContextToWorkerSlot(const std::shared_ptr<EvtContextRuntime> &context
   }
 
   if (context->slot_load_accounted && context->worker_slot_index != kInvalidEvtThreadSlot) {
-    return RescheduleContextOnWorkerSlot(context, wake_tick_ms, context->ida.weight_mirror);
+    return RescheduleContextOnWorkerSlot(context, wake_tick_ms,
+                                         context->legacy_state.weight_mirror);
   }
 
-  context->ida.next_wake_tick_ms = wake_tick_ms;
+  context->legacy_state.next_wake_tick_ms = wake_tick_ms;
   MirrorLegacyEvtContextSchedulingState(*context);
 
   std::shared_ptr<EvtThreadSlotRuntime> slot;
@@ -1975,8 +1977,8 @@ void ClearHandlerBucketUnlocked(EvtHandlerBucket &bucket) {
   }
 }
 
-void InsertHandlerNodeInIdaOrderUnlocked(EvtHandlerBucket &bucket,
-                                         std::shared_ptr<EvtHandlerNode> node) {
+void InsertHandlerNodeInPriorityOrderUnlocked(EvtHandlerBucket &bucket,
+                                              std::shared_ptr<EvtHandlerNode> node) {
   auto current = bucket.head;
   std::shared_ptr<EvtHandlerNode> previous;
   while (current && current->priority > node->priority) {
@@ -2011,7 +2013,7 @@ void RegisterHandlerRecord(const std::shared_ptr<EvtContextRuntime> &context, in
 
   std::lock_guard lock(context->handler_mutex);
   auto &bucket = context->handlers[static_cast<std::size_t>(type)];
-  InsertHandlerNodeInIdaOrderUnlocked(bucket, std::move(node));
+  InsertHandlerNodeInPriorityOrderUnlocked(bucket, std::move(node));
 }
 
 bool DispatchHandlers(const std::shared_ptr<EvtContextRuntime> &context, int event_type,
@@ -2073,7 +2075,7 @@ void RunContextFrameTick(const std::shared_ptr<EvtContextRuntime> &context, doub
   {
     std::lock_guard lock(context->timer_mutex);
     current_tick_ms = AdvanceContextTickLocked(*context, delta_sec);
-    context->ida.tick_ms = current_tick_ms;
+    context->legacy_state.tick_ms = current_tick_ms;
   }
   MirrorLegacyEvtContextState(*context);
 
@@ -2120,7 +2122,7 @@ void EnsureContextEnterHandlersDispatched(const std::shared_ptr<EvtContextRuntim
   {
     std::lock_guard lock(context->timer_mutex);
     context->current_tick_ms = GameClock::GetTickCount32();
-    context->ida.tick_ms = context->current_tick_ms;
+    context->legacy_state.tick_ms = context->current_tick_ms;
   }
 
   context->enter_dispatched = true;
@@ -2177,8 +2179,8 @@ void DispatchPostQueueHandlers(const std::shared_ptr<EvtContextRuntime> &context
       return;
     }
 
-    if ((context->ida.flags_word & 2u) != 0) {
-      context->ida.flags_word |= 4u;
+    if ((context->legacy_state.flags_word & 2u) != 0) {
+      context->legacy_state.flags_word |= 4u;
       MirrorLegacyEvtContextState(*context);
     }
   }
@@ -2198,8 +2200,8 @@ void DispatchPostQueueCompletionIfActive(const std::shared_ptr<EvtContextRuntime
       return;
     }
 
-    if ((context->ida.flags_word & 4u) != 0) {
-      context->ida.flags_word &= ~4u;
+    if ((context->legacy_state.flags_word & 4u) != 0) {
+      context->legacy_state.flags_word &= ~4u;
       MirrorLegacyEvtContextState(*context);
       should_dispatch = true;
     }
@@ -2217,7 +2219,7 @@ void SignalEventSchedulerWorkerShutdown() {
   {
     std::lock_guard lock(g_evt_mutex);
     shutdown_event = g_evt_shutdown_event.get();
-    signal_worker_slots = (g_evt.dword_B417E0 == 0);
+    signal_worker_slots = (g_evt.init_mode == 0);
     if (signal_worker_slots) {
       worker_slots = g_evt_thread_slots;
     }
@@ -2262,9 +2264,9 @@ void FinalizeEvtContext(const std::shared_ptr<EvtContextRuntime> &context) {
   bool wake_workers = false;
   {
     std::lock_guard lock(g_evt_mutex);
-    if ((context->ida.flags_word & 2u) != 0 && g_evt.dword_B417D0 != 0) {
-      --g_evt.dword_B417D0;
-      wake_workers = (g_evt.dword_B417D0 == 0);
+    if ((context->legacy_state.flags_word & 2u) != 0 && g_evt.interactive_context_count != 0) {
+      --g_evt.interactive_context_count;
+      wake_workers = (g_evt.interactive_context_count == 0);
     }
   }
 
@@ -2358,7 +2360,7 @@ void RestoreStartupKeyboardToggleStateIfNeeded() {
 }
 
 void EvtSched_PumpActiveContextFromWindowTimer() {
-  const auto context = FindEvtContext(g_evt.dword_B417C4);
+  const auto context = FindEvtContext(g_evt.primary_slot_active_context);
   if (!context) {
     return;
   }
@@ -2462,7 +2464,7 @@ void InitEvtSchedulerConfig_CaptureStartupInputState() {
   CaptureStartupInputState();
 }
 
-void InitEvtSchedulerConfig(uint32_t thread_count, int32_t a2) {
+void InitEvtSchedulerConfig(uint32_t thread_count, int32_t init_mode) {
 
   InitEvtSchedulerConfig_CaptureStartupInputState();
 
@@ -2470,7 +2472,7 @@ void InitEvtSchedulerConfig(uint32_t thread_count, int32_t a2) {
   if (count == 0)
     count = 1;
 
-  EvtSched_Init(count, a2);
+  EvtSched_Init(count, init_mode);
   SetEvtWindowTimerCallback(&EvtSched_PumpActiveContextFromWindowTimer);
 }
 
@@ -2531,7 +2533,7 @@ int InitEventScheduler() {
   int result = EvtSched_WorkerThreadProc(1, 0);
   {
     std::lock_guard lock(g_evt_mutex);
-    g_evt.dword_B417C8 = 0;
+    g_evt.main_worker_slot = 0;
   }
   return result;
 }
@@ -2541,7 +2543,7 @@ int EvtSched_WorkerThreadProc(uint32_t flags, int32_t ) {
   int slot_index = 0;
   if (flags != 0) {
     std::lock_guard lock(g_evt_mutex);
-    slot_index = static_cast<int>(g_evt.dword_B417C8);
+    slot_index = static_cast<int>(g_evt.main_worker_slot);
     ready_event = g_evt_ready_event.get();
   } else {
     slot_index = EvtThread_CreateOrReuse();
@@ -2557,8 +2559,9 @@ int EvtSched_WorkerThreadProc(uint32_t flags, int32_t ) {
   return 0;
 }
 
-int CreateEventContext_Thunk(int a1, int a2, int a3, int a4, uint32_t a5) {
-  return CreateEventContext(a1, a2, a3, a4, a5);
+int CreateEventContext_Thunk(int interactive, int enter_cb, int exit_cb, int idle_time,
+                             uint32_t flags) {
+  return CreateEventContext(interactive, enter_cb, exit_cb, idle_time, flags);
 }
 
 int EvtContext_RequestShutdown(uint32_t context_handle) {
@@ -2716,7 +2719,7 @@ int CreateEventContext(int interactive, int enter_cb, int exit_cb, int idle_time
   if (idle_time == 0)
     idle_time = 1;
 
-  void *context_storage = SMemAlloc(kLegacyEvtContextSize, ".\\EvtSched.cpp", 0x3AD, 0);
+  void *context_storage = SMemAlloc(kLegacyEvtContextSize, __FILE__, __LINE__, 0);
   if (context_storage != nullptr) {
     context_storage = EvtContext_Init(context_storage, interactive != 0 ? 2 : 0, idle_time,
                                       interactive != 0 ? 1000 : 1, nullptr,
@@ -2731,7 +2734,7 @@ int CreateEventContext(int interactive, int enter_cb, int exit_cb, int idle_time
 
   if (interactive) {
     std::lock_guard lock(g_evt_mutex);
-    ++g_evt.dword_B417D0;
+    ++g_evt.interactive_context_count;
   }
 
   if (enter_cb != 0) {
@@ -2759,14 +2762,14 @@ void *EvtContext_Init(void *ctx, int interactive, int idle_time, int weight, voi
   auto context = std::make_shared<EvtContextRuntime>();
   context->legacy_storage = ctx;
   context->profile_object = Prop_Alloc();
-  context->ida.tick_ms = GameClock::GetTickCount32();
-  context->ida.flags_word = static_cast<uint32_t>(interactive);
-  context->ida.idle_time = static_cast<uint32_t>(idle_time);
-  context->ida.idle_time_mirror = static_cast<uint32_t>(idle_time);
-  context->ida.weight = static_cast<uint32_t>(weight);
-  context->ida.weight_mirror = static_cast<uint32_t>(weight);
-  context->ida.flags = static_cast<uint32_t>(flags);
-  context->current_tick_ms = context->ida.tick_ms;
+  context->legacy_state.tick_ms = GameClock::GetTickCount32();
+  context->legacy_state.flags_word = static_cast<uint32_t>(interactive);
+  context->legacy_state.idle_time = static_cast<uint32_t>(idle_time);
+  context->legacy_state.idle_time_mirror = static_cast<uint32_t>(idle_time);
+  context->legacy_state.weight = static_cast<uint32_t>(weight);
+  context->legacy_state.weight_mirror = static_cast<uint32_t>(weight);
+  context->legacy_state.flags = static_cast<uint32_t>(flags);
+  context->current_tick_ms = context->legacy_state.tick_ms;
   context->weight = static_cast<uint32_t>(weight);
   context->state = kEvtContextStateActive;
 
@@ -2780,12 +2783,13 @@ void *EvtContext_Init(void *ctx, int interactive, int idle_time, int weight, voi
                                kLegacyEvtContextQueuedMessageListTailOffset);
   InitializeLegacySentinelPair(ctx, kLegacyEvtContextRepeatKeyDownListHeadOffset,
                                kLegacyEvtContextRepeatKeyDownListTailOffset);
-  StoreLegacyU32(ctx, kLegacyEvtContextTickOffset, context->ida.tick_ms);
-  StoreLegacyU32(ctx, kLegacyEvtContextFlagsOffset, context->ida.flags_word);
-  StoreLegacyU32(ctx, kLegacyEvtContextIdleTimeOffset, context->ida.idle_time);
-  StoreLegacyU32(ctx, kLegacyEvtContextIdleTimeMirrorOffset, context->ida.idle_time_mirror);
-  StoreLegacyU32(ctx, kLegacyEvtContextWeightOffset, context->ida.weight);
-  StoreLegacyU32(ctx, kLegacyEvtContextWeightMirrorOffset, context->ida.weight_mirror);
+  StoreLegacyU32(ctx, kLegacyEvtContextTickOffset, context->legacy_state.tick_ms);
+  StoreLegacyU32(ctx, kLegacyEvtContextFlagsOffset, context->legacy_state.flags_word);
+  StoreLegacyU32(ctx, kLegacyEvtContextIdleTimeOffset, context->legacy_state.idle_time);
+  StoreLegacyU32(ctx, kLegacyEvtContextIdleTimeMirrorOffset,
+                 context->legacy_state.idle_time_mirror);
+  StoreLegacyU32(ctx, kLegacyEvtContextWeightOffset, context->legacy_state.weight);
+  StoreLegacyU32(ctx, kLegacyEvtContextWeightMirrorOffset, context->legacy_state.weight_mirror);
   StoreLegacyU32(ctx, kLegacyEvtContextNextWakeTickOffset, 0);
   StoreLegacyU32(ctx, kLegacyEvtContextLoadRebalancePendingOffset, 0);
   StoreLegacyU32(ctx, kLegacyEvtContextQueuedMessageListRootOffset, 4);
@@ -2793,7 +2797,7 @@ void *EvtContext_Init(void *ctx, int interactive, int idle_time, int weight, voi
   StoreLegacyU32(ctx, kLegacyEvtContextProfileObjectOffset,
                  ToLegacyPointerWord(context->profile_object));
   StoreLegacyU32(ctx, kLegacyEvtContextDebugContextOffset, ToLegacyPointerWord(debug_context));
-  StoreLegacyU32(ctx, kLegacyEvtContextFlagsArgOffset, context->ida.flags);
+  StoreLegacyU32(ctx, kLegacyEvtContextFlagsArgOffset, context->legacy_state.flags);
 
   {
     std::lock_guard lock(g_evt_mutex);
@@ -2820,23 +2824,23 @@ void EvtContext_RegisterHandler(void *ctx, int type, int callback, int param, fl
   RegisterHandlerRecord(context, type, callback, param, priority);
 }
 
-void EvtSched_Init(uint32_t thread_count, int32_t a2) {
+void EvtSched_Init(uint32_t thread_count, int32_t init_mode) {
   std::lock_guard lock(g_evt_mutex);
 
-  if (g_evt.dword_B417D4 != 0) {
+  if (g_evt.rounded_slot_count != 0) {
   }
 
   ResetEvtSchedulerInitSliceLocked();
-  g_evt.dword_B417E0 = static_cast<uint32_t>(a2);
-  g_evt.dword_B417CC = static_cast<uint32_t>(SThread_GetCurrentPriority());
+  g_evt.init_mode = static_cast<uint32_t>(init_mode);
+  g_evt.saved_thread_priority = static_cast<uint32_t>(SThread_GetCurrentPriority());
 
   uint32_t rounded = 1;
   while (rounded < thread_count && rounded != 0) {
     rounded *= 2;
   }
 
-  g_evt.dword_B417D4 = rounded;
-  g_evt.dword_B417C4 = 0;
+  g_evt.rounded_slot_count = rounded;
+  g_evt.primary_slot_active_context = 0;
   g_evt_thread_slots.assign(rounded, {});
   g_evt_slot_critical_sections.clear();
   g_evt_slot_critical_sections.reserve(rounded);
@@ -2847,9 +2851,9 @@ void EvtSched_Init(uint32_t thread_count, int32_t a2) {
   ResetEvtSchedulerEvent(g_evt_shutdown_event);
   SyncEvtSchedulerInitBackingPointersLocked();
 
-  g_evt.dword_B417C8 = static_cast<uint32_t>(EvtThread_CreateOrReuseLocked());
+  g_evt.main_worker_slot = static_cast<uint32_t>(EvtThread_CreateOrReuseLocked());
 
-  while (g_evt.dword_B41814 + 1 < thread_count) {
+  while (g_evt.worker_handle_count + 1 < thread_count) {
     auto *slot = AppendEvtWorkerThreadHandleSlotLocked();
     *slot = std::make_unique<EvtWorkerThreadHandleSlot>();
     (void)EvtThread_CreateOrReuseLocked();
@@ -2912,19 +2916,19 @@ void EvtSched_Shutdown() {
   g_evt_shutdown_event.reset();
   SetEvtContextTlsValue(nullptr);
 
-  g_evt.dword_B417C4 = 0;
-  g_evt.dword_B417D4 = 0;
-  g_evt.dword_B417D8 = nullptr;
-  g_evt.dword_B417DC = nullptr;
-  g_evt.dword_B417D0 = 0;
-  g_evt.dword_B417CC = 0;
-  g_evt.dword_B417E0 = 0;
-  g_evt.dword_B41810 = 0;
-  g_evt.dword_B41814 = 0;
-  g_evt.dword_B41818 = nullptr;
-  g_evt.dword_B4181C = 0;
-  g_evt.dword_B41820 = 0;
-  g_evt.dword_B41824 = 0;
+  g_evt.primary_slot_active_context = 0;
+  g_evt.rounded_slot_count = 0;
+  g_evt.thread_slots = nullptr;
+  g_evt.slot_critical_sections = nullptr;
+  g_evt.interactive_context_count = 0;
+  g_evt.saved_thread_priority = 0;
+  g_evt.init_mode = 0;
+  g_evt.worker_handle_capacity = 0;
+  g_evt.worker_handle_count = 0;
+  g_evt.worker_handles = nullptr;
+  g_evt.worker_handle_growth_quantum = 0;
+  g_evt.has_ready_event = 0;
+  g_evt.has_shutdown_event = 0;
   g_cached_active_window_client_rect = {};
 }
 
@@ -2956,7 +2960,7 @@ int EvtSched_SubmitContext(void *ctx) {
   return static_cast<int>(handle);
 }
 
-int EvtSched_SubmitContext_callee_47E3D0(void * , void *ctx) {
+int EvtSched_RegisterSubmittedContext(void * , void *ctx) {
   std::lock_guard lock(g_evt_mutex);
   const auto context = ResolveEvtContextForSubmissionLocked(ctx);
   if (!context) {
@@ -2965,7 +2969,7 @@ int EvtSched_SubmitContext_callee_47E3D0(void * , void *ctx) {
   return static_cast<int>(RegisterEvtContextLocked(context));
 }
 
-void *EvtSched_Shutdown_callee_47DE50(void * ) {
+void *EvtSched_AppendWorkerThreadHandleSlot(void * ) {
   std::lock_guard lock(g_evt_mutex);
   return AppendEvtWorkerThreadHandleSlotLocked();
 }
@@ -3547,7 +3551,7 @@ bool EvtTimer_ProcessDueTimers(int ctx, uint32_t current_tick_ms) {
 }
 
 uint32_t EvtTimer_Register(int ctx, uint32_t interval_ms, int callback, int param, int destroy_cb,
-                           int a6, int a7, int a8) {
+                           int destroy_arg0, int destroy_arg1, int destroy_arg2) {
   const auto context = FindEvtContext(static_cast<uint32_t>(ctx));
   if (!context) {
     return 0;
@@ -3580,9 +3584,9 @@ uint32_t EvtTimer_Register(int ctx, uint32_t interval_ms, int callback, int para
   slot.callback = callback;
   slot.param = param;
   slot.destroy_callback = destroy_cb;
-  slot.destroy_arg0 = a6;
-  slot.destroy_arg1 = a7;
-  slot.destroy_arg2 = a8;
+  slot.destroy_arg0 = destroy_arg0;
+  slot.destroy_arg1 = destroy_arg1;
+  slot.destroy_arg2 = destroy_arg2;
   InsertQueuedTimerLocked(*context, timer_id);
   return timer_id;
 }
@@ -3598,7 +3602,7 @@ void EvtSched_SetContextCurrentTickForTests(uint32_t context_handle, uint32_t cu
   std::lock_guard lock(context->timer_mutex);
   context->current_tick_ms = current_tick_ms;
   context->tick_fraction_ms = 0.0;
-  context->ida.tick_ms = current_tick_ms;
+  context->legacy_state.tick_ms = current_tick_ms;
   if (context->legacy_storage != nullptr) {
     StoreLegacyU32(context->legacy_storage, kLegacyEvtContextTickOffset, current_tick_ms);
   }
@@ -3610,7 +3614,7 @@ void EvtSched_SetContextWakeTickForTests(uint32_t context_handle, uint32_t wake_
     return;
   }
 
-  (void)RescheduleContextOnWorkerSlot(context, wake_tick_ms, context->ida.weight_mirror);
+  (void)RescheduleContextOnWorkerSlot(context, wake_tick_ms, context->legacy_state.weight_mirror);
 }
 
 void EvtSched_SetContextQueuedWeightForTests(uint32_t context_handle, uint32_t queued_weight) {
@@ -3619,7 +3623,8 @@ void EvtSched_SetContextQueuedWeightForTests(uint32_t context_handle, uint32_t q
     return;
   }
 
-  (void)RescheduleContextOnWorkerSlot(context, context->ida.next_wake_tick_ms, queued_weight);
+  (void)RescheduleContextOnWorkerSlot(context, context->legacy_state.next_wake_tick_ms,
+                                      queued_weight);
 }
 
 uint32_t EvtSched_DequeueContextForSlotForTests(uint32_t slot_index) {
@@ -3627,7 +3632,7 @@ uint32_t EvtSched_DequeueContextForSlotForTests(uint32_t slot_index) {
 }
 
 uint32_t EvtSched_GetCurrentPrimarySlotContextForTests() {
-  return g_evt.dword_B417C4;
+  return g_evt.primary_slot_active_context;
 }
 
 std::size_t EvtSched_GetQueuedContextCountForTests(uint32_t slot_index) {
@@ -3652,7 +3657,7 @@ uint32_t EvtSched_GetContextActiveWeightForTests(uint32_t context_handle) {
 
 uint32_t EvtSched_GetContextQueuedWeightForTests(uint32_t context_handle) {
   const auto context = FindEvtContext(context_handle);
-  return context ? context->ida.weight_mirror : 0;
+  return context ? context->legacy_state.weight_mirror : 0;
 }
 
 bool EvtSched_IsContextLoadRebalancePendingForTests(uint32_t context_handle) {
@@ -3710,7 +3715,7 @@ bool EvtSched_IsContextInteractiveForTests(uint32_t context_handle) {
     return false;
   }
 
-  return (context->ida.flags_word >> 1) != 0;
+  return (context->legacy_state.flags_word >> 1) != 0;
 }
 
 uint32_t EvtSched_GetContextFlagsWordForTests(uint32_t context_handle) {
@@ -3723,7 +3728,7 @@ uint32_t EvtSched_GetContextFlagsWordForTests(uint32_t context_handle) {
 }
 
 uint32_t EvtSched_GetRoundedSlotCountForTests() {
-  return g_evt.dword_B417D4;
+  return g_evt.rounded_slot_count;
 }
 
 bool EvtSched_HasWorkerSlotForTests(uint32_t slot_index) {
@@ -3731,19 +3736,19 @@ bool EvtSched_HasWorkerSlotForTests(uint32_t slot_index) {
 }
 
 uint32_t EvtSched_GetMainWorkerSlotForTests() {
-  return g_evt.dword_B417C8;
+  return g_evt.main_worker_slot;
 }
 
 uint32_t EvtSched_GetWorkerThreadHandleCountForTests() {
-  return g_evt.dword_B41814;
+  return g_evt.worker_handle_count;
 }
 
 uint32_t EvtSched_GetWorkerThreadHandleCapacityForTests() {
-  return g_evt.dword_B41810;
+  return g_evt.worker_handle_capacity;
 }
 
 uint32_t EvtSched_GetWorkerThreadHandleGrowthQuantumForTests() {
-  return g_evt.dword_B4181C;
+  return g_evt.worker_handle_growth_quantum;
 }
 
 void EvtSched_SetWorkerThreadHandleCapacityForTests(uint32_t new_capacity) {
@@ -3753,7 +3758,7 @@ void EvtSched_SetWorkerThreadHandleCapacityForTests(uint32_t new_capacity) {
 
 void EvtSched_SetWorkerThreadHandleValueForTests(uint32_t slot_index, std::uintptr_t value) {
   std::lock_guard lock(g_evt_mutex);
-  if (slot_index >= g_evt.dword_B41814 ||
+  if (slot_index >= g_evt.worker_handle_count ||
       slot_index >= static_cast<uint32_t>(g_evt_worker_thread_handles.size())) {
     return;
   }
@@ -3767,7 +3772,7 @@ void EvtSched_SetWorkerThreadHandleValueForTests(uint32_t slot_index, std::uintp
 
 std::uintptr_t EvtSched_GetWorkerThreadHandleValueForTests(uint32_t slot_index) {
   std::lock_guard lock(g_evt_mutex);
-  if (slot_index >= g_evt.dword_B41814 ||
+  if (slot_index >= g_evt.worker_handle_count ||
       slot_index >= static_cast<uint32_t>(g_evt_worker_thread_handles.size())) {
     return 0;
   }
@@ -3781,11 +3786,11 @@ std::uintptr_t EvtSched_GetWorkerThreadHandleValueForTests(uint32_t slot_index) 
 }
 
 uint32_t EvtSched_GetSavedThreadPriorityForTests() {
-  return g_evt.dword_B417CC;
+  return g_evt.saved_thread_priority;
 }
 
 uint32_t EvtSched_GetInitModeForTests() {
-  return g_evt.dword_B417E0;
+  return g_evt.init_mode;
 }
 
 bool EvtSched_HasWindowTimerCallbackForTests() {

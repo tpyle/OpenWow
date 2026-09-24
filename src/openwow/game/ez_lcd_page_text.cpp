@@ -82,7 +82,7 @@ void* CEzLcdPage_AddNewMonoText(
     }
 
     auto* raw = static_cast<std::uint8_t*>(
-        core::SMemAlloc(kCLCDTextAllocSize, ".\\EZ_LCD_Page.cpp", 0x298, 0));
+        core::SMemAlloc(kCLCDTextAllocSize, __FILE__, __LINE__, 0));
     if (!raw) {
         return nullptr;
     }
@@ -160,7 +160,7 @@ void* CEzLcdPage_AddNewColorText(
     }
 
     auto* raw = static_cast<std::uint8_t*>(
-        core::SMemAlloc(kCLCDTextAllocSize, ".\\EZ_LCD_Page.cpp", 0x298, 0));
+        core::SMemAlloc(kCLCDTextAllocSize, __FILE__, __LINE__, 0));
     if (!raw) {
         return nullptr;
     }

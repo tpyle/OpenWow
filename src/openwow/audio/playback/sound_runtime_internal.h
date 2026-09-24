@@ -51,7 +51,7 @@ namespace retail_rng = openwow::foundation::hashing;
 inline constexpr std::uint32_t kVoiceChatToggleOnLookupResolvedBit = 0x1u;
 inline constexpr std::uint32_t kVoiceChatToggleOffLookupResolvedBit = 0x2u;
 inline constexpr std::uint32_t kVoiceChatTogglePlaybackPriority = 128u;
-inline float ParseSoundVolumeCVar(std::string_view value) { return static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(value)); }
+inline float ParseSoundVolumeCVar(std::string_view value) { return static_cast<float>(openwow::core::ParseDecimalFloat(value)); }
 inline void ApplySoundChannelGroupVolume(SoundEngine &engine, AudioEngine &audio, const char *group_name, const float volume) {
   engine.SetChannelGroupVolume(group_name, volume);
   if (openwow::text::EqualsIgnoreCaseAscii(group_name, "SFX")) {

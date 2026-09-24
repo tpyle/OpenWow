@@ -13,14 +13,14 @@ namespace openwow::game {
 class CGUnit_C;
 class WorldSession;
 
-int HandleSpellDelayPacket(WorldSession& session, std::uintptr_t a1,
-                           std::uintptr_t a2, std::uintptr_t a3,
+int HandleSpellDelayPacket(WorldSession& session, std::uintptr_t handler_param,
+                           std::uintptr_t opcode, std::uintptr_t time_ms,
                            std::uintptr_t data_store);
-int HandleChannelStartPacket(const WorldSession& session, std::uintptr_t a1,
-                             std::uintptr_t a2, std::uintptr_t a3,
+int HandleChannelStartPacket(const WorldSession& session, std::uintptr_t handler_param,
+                             std::uintptr_t opcode, std::uintptr_t time_ms,
                              std::uintptr_t data_store);
-int HandleChannelUpdatePacket(WorldSession& session, std::uintptr_t a1,
-                              std::uintptr_t a2, std::uintptr_t a3,
+int HandleChannelUpdatePacket(WorldSession& session, std::uintptr_t handler_param,
+                              std::uintptr_t opcode, std::uintptr_t time_ms,
                               std::uintptr_t data_store);
 [[nodiscard]] ChannelUpdateTransition PrepareChannelUpdate(
     CGUnit_C& unit, const data::dbc::SpellEntry& spell,

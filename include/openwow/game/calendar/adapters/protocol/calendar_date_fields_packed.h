@@ -33,7 +33,7 @@ struct CalendarDateFieldsFull {
   std::int32_t aux1    =  0;
 };
 static_assert(sizeof(CalendarDateFieldsFull) == 32,
-              "Must be exactly 32 bytes (8 DWORDs) per IDA 0x576AE0 rep-movsd");
+              "Must be exactly 32 bytes (8 DWORDs) so it copies as one block");
 
 inline CalendarDateFieldsFull& Calendar_ResetDateFields(
     CalendarDateFieldsFull& fields) noexcept {

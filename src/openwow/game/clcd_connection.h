@@ -28,7 +28,7 @@ struct CLCDConnectionEventNode {
 
 #if INTPTR_MAX == INT32_MAX
 static_assert(sizeof(CLCDConnectionEventNode) == 32,
-              "CB_EVENT_NODE must be 32 bytes (IDA SMemAlloc size)");
+              "CB_EVENT_NODE must be 32 bytes (legacy allocation size)");
 static_assert(offsetof(CLCDConnectionEventNode, next) == 0x00);
 static_assert(offsetof(CLCDConnectionEventNode, prev) == 0x04);
 static_assert(offsetof(CLCDConnectionEventNode, event_type) == 0x08);

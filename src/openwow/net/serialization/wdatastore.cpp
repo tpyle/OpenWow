@@ -9,16 +9,6 @@
 namespace openwow::net {
 namespace {
 
-constexpr char kWDataStoreSourceFile[] = ".\\WDataStore.cpp";
-constexpr char kCDataStoreSourceFile[] =
-    "d:\\buildserver\\wow\\1\\work\\wow-code\\branches\\wow-patch-3_3_5_a-bnet\\engine\\source\\base\\CDataStore.h";
-constexpr int kCDataStoreAllocLine = 0xF6;
-constexpr int kCDataStoreReallocLine = 0x118;
-constexpr int kWDataStoreHeapAllocLine = 0xBA;
-constexpr int kWDataStoreHeapFreeLine = 0xCD;
-constexpr int kWDataStoreGrowHeapReallocLine = 0x93;
-constexpr int kWDataStoreGrowPoolToHeapLine = 0x97;
-
 struct PoolBlockHeader {
   std::uint32_t token = 0;
   std::uint8_t reserved[kWDataStorePooledHeaderSize -
@@ -141,18 +131,18 @@ void *WDataStore_AllocHelper(std::size_t size, const char *source_file,
   }
 
   const char *resolved_source =
-      source_file != nullptr ? source_file : kCDataStoreSourceFile;
+      source_file != nullptr ? source_file : __FILE__;
   const int resolved_line =
-      source_file != nullptr ? source_line : kCDataStoreAllocLine;
+      source_file != nullptr ? source_line : __LINE__;
   return core::SMemAlloc(size, resolved_source, resolved_line, 0);
 }
 
 void *WDataStore_ReallocHelper(void *block, std::size_t new_size,
                                const char *source_file, int source_line) {
   const char *resolved_source =
-      source_file != nullptr ? source_file : kCDataStoreSourceFile;
+      source_file != nullptr ? source_file : __FILE__;
   const int resolved_line =
-      source_file != nullptr ? source_line : kCDataStoreReallocLine;
+      source_file != nullptr ? source_line : __LINE__;
   return core::SMemReAlloc(block, new_size, resolved_source, resolved_line, 0);
 }
 
@@ -215,7 +205,7 @@ std::size_t BufferPool::GetFreeCount() const {
 
 std::uint8_t *BufferPool::AllocateRawBlock() const {
   auto *raw_block =
-      static_cast<std::uint8_t *>(core::SMemAlloc(block_size_, kWDataStoreSourceFile, -2, 0));
+      static_cast<std::uint8_t *>(core::SMemAlloc(block_size_, __FILE__, -2, 0));
   if (!raw_block) {
     return nullptr;
   }
@@ -227,7 +217,7 @@ std::uint8_t *BufferPool::AllocateRawBlock() const {
 
 void BufferPool::ClearUnlocked() {
   for (auto *raw_block : free_list_) {
-    core::SMemFree(raw_block, kWDataStoreSourceFile, -2, 0);
+    core::SMemFree(raw_block, __FILE__, -2, 0);
   }
   free_list_.clear();
 }
@@ -282,7 +272,7 @@ std::uint8_t *WDataStore_AllocBuffer(std::size_t size) {
   const auto tier = WDataStore_ClassifyBufferSize(size);
   if (tier == WDataStoreBufferTier::Heap) {
     return static_cast<std::uint8_t *>(core::SMemAlloc(
-        size, kWDataStoreSourceFile, kWDataStoreHeapAllocLine, 0));
+        size, __FILE__, __LINE__, 0));
   }
 
   if (auto *pool = GetPoolRegistry().ForTier(tier)) {
@@ -298,7 +288,7 @@ void WDataStore_FreeBuffer(std::uint8_t *ptr, std::size_t size) {
 
   const auto tier = WDataStore_ClassifyBufferSize(size);
   if (tier == WDataStoreBufferTier::Heap) {
-    core::SMemFree(ptr, kWDataStoreSourceFile, kWDataStoreHeapFreeLine, 0);
+    core::SMemFree(ptr, __FILE__, __LINE__, 0);
     return;
   }
 
@@ -318,8 +308,8 @@ std::uint8_t *WDataStore_GrowBuffer(std::uint8_t *old_ptr, std::size_t current_c
   if (!old_ptr) {
     if (WDataStore_ClassifyBufferSize(target_capacity) == WDataStoreBufferTier::Heap) {
       return static_cast<std::uint8_t *>(WDataStore_ReallocHelper(
-          nullptr, target_capacity, kWDataStoreSourceFile,
-          kWDataStoreGrowHeapReallocLine));
+          nullptr, target_capacity, __FILE__,
+          __LINE__));
     }
     return WDataStore_AllocBuffer(target_capacity);
   }
@@ -329,14 +319,14 @@ std::uint8_t *WDataStore_GrowBuffer(std::uint8_t *old_ptr, std::size_t current_c
 
   if (current_tier == WDataStoreBufferTier::Heap && target_tier == WDataStoreBufferTier::Heap) {
     return static_cast<std::uint8_t *>(WDataStore_ReallocHelper(
-        old_ptr, target_capacity, kWDataStoreSourceFile,
-        kWDataStoreGrowHeapReallocLine));
+        old_ptr, target_capacity, __FILE__,
+        __LINE__));
   }
 
   std::uint8_t *new_ptr = nullptr;
   if (target_tier == WDataStoreBufferTier::Heap) {
     new_ptr = static_cast<std::uint8_t *>(WDataStore_AllocHelper(
-        target_capacity, kWDataStoreSourceFile, kWDataStoreGrowPoolToHeapLine));
+        target_capacity, __FILE__, __LINE__));
   } else {
     new_ptr = WDataStore_AllocBuffer(target_capacity);
   }

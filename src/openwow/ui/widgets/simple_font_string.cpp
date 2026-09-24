@@ -546,12 +546,12 @@ bool CSimpleFontString::LoadXMLWithInheritance(
   if (const char *bytes = FindAttributeValue(frame_def, "bytes");
       bytes != nullptr && *bytes != '\0') {
     AllocTextBuffer(static_cast<std::uint16_t>(
-        openwow::core::ParseSignedDecimalLikeSub76F0D0(bytes)));
+        openwow::core::ParseSignedDecimal(bytes)));
   }
 
   if (const char *max_lines = FindAttributeValue(frame_def, "maxLines");
       max_lines != nullptr && *max_lines != '\0') {
-    SetMaxLines(openwow::core::ParseSignedDecimalLikeSub76F0D0(max_lines) & 0xFFFFFFu);
+    SetMaxLines(openwow::core::ParseSignedDecimal(max_lines) & 0xFFFFFFu);
   }
 
   if (!frame_def.font.empty()) {
@@ -593,7 +593,7 @@ bool CSimpleFontString::LoadXMLWithInheritance(
   if (const char *spacing = FindAttributeValue(frame_def, "spacing");
       spacing != nullptr && *spacing != '\0') {
     SetSpacing(openwow::ui::PixelUiHorizontalCoordinateToStored(
-        static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(spacing))));
+        static_cast<float>(openwow::core::ParseDecimalFloat(spacing))));
 
   }
 
@@ -627,7 +627,7 @@ bool CSimpleFontString::LoadXMLWithInheritance(
   if (const char *alpha = FindAttributeValue(frame_def, "alpha");
       alpha != nullptr && *alpha != '\0') {
     const float clamped_alpha = std::clamp(
-        static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(alpha)), 0.0f, 1.0f);
+        static_cast<float>(openwow::core::ParseDecimalFloat(alpha)), 0.0f, 1.0f);
     auto &render = MutableRender();
     render.SetColorAlpha(static_cast<std::uint8_t>(clamped_alpha * 255.0f));
     render.SyncEmbeddedTextureAlphaFromTextColor();

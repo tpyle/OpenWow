@@ -1099,7 +1099,7 @@ int Console_PeriodicUpdate(const float *frame_delta_seconds) {
 int Console_SpacingCommand(const std::string_view raw_args) {
   if (!raw_args.empty()) {
     s_console_character_spacing_pixels =
-        static_cast<float>(ParseFloatLikeSub76FB80(raw_args));
+        static_cast<float>(ParseDecimalFloat(raw_args));
   } else {
     s_console_character_spacing_pixels = 0.0f;
   }

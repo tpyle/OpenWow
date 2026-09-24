@@ -2,7 +2,7 @@
 
 namespace openwow::core {
 
-inline int IdaSharedReturnZeroArg1(int ) {
+inline int SharedReturnZeroArg1(int ) {
   return 0;
 }
 

@@ -348,13 +348,13 @@ void* AllocateFileUnitStorage(IOUnitAllocator* const alloc,
     }
 
     *out_owned = 1;
-    return SMemAlloc(unit_size, ".\\IOUnitContainer.cpp", 0x44, 0x8);
+    return SMemAlloc(unit_size, __FILE__, __LINE__, 0x8);
 }
 
 void ReleaseFileUnitStorageOnOpenFailure(void* const storage,
                                          const std::uint8_t owned) {
     if (owned != 0 && storage != nullptr) {
-        SMemFree(storage, ".\\IOUnitContainer.cpp", 58, 0);
+        SMemFree(storage, __FILE__, __LINE__, 0);
     }
 }
 
@@ -498,7 +498,7 @@ void IOInlinePathStorage::Assign(const char* source) {
         char* new_buffer = heap_buffer_;
         if (new_buffer == nullptr || length_ != required_length) {
             new_buffer = static_cast<char*>(
-                SMemAlloc(required_length, ".\\IOUnitContainer.cpp", 0, 0));
+                SMemAlloc(required_length, __FILE__, 0, 0));
         }
         if (new_buffer == nullptr) {
             Reset();
@@ -506,12 +506,12 @@ void IOInlinePathStorage::Assign(const char* source) {
         }
         if (new_buffer != heap_buffer_) {
             if (heap_buffer_ != nullptr) {
-                SMemFree(heap_buffer_, ".\\IOUnitContainer.cpp", 0, 0);
+                SMemFree(heap_buffer_, __FILE__, 0, 0);
             }
             heap_buffer_ = new_buffer;
         }
     } else if (heap_buffer_ != nullptr) {
-        SMemFree(heap_buffer_, ".\\IOUnitContainer.cpp", 0, 0);
+        SMemFree(heap_buffer_, __FILE__, 0, 0);
         heap_buffer_ = nullptr;
     }
 
@@ -521,7 +521,7 @@ void IOInlinePathStorage::Assign(const char* source) {
 
 void IOInlinePathStorage::Reset() {
     if (heap_buffer_ != nullptr) {
-        SMemFree(heap_buffer_, ".\\IOUnitContainer.cpp", 0, 0);
+        SMemFree(heap_buffer_, __FILE__, 0, 0);
         heap_buffer_ = nullptr;
     }
     length_ = 0;
@@ -612,7 +612,7 @@ void IOFileReadOnlyUnit::InitArchiveFileState(
 
     if (path_length > sizeof(inline_path)) {
         path_ptr = static_cast<char*>(
-            SMemAlloc(path_length, ".\\IOUnitContainer.cpp", 0x44, 0));
+            SMemAlloc(path_length, __FILE__, __LINE__, 0));
         if (path_ptr == nullptr) {
             path_ptr = inline_path;
             inline_path[0] = '\0';
@@ -637,7 +637,7 @@ void IOFileReadOnlyUnit::Destroy(const bool free_self) {
 
 void IOFileReadOnlyUnit::DestroyArchiveFileState(const bool free_self) {
     if (path_ptr != inline_path && path_ptr != nullptr) {
-        SMemFree(path_ptr, ".\\IOUnitContainer.cpp", 0x44, 0);
+        SMemFree(path_ptr, __FILE__, __LINE__, 0);
     }
     archive = nullptr;
     path_ptr = inline_path;
@@ -884,7 +884,7 @@ void IOAlignUnit::AllocBuffer() {
     if (raw_buffer) return;
 
     size_t raw_size = static_cast<size_t>(slot_count) * slot_size + alignment - 1;
-    raw_buffer = SMemAlloc(raw_size, ".\\IOAlignUnit.cpp", 0x126, 0x8);
+    raw_buffer = SMemAlloc(raw_size, __FILE__, __LINE__, 0x8);
     if (!raw_buffer) return;
 
     uintptr_t raw_addr = reinterpret_cast<uintptr_t>(raw_buffer);
@@ -1315,7 +1315,7 @@ void IOAlignUnit::Destroy(bool free_self) {
 bool IOAlignUnit::Close() {
     const bool flushed = FlushDirtySlots();
 
-    SMemFree(raw_buffer, ".\\IOAlignUnit.cpp", 0x116, 0);
+    SMemFree(raw_buffer, __FILE__, __LINE__, 0);
     raw_buffer = nullptr;
     aligned_base = nullptr;
     return flushed;
@@ -1373,7 +1373,7 @@ IOUnit* IOUnitContainer_CreateAlignUnit(
 
 IOAsyncFileUnit::~IOAsyncFileUnit() {
     if (raw_buffer) {
-        SMemFree(raw_buffer, ".\\IOUnitContainer.cpp", 0x40, 0);
+        SMemFree(raw_buffer, __FILE__, __LINE__, 0);
         raw_buffer = nullptr;
         aligned_buffer = nullptr;
     }
@@ -1381,7 +1381,7 @@ IOAsyncFileUnit::~IOAsyncFileUnit() {
 
 void IOAsyncFileUnit::Init(std::uint32_t handle_index, std::uint8_t owned_flag) {
     if (raw_buffer) {
-        SMemFree(raw_buffer, ".\\IOUnitContainer.cpp", 0x40, 0);
+        SMemFree(raw_buffer, __FILE__, __LINE__, 0);
         raw_buffer = nullptr;
         aligned_buffer = nullptr;
     }
@@ -1403,7 +1403,7 @@ void IOAsyncFileUnit::Init(std::uint32_t handle_index, std::uint8_t owned_flag) 
     sector_mask = ComputeSectorMask(QueryBytesPerSectorForRootPath(root_path));
 
     raw_buffer = SMemAlloc(static_cast<std::size_t>(sector_mask) + 0x100000u,
-                           ".\\IOUnitContainer.cpp", 0x40, 0);
+                           __FILE__, __LINE__, 0);
     if (raw_buffer) {
         const auto raw = reinterpret_cast<std::uintptr_t>(raw_buffer);
         const auto aligned =
@@ -1549,7 +1549,7 @@ void IOAsyncFileUnit::Destroy(bool free_self) {
 
 bool IOAsyncFileUnit::Close() {
     if (raw_buffer != nullptr) {
-        SMemFree(raw_buffer, ".\\IOUnitContainer.cpp", 0x40, 0);
+        SMemFree(raw_buffer, __FILE__, __LINE__, 0);
         raw_buffer = nullptr;
         aligned_buffer = nullptr;
     }

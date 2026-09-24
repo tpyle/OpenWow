@@ -102,7 +102,7 @@ protected:
 };
 
 static_assert(sizeof(CLCDGfxBase) <= 64,
-              "CLCDGfxBase must fit within expected IDA size "
+              "CLCDGfxBase must fit within the expected legacy size "
               "(vtable + 8 fields = 36 bytes in original, "
               "C++ class may be slightly larger due to vptr)");
 

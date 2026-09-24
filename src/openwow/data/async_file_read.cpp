@@ -915,7 +915,7 @@ AsyncFileReadObject* CAsyncObject_Allocate() {
         }
     } else {
         auto* const mem = openwow::core::SMemAlloc(
-            sizeof(AsyncFileReadObject), "AVC:AsyncObject", -2, 8);
+            sizeof(AsyncFileReadObject), "async_file.object", -2, 8);
         if (mem != nullptr) {
             obj = reinterpret_cast<AsyncFileReadObject*>(mem);
             obj->listNext = 0;
@@ -952,7 +952,7 @@ void CAsyncObject_FreeAll(uint32_t* listHead) {
     DestroyStormIntrusiveList<AsyncFileReadObject>(
         list,
         offsetof(AsyncFileReadObject, listNext),
-        "AVC:AsyncObject",
+        "async_file.object",
         [](AsyncFileReadObject*) {});
 }
 
@@ -961,7 +961,7 @@ void CAsyncThread_DestroyAll(uint32_t* listHead) {
     DestroyStormIntrusiveList<AsyncThreadNode>(
         list,
         0,
-        "AVC:AsyncThread",
+        "async_file.thread",
         [](AsyncThreadNode* node) { DestroyAsyncThreadHandle(node->threadHandle); });
 }
 
@@ -969,7 +969,7 @@ AsyncThreadNode* CAsyncThread_CreateAndStart(CAsyncQueue* queue,
                                              const char* threadName) {
     auto* node = static_cast<AsyncThreadNode*>(
         openwow::core::SMemAlloc(sizeof(AsyncThreadNode),
-                                 "AVC:AsyncThread",
+                                 "async_file.thread",
                                  kStormDestructorLine,
                                  8));
     if (node == nullptr) {
@@ -1478,7 +1478,7 @@ void CAsyncQueue_Destroy(CAsyncQueue* queue, const std::uint32_t queueToken) {
 }
 
 CAsyncQueue* CAsyncQueue_Create() {
-    auto* mem = openwow::core::SMemAlloc(36, "AVC:AsyncQueue", -2, 8);
+    auto* mem = openwow::core::SMemAlloc(36, "async_file.queue", -2, 8);
     if (!mem) {
         return nullptr;
     }
@@ -1591,7 +1591,7 @@ void AsyncFile_Shutdown() {
     while (const auto queueToken = GetIntrusiveListFront(*queueList)) {
         auto* queue = static_cast<CAsyncQueue*>(ResolveAsyncPointer(queueToken));
         CAsyncQueue_Destroy(queue, queueToken);
-        FreeStormMemory(queue, "AVC:AsyncQueue");
+        FreeStormMemory(queue, "async_file.queue");
     }
 
     g_asyncQueues[0] = 0;

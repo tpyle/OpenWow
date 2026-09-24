@@ -456,7 +456,7 @@ bool IsSimplifiedChineseClientLocale() {
 }
 
 std::string CanonicalizeRetailColorBits(std::string_view value, std::string_view fallback = "24") {
-  switch (openwow::core::ParseSignedDecimalLikeSub76F0D0(value)) {
+  switch (openwow::core::ParseSignedDecimal(value)) {
   case 16:
     return "16";
   case 24:
@@ -469,7 +469,7 @@ std::string CanonicalizeRetailColorBits(std::string_view value, std::string_view
 }
 
 std::string CanonicalizeRetailDepthBits(std::string_view value, std::string_view fallback = "24") {
-  switch (openwow::core::ParseSignedDecimalLikeSub76F0D0(value)) {
+  switch (openwow::core::ParseSignedDecimal(value)) {
   case 16:
     return "16";
   case 24:
@@ -482,15 +482,15 @@ std::string CanonicalizeRetailDepthBits(std::string_view value, std::string_view
 }
 
 int NormalizeRetailBooleanDisplayCVar(std::string_view value) {
-  return openwow::core::ParseSignedDecimalLikeSub76F0D0(value) != 0 ? 1 : 0;
+  return openwow::core::ParseSignedDecimal(value) != 0 ? 1 : 0;
 }
 
 int NormalizeRetailSignedDisplayCVar(std::string_view value) {
-  return static_cast<int>(openwow::core::ParseSignedDecimalLikeSub76F0D0(value));
+  return static_cast<int>(openwow::core::ParseSignedDecimal(value));
 }
 
 int NormalizeRetailMultisample(std::string_view value) {
-  int multisample = static_cast<int>(openwow::core::ParseSignedDecimalLikeSub76F0D0(value));
+  int multisample = static_cast<int>(openwow::core::ParseSignedDecimal(value));
   if (multisample <= 1) {
     return 1;
   }
@@ -501,7 +501,7 @@ int NormalizeRetailMultisample(std::string_view value) {
 }
 
 float NormalizeRetailMultisampleQuality(std::string_view value) {
-  const double parsed = openwow::core::ParseFloatLikeSub76FB80(value);
+  const double parsed = openwow::core::ParseDecimalFloat(value);
   if (parsed < 0.0) {
     return 0.0f;
   }
@@ -543,7 +543,7 @@ bool GxCVar_MaximizeValidationCallback(const std::string &, const std::string &,
 
 bool GxCVar_ColorBitsValidationCallback(const std::string &, const std::string &,
                                         const std::string &new_value) {
-  switch (openwow::core::ParseSignedDecimalLikeSub76F0D0(new_value)) {
+  switch (openwow::core::ParseSignedDecimal(new_value)) {
   case 16:
   case 24:
   case 30:
@@ -557,7 +557,7 @@ bool GxCVar_ColorBitsValidationCallback(const std::string &, const std::string &
 
 bool GxCVar_DepthBitsValidationCallback(const std::string &, const std::string &,
                                         const std::string &new_value) {
-  switch (openwow::core::ParseSignedDecimalLikeSub76F0D0(new_value)) {
+  switch (openwow::core::ParseSignedDecimal(new_value)) {
   case 16:
   case 24:
   case 32:
@@ -571,7 +571,7 @@ bool GxCVar_DepthBitsValidationCallback(const std::string &, const std::string &
 
 bool GxCVar_TripleBufferValidationCallback(const std::string &, const std::string &,
                                            const std::string &new_value) {
-  const std::uint32_t parsed = openwow::core::ParseSignedDecimalLikeSub76F0D0(new_value);
+  const std::uint32_t parsed = openwow::core::ParseSignedDecimal(new_value);
   if (parsed >= 2) {
     openwow::debug::DebugConsole::Get().Write("TripleBuffer must be 0 or 1");
     return false;
@@ -654,21 +654,21 @@ static std::uint32_t ClampFpsCap(std::uint32_t raw) {
 
 bool GxCVar_MaxFPSValidationCallback(const std::string &, const std::string &,
                                      const std::string &new_value) {
-  const auto raw = static_cast<std::uint32_t>(ParseSignedDecimalLikeSub76F0D0(new_value));
+  const auto raw = static_cast<std::uint32_t>(ParseSignedDecimal(new_value));
   SetMaxFps(ClampFpsCap(raw));
   return true;
 }
 
 bool GxCVar_MaxFPSBkValidationCallback(const std::string &, const std::string &,
                                        const std::string &new_value) {
-  const auto raw = static_cast<std::uint32_t>(ParseSignedDecimalLikeSub76F0D0(new_value));
+  const auto raw = static_cast<std::uint32_t>(ParseSignedDecimal(new_value));
   SetMaxFpsBk(ClampFpsCap(raw));
   return true;
 }
 
 bool ApplyWindowResizeLockValue(std::string_view value, SDL_Window *window_override) {
   auto &callback_state = GetWindowResizeLockCallbackState();
-  const bool resize_locked = ParseSignedDecimalLikeSub76F0D0(value) != 0;
+  const bool resize_locked = ParseSignedDecimal(value) != 0;
 
   SDL_Window *window = window_override;
   {
@@ -782,11 +782,11 @@ void EmitDisplayRestartFailure(const char *text) {
 }
 
 bool ParseStereoEnabledValue(std::string_view value) {
-  return openwow::core::ParseSignedDecimalLikeSub76F0D0(value) == 1u;
+  return openwow::core::ParseSignedDecimal(value) == 1u;
 }
 
 float ParseStereoFloatValue(std::string_view value) {
-  return static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(value));
+  return static_cast<float>(openwow::core::ParseDecimalFloat(value));
 }
 
 bool IsWindowedDisplayModeActive() {
@@ -1269,7 +1269,7 @@ bool GxCVar_StereoEnabledCallback(void * , const char * , const char *new_val,
 bool GxCVar_RefreshValidationCallback(void * , const char * ,
                                       const char *new_val, int ) {
   const int requested_refresh =
-      static_cast<int>(openwow::core::ParseUnsignedDecimalLikeSub76F140(new_val ? new_val : ""));
+      static_cast<int>(openwow::core::ParseUnsignedDecimal(new_val ? new_val : ""));
   if (!PrimaryDisplayModesContainRefreshRate(requested_refresh)) {
     openwow::debug::DebugConsole::Get().Write("Unsupported refresh rate");
     return false;

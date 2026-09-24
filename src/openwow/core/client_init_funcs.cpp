@@ -440,11 +440,11 @@ bool NextSignatureFileLine(const std::vector<std::uint8_t> &file_bytes,
 }
 
 void *ClientAlloc(const std::size_t size) {
-  return SMemAlloc(size, ".\\Client.cpp", 3055, 0);
+  return SMemAlloc(size, __FILE__, __LINE__, 0);
 }
 
 void ClientFree(void *ptr) {
-  (void)SMemFree(ptr, ".\\Client.cpp", 3059, 0);
+  (void)SMemFree(ptr, __FILE__, __LINE__, 0);
 }
 
 std::uint8_t GetExpansionLevel() {

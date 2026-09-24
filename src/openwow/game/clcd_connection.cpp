@@ -7,7 +7,7 @@
 namespace openwow::game {
 
 static constexpr const char* kEventNodeAllocTag =
-    ".?AUCB_EVENT_NODE@CLCDConnection@@";
+    "lcd.connection_event_node";
 
 void CLCDConnectionEventSentinel::Initialize() {
     auto* self = AsSentinelNode();

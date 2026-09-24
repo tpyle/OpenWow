@@ -70,7 +70,7 @@ std::optional<float> FloatAttr(const XmlNode& node, const std::string& name) {
   if (raw.empty()) {
     return std::nullopt;
   }
-  return static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(raw));
+  return static_cast<float>(openwow::core::ParseDecimalFloat(raw));
 }
 
 std::optional<int> IntAttr(const XmlNode& node, const std::string& name) {

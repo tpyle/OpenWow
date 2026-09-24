@@ -343,7 +343,7 @@ float* Passenger_TransformLocalToWorldPosition(
   float transform[16];
   if (Movement_GetObjectTransform(objects, parent_guid, transform) == 0) {
     diagnostics::Log(diagnostics::LogLevel::kDebug,
-              FormatMovementGuidLog("Passenger.cpp", parent_guid, 0x42));
+              FormatMovementGuidLog(__FILE__, parent_guid, __LINE__));
   }
   return Passenger_TransformLocalPointToWorld(
       out_world_pos, local_pos, transform);
@@ -365,7 +365,7 @@ float* Passenger_TransformWorldToLocalPosition(
   float transform[16];
   if (Movement_GetObjectTransform(objects, parent_guid, transform) == 0) {
     diagnostics::Log(diagnostics::LogLevel::kDebug,
-              FormatMovementGuidLog("Passenger.cpp", parent_guid, 0x4B));
+              FormatMovementGuidLog(__FILE__, parent_guid, __LINE__));
   }
   return Passenger_TransformWorldPointToLocal(
       out_local_pos, world_pos, transform);

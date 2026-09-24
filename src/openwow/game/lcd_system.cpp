@@ -516,7 +516,7 @@ bool LCD_ParseTextElement(int , const ui::xml::CXMLNode* ,
 
 bool LCD_ParseBitmapElement(int , const ui::xml::CXMLNode* xmlNode,
                             void* ) {
-    using openwow::core::ParseSignedDecimalLikeSub76F0D0;
+    using openwow::core::ParseSignedDecimal;
 
     uint32_t posX = 0;
     uint32_t posY = 0;
@@ -563,21 +563,21 @@ bool LCD_ParseBitmapElement(int , const ui::xml::CXMLNode* xmlNode,
     const char* mipStr =
         ui::xml::XMLNode_GetAttributeValue(xmlNode, "miplevel");
     if (mipStr && *mipStr) {
-        miplevel = ParseSignedDecimalLikeSub76F0D0(mipStr);
+        miplevel = ParseSignedDecimal(mipStr);
     }
 
     uint32_t alpha = 1;
     const char* alphaStr =
         ui::xml::XMLNode_GetAttributeValue(xmlNode, "alpha");
     if (alphaStr && *alphaStr) {
-        alpha = ParseSignedDecimalLikeSub76F0D0(alphaStr);
+        alpha = ParseSignedDecimal(alphaStr);
     }
 
     uint32_t iconIndex = static_cast<uint32_t>(-1);
     const char* iconStr =
         ui::xml::XMLNode_GetAttributeValue(xmlNode, "icon");
     if (iconStr && *iconStr) {
-        iconIndex = ParseSignedDecimalLikeSub76F0D0(iconStr);
+        iconIndex = ParseSignedDecimal(iconStr);
         if (iconIndex != static_cast<uint32_t>(-1)) {
             bitmapType = 4;
         }
@@ -592,11 +592,11 @@ bool LCD_ParseBitmapElement(int , const ui::xml::CXMLNode* xmlNode,
                           std::numeric_limits<size_t>::max()) == 0) {
             const char* xVal =
                 ui::xml::XMLNode_GetAttributeValue(child, "x");
-            posX = (xVal && *xVal) ? ParseSignedDecimalLikeSub76F0D0(xVal) : 0;
+            posX = (xVal && *xVal) ? ParseSignedDecimal(xVal) : 0;
 
             const char* yVal =
                 ui::xml::XMLNode_GetAttributeValue(child, "y");
-            posY = (yVal && *yVal) ? ParseSignedDecimalLikeSub76F0D0(yVal) : 0;
+            posY = (yVal && *yVal) ? ParseSignedDecimal(yVal) : 0;
 
         } else if (SStrCmpNoCase(childTag, "RelOrigin",
                                  std::numeric_limits<size_t>::max()) == 0) {
@@ -614,14 +614,14 @@ bool LCD_ParseBitmapElement(int , const ui::xml::CXMLNode* xmlNode,
                 ui::xml::XMLNode_GetAttributeValue(child, "x");
             uint32_t xOff = 0;
             if (xVal && *xVal) {
-                xOff = ParseSignedDecimalLikeSub76F0D0(xVal);
+                xOff = ParseSignedDecimal(xVal);
             }
 
             const char* yVal =
                 ui::xml::XMLNode_GetAttributeValue(child, "y");
             uint32_t yOff = 0;
             if (yVal && *yVal) {
-                yOff = ParseSignedDecimalLikeSub76F0D0(yVal);
+                yOff = ParseSignedDecimal(yVal);
             }
 
             posX = static_cast<uint32_t>(relEntry.posX) + xOff;
@@ -631,11 +631,11 @@ bool LCD_ParseBitmapElement(int , const ui::xml::CXMLNode* xmlNode,
                                  std::numeric_limits<size_t>::max()) == 0) {
             const char* xVal =
                 ui::xml::XMLNode_GetAttributeValue(child, "x");
-            sizeW = (xVal && *xVal) ? ParseSignedDecimalLikeSub76F0D0(xVal) : 0;
+            sizeW = (xVal && *xVal) ? ParseSignedDecimal(xVal) : 0;
 
             const char* yVal =
                 ui::xml::XMLNode_GetAttributeValue(child, "y");
-            sizeH = (yVal && *yVal) ? ParseSignedDecimalLikeSub76F0D0(yVal) : 0;
+            sizeH = (yVal && *yVal) ? ParseSignedDecimal(yVal) : 0;
 
         } else if (SStrCmpNoCase(childTag, "TexCoord",
                                  std::numeric_limits<size_t>::max()) == 0) {
@@ -643,27 +643,27 @@ bool LCD_ParseBitmapElement(int , const ui::xml::CXMLNode* xmlNode,
             const char* xVal =
                 ui::xml::XMLNode_GetAttributeValue(child, "x");
             if (xVal && *xVal) {
-                texCoordX = ParseSignedDecimalLikeSub76F0D0(xVal);
+                texCoordX = ParseSignedDecimal(xVal);
             }
 
             const char* yVal =
                 ui::xml::XMLNode_GetAttributeValue(child, "y");
             if (yVal && *yVal) {
-                texCoordY = ParseSignedDecimalLikeSub76F0D0(yVal);
+                texCoordY = ParseSignedDecimal(yVal);
             }
 
             const char* wVal =
                 ui::xml::XMLNode_GetAttributeValue(child, "width");
             if (wVal && *wVal) {
                 texCoordRight = static_cast<int>(
-                    texCoordX + ParseSignedDecimalLikeSub76F0D0(wVal));
+                    texCoordX + ParseSignedDecimal(wVal));
             }
 
             const char* hVal =
                 ui::xml::XMLNode_GetAttributeValue(child, "height");
             if (hVal && *hVal) {
                 texCoordBottom = static_cast<int>(
-                    texCoordY + ParseSignedDecimalLikeSub76F0D0(hVal));
+                    texCoordY + ParseSignedDecimal(hVal));
             }
         }
     }
@@ -744,14 +744,14 @@ bool LCD_ParseMapElement(int ,
                 ui::xml::XMLNode_GetAttributeValue(child, "x");
             entry.sizeX = (xVal && *xVal)
                               ? static_cast<int32_t>(
-                                    core::ParseSignedDecimalLikeSub76F0D0(xVal))
+                                    core::ParseSignedDecimal(xVal))
                               : 0;
 
             const char *yVal =
                 ui::xml::XMLNode_GetAttributeValue(child, "y");
             entry.sizeY = (yVal && *yVal)
                               ? static_cast<int32_t>(
-                                    core::ParseSignedDecimalLikeSub76F0D0(yVal))
+                                    core::ParseSignedDecimal(yVal))
                               : 0;
         } else if (SStrCmpNoCase(child->tag.c_str(), "Offset",
                                  std::numeric_limits<size_t>::max()) == 0) {
@@ -760,7 +760,7 @@ bool LCD_ParseMapElement(int ,
             entry.offsetX =
                 (xVal && *xVal)
                     ? static_cast<int32_t>(
-                          core::ParseSignedDecimalLikeSub76F0D0(xVal))
+                          core::ParseSignedDecimal(xVal))
                     : 0;
 
             const char *yVal =
@@ -768,7 +768,7 @@ bool LCD_ParseMapElement(int ,
             entry.offsetY =
                 (yVal && *yVal)
                     ? static_cast<int32_t>(
-                          core::ParseSignedDecimalLikeSub76F0D0(yVal))
+                          core::ParseSignedDecimal(yVal))
                     : 0;
         }
     }
@@ -890,7 +890,7 @@ void CEzLcd_SetPageBGColor(void* , uint32_t ) {
 }
 
 bool LCD_ParseScreen(const ui::xml::CXMLNode* xmlNode, void* errorCtx) {
-    using openwow::core::ParseSignedDecimalLikeSub76F0D0;
+    using openwow::core::ParseSignedDecimal;
 
     const char* nameAttr =
         ui::xml::XMLNode_GetAttributeValue(xmlNode, "name");
@@ -938,11 +938,11 @@ bool LCD_ParseScreen(const ui::xml::CXMLNode* xmlNode, void* errorCtx) {
         }
 
         uint32_t b = static_cast<uint8_t>(
-            ParseSignedDecimalLikeSub76F0D0(tokenB));
+            ParseSignedDecimal(tokenB));
         uint32_t g = static_cast<uint8_t>(
-            ParseSignedDecimalLikeSub76F0D0(tokenG));
+            ParseSignedDecimal(tokenG));
         uint32_t r = static_cast<uint8_t>(
-            ParseSignedDecimalLikeSub76F0D0(tokenR));
+            ParseSignedDecimal(tokenR));
         uint32_t color = (b << 16) | (g << 8) | r;
 
         CEzLcd_SetPageBGColor(g_lcdContext, color);
@@ -962,7 +962,7 @@ bool LCD_ParseScreen(const ui::xml::CXMLNode* xmlNode, void* errorCtx) {
             }
 
             int subscreenId = static_cast<int>(
-                ParseSignedDecimalLikeSub76F0D0(idAttr));
+                ParseSignedDecimal(idAttr));
 
             for (const ui::xml::CXMLNode* subChild = child->first_child;
                  subChild != nullptr;

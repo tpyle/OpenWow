@@ -13,9 +13,6 @@ namespace openwow::platform {
 
 namespace {
 
-constexpr const char* kOsClipboardSourceFile = ".\\W32\\OsClipboard.cpp";
-constexpr int kOsClipboardReadAllocLine = 0x80;
-constexpr int kOsClipboardFreeLine = 145;
 
 std::optional<std::string>& ClipboardTextOverride() {
     static std::optional<std::string> text;
@@ -102,8 +99,8 @@ char* OsClipboard_GetText(void* hwnd) {
 
     auto* const storm_buffer = static_cast<char*>(
         openwow::core::SMemAlloc(normalized.size() + 1,
-                                 kOsClipboardSourceFile,
-                                 kOsClipboardReadAllocLine,
+                                 __FILE__,
+                                 __LINE__,
                                  0));
     if (storm_buffer == nullptr) {
         return nullptr;
@@ -119,7 +116,7 @@ void OsClipboard_FreeText(void* text) {
         return;
     }
 
-    (void)openwow::core::SMemFree(text, kOsClipboardSourceFile, kOsClipboardFreeLine, 0);
+    (void)openwow::core::SMemFree(text, __FILE__, __LINE__, 0);
 }
 
 int OsClipboard_SetText(const char* text, void* hwnd) {

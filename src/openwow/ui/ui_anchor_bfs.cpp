@@ -14,7 +14,7 @@
 namespace openwow::ui {
 namespace {
 
-constexpr char kCRectStormTypeTag[] = ".?AVCRect@NTempest@@";
+constexpr char kCRectStormTypeTag[] = "ui.anchor_rect_grid";
 constexpr int kAnchorGridCount = 2;
 
 constexpr float kViewportMinLeft = 0.0f;

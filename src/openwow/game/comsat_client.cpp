@@ -144,7 +144,7 @@ struct ComSatSoundRuntime {
 };
 
 bool ParseVoiceToggleValue(const std::string_view value) {
-  return openwow::core::ParseSignedDecimalLikeSub76F0D0(value) != 0u;
+  return openwow::core::ParseSignedDecimal(value) != 0u;
 }
 
 bool ReadVoiceChatBoolCVar(const char *name, const bool fallback = false) {
@@ -178,7 +178,7 @@ void SyncVoiceChatSettingsFromCVars() {
 }
 
 int ParseVoiceDriverIndexValue(const std::string_view value) {
-  return static_cast<int>(openwow::core::ParseSignedDecimalLikeSub76F0D0(value));
+  return static_cast<int>(openwow::core::ParseSignedDecimal(value));
 }
 
 bool IsVoiceChatSoundRuntimeActive(openwow::audio::SoundEngine& engine) {
@@ -806,7 +806,7 @@ static constexpr const char* kVoiceChatSessionLuaGlobals[] = {
 
 static_assert(
     sizeof(kVoiceChatSessionLuaGlobals) / sizeof(kVoiceChatSessionLuaGlobals[0]) == 15,
-    "IDA off_AF29C0 has exactly 15 (name, handler) pairs (30 entries, stride 2)");
+    "The voice chat session Lua global table has exactly 15 (name, handler) pairs");
 
 void VoiceChat_BindRegisteredCVars(openwow::audio::SoundRuntime& sound_runtime) {
   auto &cvars = openwow::ui::game::CVarSystem::Instance();
@@ -1450,7 +1450,7 @@ bool CVar_VoiceActivationSensitivity_OnChanged(const char *new_value) {
   }
 
   float sensitivity = static_cast<float>(
-      openwow::core::ParseFloatLikeSub76FB80(new_value));
+      openwow::core::ParseDecimalFloat(new_value));
 
   if (sensitivity < kMinSensitivity) {
     sensitivity = kMinSensitivity;

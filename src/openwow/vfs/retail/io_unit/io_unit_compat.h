@@ -68,30 +68,33 @@ void *IOUnitContainerLock_AllocDefault(IOUnitContainerCompatAllocState *alloc_st
 void IOUnitContainer_ForwardingWrapper_Ctor(void *self);
 bool IOUnitContainerLock_WrapInner(void *lock_wrapper, void *replacement);
 
-int IOUnitContainer_CreateReadOnlyFile_vf1(void *self, int a2, int a3, int a4, int a5,
-                                           int a6);
-int IOUnitContainer_CreateWritableFile_vf2(void *self, int a2, int a3, int a4, int a5);
+int IOUnitContainer_CreateReadOnlyFile_vf1(void *self, int buffer, int offset_low,
+                                           int offset_high, int size, int allow_truncate);
+int IOUnitContainer_CreateWritableFile_vf2(void *self, int buffer, int offset_low,
+                                           int offset_high, int size);
 int IOUnitContainer_GetFileSize_vf4(void *self);
-int IOUnitContainer_ForwardInnerVf5(void *self, int a2, int a3);
+int IOUnitContainer_ForwardInnerVf5(void *self, int size_low, int size_high);
 std::uint8_t IOUnitContainer_ReadOnlySectorReader_vf4(void *self,
                                                       std::uint32_t *out_offset_parts);
 int IOUnitContainer_CreateFileUnit_Flush_vf3(void *self);
 int IOUnitContainer_CreateFileUnit_vf8(void *self);
 int IOUnitContainer_CreateFileUnit_SetSize_vf5(void *self, std::uint32_t size_low,
                                                std::uint32_t size_high);
-std::uint8_t IOUnitContainerLock_vf1(void *self, int a2, int a3, int a4, int a5, int a6);
-std::uint8_t IOUnitContainerLock_vf2(void *self, int a2, int a3, int a4, int a5);
+std::uint8_t IOUnitContainerLock_vf1(void *self, int buffer, int offset_low, int offset_high,
+                                     int size, int allow_truncate);
+std::uint8_t IOUnitContainerLock_vf2(void *self, int buffer, int offset_low, int offset_high,
+                                     int size);
 std::uint8_t IOUnitContainerLock_vf3(void *self);
 std::uint8_t IOUnitContainerLock_vf4(void *self, std::uint32_t *out_offset_parts);
-std::uint8_t IOUnitContainerLock_vf5(void *self, int a2, int a3);
+std::uint8_t IOUnitContainerLock_vf5(void *self, int size_low, int size_high);
 int IOUnitContainerLock_vf6(void *self);
 void *IOUnitContainerLock_Destroy(void *self, char free_self);
 
-std::uint8_t IOUnitContainer_CreateFileUnit_vf19(void *self, int a2,
+std::uint8_t IOUnitContainer_CreateFileUnit_vf19(void *self, int buffer,
                                                  int relative_offset_low,
                                                  int relative_offset_high, int size,
                                                  int allow_truncate);
-std::uint8_t IOUnitContainer_CreateFileUnit_vf20(void *self, int a2,
+std::uint8_t IOUnitContainer_CreateFileUnit_vf20(void *self, int buffer,
                                                  std::uint64_t relative_offset,
                                                  std::uint32_t size);
 int IOUnitContainer_CreateFileUnit_vf21(void *self);
@@ -99,9 +102,9 @@ std::uint8_t IOUnitContainer_CreateFileUnit_vf22(void *self,
                                                  std::uint32_t *out_offset_parts);
 bool IOUnitContainer_CreateFileUnit_vf23(void *self, std::uint64_t size);
 int IOUnitContainer_CreateFileUnit_vf24(void *self);
-bool IOUnitContainer_CreateFileUnit_vf1_Stub(int a1, int a2, int a3, int a4, int a5);
-bool IOUnitContainer_ReadOnly_vf2_Stub(int a1, int a2, int a3, int a4);
-std::uint8_t IOUnitContainer_ReadOnly_vf5_Stub(void *self, int a2, int a3);
+bool IOUnitContainer_CreateFileUnit_vf1_Stub(int arg1, int arg2, int arg3, int arg4, int arg5);
+bool IOUnitContainer_ReadOnly_vf2_Stub(int arg1, int arg2, int arg3, int arg4);
+std::uint8_t IOUnitContainer_ReadOnly_vf5_Stub(void *self, int size_low, int size_high);
 
 void *IOUnitSourcePathBase_Destroy(void *self, char free_self);
 void *IOUnitContainer_ArchiveFile_Destroy(void *self, char free_self);
@@ -133,7 +136,7 @@ void *AllocateIOUnitContainerCompatStorage(IOUnitContainerCompatAllocState *allo
                                            std::size_t native_size,
                                            std::uint8_t *out_owned);
 int ComparePackedSignedQwords(std::uint64_t lhs, std::uint64_t rhs);
-int ForwardIOUnitVf5(void *inner, int a2, int a3);
+int ForwardIOUnitVf5(void *inner, int size_low, int size_high);
 
 }
 }

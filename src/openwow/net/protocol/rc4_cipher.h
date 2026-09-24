@@ -58,7 +58,7 @@ struct RC4State {
 };
 
 static_assert(sizeof(RC4State) == 258,
-              "RC4State must match the IDA 258-byte layout");
+              "RC4State must keep its 258-byte layout");
 
 inline void RC4_Init(const std::uint8_t* key, const std::uint32_t key_len,
                      RC4State& state) {

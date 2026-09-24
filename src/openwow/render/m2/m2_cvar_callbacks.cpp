@@ -44,7 +44,7 @@ namespace {
         if (!cvars.Exists(std::string(name))) {
             return 0;
         }
-        return openwow::core::ParseSignedDecimalLikeSub76F0D0(
+        return openwow::core::ParseSignedDecimal(
             cvars.GetCVar(std::string(name)));
     }
 
@@ -56,7 +56,7 @@ namespace {
 
     bool IsCurrentM2CVarNonZero(openwow::ui::game::CVarSystem& cvars,
                                 std::string_view name) {
-        return openwow::core::ParseSignedDecimalLikeSub76F0D0(
+        return openwow::core::ParseSignedDecimal(
                    cvars.GetCVar(std::string(name))) != 0;
     }
 
@@ -179,7 +179,7 @@ bool CVar_M2BatchParticles_Callback(
     const std::string& ,
     const std::string& newValue) {
     const std::uint32_t enabled =
-        openwow::core::ParseSignedDecimalLikeSub76F0D0(newValue);
+        openwow::core::ParseSignedDecimal(newValue);
     ToggleM2GlobalFlagWithConsoleLine(
         GetM2GlobalFlags(),
         kM2Flag_BatchParticles,
@@ -195,7 +195,7 @@ bool CVar_M2BatchDoodads_Callback(
     const std::string& ,
     const std::string& newValue) {
     const std::uint32_t enabled =
-        openwow::core::ParseSignedDecimalLikeSub76F0D0(newValue);
+        openwow::core::ParseSignedDecimal(newValue);
     ToggleM2GlobalFlagWithConsoleLine(
         GetM2GlobalFlags(),
         kM2Flag_BatchDoodads,
@@ -211,7 +211,7 @@ bool CVar_M2ForceAdditiveSort_Callback(
     const std::string& ,
     const std::string& newValue) {
     const std::uint32_t enabled =
-        openwow::core::ParseSignedDecimalLikeSub76F0D0(newValue);
+        openwow::core::ParseSignedDecimal(newValue);
     ToggleM2GlobalFlagWithConsoleLine(
         GetM2GlobalFlags(),
         kM2Flag_ForceAdditiveSort,
@@ -227,7 +227,7 @@ bool CVar_M2Faster_Callback(
     const std::string& ,
     const std::string& newValue) {
     const std::uint32_t requested_faster =
-        openwow::core::ParseSignedDecimalLikeSub76F0D0(newValue);
+        openwow::core::ParseSignedDecimal(newValue);
     const std::uint32_t current_debug =
         ParseCurrentUnsignedCVar("M2FasterDebug");
     OrM2OptimizationModeBits(ComputeM2OptimizationModeBits(
@@ -244,7 +244,7 @@ bool CVar_M2FasterDebug_Callback(
     const std::uint32_t current_faster =
         ParseCurrentUnsignedCVar("M2Faster");
     const std::uint32_t requested_debug =
-        openwow::core::ParseSignedDecimalLikeSub76F0D0(newValue);
+        openwow::core::ParseSignedDecimal(newValue);
     OrM2OptimizationModeBits(ComputeM2OptimizationModeBits(
         current_faster,
         requested_debug,

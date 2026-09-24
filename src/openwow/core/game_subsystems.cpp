@@ -198,10 +198,10 @@ std::vector<SubsystemInfo> GetInitSubsystemOrder() {
         {SubsystemId::M2SystemInit,             "M2System_Init"},
         {SubsystemId::TextureFilterClamp,      "ClampStartup(Tier+Anisotropy)"},
 
-        {SubsystemId::ScheduleSubEvent,        "ScheduleEvent(5,sub_4020E0)"},
+        {SubsystemId::ScheduleSubEvent,        "ScheduleEvent(5)"},
         {SubsystemId::ClientErrorDisplayStateInit,
          "ClientErrorDisplay_InitRuntimeState"},
-        {SubsystemId::RenderBootstrap,         "sub_40B710(font/string_batch_init)"},
+        {SubsystemId::RenderBootstrap,         "FontStringBatch_Init"},
         {SubsystemId::ClientRegisterCVars,     "Client_RegisterCVars"},
         {SubsystemId::DBClientInit,            "DBClient_Initialize"},
         {SubsystemId::UIShaderInit,            "InitGameSubsystems_InitializeUiShaders"},
@@ -226,7 +226,7 @@ std::vector<SubsystemInfo> GetInitSubsystemOrder() {
         {SubsystemId::DataPreloadThread,       "StartDataPreloadThreadIfNeeded", false, true},
         {SubsystemId::StartupScreenSelect,     "StartupScreen(movie/login)"},
         {SubsystemId::SpellVisuals,            "InitSpellVisuals"},
-        {SubsystemId::ScheduleFinalEvent,      "ScheduleEvent(7,sub_401FD0)"},
+        {SubsystemId::ScheduleFinalEvent,      "ScheduleEvent(7)"},
     };
 }
 
@@ -234,31 +234,31 @@ std::vector<SubsystemInfo> GetShutdownSubsystemOrder() {
 
     return {
         {SubsystemId::DisplayCallbackRegister, "Unregister:DisplaySettingsCallback"},
-        {SubsystemId::GlueUIInit,              "WorldToGlueTeardown(sub_406510)"},
+        {SubsystemId::GlueUIInit,              "WorldToGlueTeardown"},
 
-        {SubsystemId::ChatLogShutdown,           "ChatLog_Shutdown(0x5FD430)"},
-        {SubsystemId::LoginShutdown,             "Login_Shutdown(0x4DBBC0)"},
-        {SubsystemId::QueryOpcodesUnregister,    "QueryOpcodes_Unregister(0x6355E0)"},
-        {SubsystemId::DBCacheDestroyAll,         "DBCache_DestroyAll(0x635540)"},
-        {SubsystemId::CharacterComponentShutdown,"CCharacterComponent_Shutdown(0x4F2320)"},
+        {SubsystemId::ChatLogShutdown,           "ChatLog_Shutdown"},
+        {SubsystemId::LoginShutdown,             "Login_Shutdown"},
+        {SubsystemId::QueryOpcodesUnregister,    "QueryOpcodes_Unregister"},
+        {SubsystemId::DBCacheDestroyAll,         "DBCache_DestroyAll"},
+        {SubsystemId::CharacterComponentShutdown,"CCharacterComponent_Shutdown"},
         {SubsystemId::VoiceChatInit,             "VoiceChat_Shutdown", false, true},
-        {SubsystemId::GxRenderTargetCleanup,     "GxRenderTarget_Cleanup(0x409620)"},
-        {SubsystemId::CMapObjCleanup,            "RenderBootstrap_FpsCleanup(0x40B320)"},
-        {SubsystemId::CombatDataShutdown,        "CombatData_Shutdown(0x634C60)"},
+        {SubsystemId::GxRenderTargetCleanup,     "GxRenderTarget_Cleanup"},
+        {SubsystemId::CMapObjCleanup,            "RenderBootstrap_FpsCleanup"},
+        {SubsystemId::CombatDataShutdown,        "CombatData_Shutdown"},
 
         {SubsystemId::OpcodeRegister253,         "UnregisterOpcodeHandler(253)"},
         {SubsystemId::ClientServicesInit,        "ClientServices__FullLogout"},
-        {SubsystemId::WorldInit,                 "CWorld__Shutdown(0x7E2C80)"},
-        {SubsystemId::SoundInit,                 "SoundInterface_Shutdown(0x7837F0)"},
-        {SubsystemId::ConsoleAndFontShutdown,    "ConsoleAndFont_Shutdown(0x7662A0)"},
-        {SubsystemId::FontInit,                  "FontSubsystem_Shutdown(0x4A8D10)"},
-        {SubsystemId::M2SystemShutdown,           "M2System_Shutdown(0x81C750)"},
-        {SubsystemId::ModelBlobShutdown,         "ModelBlob_Shutdown(0x4BB1C0)"},
+        {SubsystemId::WorldInit,                 "CWorld__Shutdown"},
+        {SubsystemId::SoundInit,                 "SoundInterface_Shutdown"},
+        {SubsystemId::ConsoleAndFontShutdown,    "ConsoleAndFont_Shutdown"},
+        {SubsystemId::FontInit,                  "FontSubsystem_Shutdown"},
+        {SubsystemId::M2SystemShutdown,           "M2System_Shutdown"},
+        {SubsystemId::ModelBlobShutdown,         "ModelBlob_Shutdown"},
         {SubsystemId::TextureFunctions,          "Texture_func10"},
-        {SubsystemId::AsyncFileShutdown,         "AsyncFile_Shutdown(0x4BAC50)"},
-        {SubsystemId::LightListShutdown,         "LightList_Shutdown(0x6BC360)"},
-        {SubsystemId::HeapUsageUnregisterCmd,    "HeapUsage_UnregisterConsoleCmd(0x4D27D0)"},
-        {SubsystemId::ObjectHeapShutdown,        "CObjectHeap_Shutdown(0x4D3580)"},
+        {SubsystemId::AsyncFileShutdown,         "AsyncFile_Shutdown"},
+        {SubsystemId::LightListShutdown,         "LightList_Shutdown"},
+        {SubsystemId::HeapUsageUnregisterCmd,    "HeapUsage_UnregisterConsoleCmd"},
+        {SubsystemId::ObjectHeapShutdown,        "CObjectHeap_Shutdown"},
     };
 }
 

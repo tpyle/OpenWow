@@ -93,11 +93,11 @@ int RegisterTooltipScriptHandler(void* tooltip, const char* event_name,
     return 0;
 }
 
-void LoadTooltipXMLAttributes(void* tooltip, void* xml_node, void* a3,
-                              void* a4, int a5) {
+void LoadTooltipXMLAttributes(void* tooltip, void* xml_node, void* arg3,
+                              void* arg4, int arg5) {
     if (!tooltip || !xml_node) return;
 
-    (void)a3; (void)a4; (void)a5;
+    (void)arg3; (void)arg4; (void)arg5;
 }
 
 static const uint32_t s_quality_colors[8] = {
@@ -349,9 +349,9 @@ void SetItemSetThresholdTableForSort(const uint32_t* thresholds) {
     g_itemSetThresholdTable = thresholds;
 }
 
-int CompareItemSetSpellThreshold(const void* a1, const void* a2) {
-    auto idx_a = static_cast<uint8_t>(*static_cast<const uint8_t*>(a1));
-    auto idx_b = static_cast<uint8_t>(*static_cast<const uint8_t*>(a2));
+int CompareItemSetSpellThreshold(const void* lhs, const void* rhs) {
+    auto idx_a = static_cast<uint8_t>(*static_cast<const uint8_t*>(lhs));
+    auto idx_b = static_cast<uint8_t>(*static_cast<const uint8_t*>(rhs));
 
     uint32_t thresh_a = g_itemSetThresholdTable[idx_a];
     uint32_t thresh_b = g_itemSetThresholdTable[idx_b];

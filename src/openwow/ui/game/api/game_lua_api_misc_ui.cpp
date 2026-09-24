@@ -1781,9 +1781,9 @@ int LuaRandomRoll(lua_State *L) {
   }
 
   const auto min_val = static_cast<std::int32_t>(
-      openwow::core::ParseSignedDecimalLikeSub76F0D0(lua_tostring(L, 1)));
+      openwow::core::ParseSignedDecimal(lua_tostring(L, 1)));
   const auto max_val = static_cast<std::int32_t>(
-      openwow::core::ParseSignedDecimalLikeSub76F0D0(lua_tostring(L, 2)));
+      openwow::core::ParseSignedDecimal(lua_tostring(L, 2)));
   if ((min_val == 0 && max_val == 0) || min_val < 0 || max_val < min_val ||
       max_val > 1000000) {
     return 0;

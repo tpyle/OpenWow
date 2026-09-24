@@ -257,7 +257,7 @@ void CloseNpcInteractionTarget(game::WorldSession& session,
                  .quest_frame_interaction_state()
                  .interaction_guid.GetRawValue() == unit_guid) {
 
-    game::CloseQuestDialogLikeIda58CA70(
+    game::CloseQuestDialog(
         session, game::GetActiveQuestDialogCloseState(session.quests()),
         false, true);
   } else if (gossip.merchant().active() &&

@@ -14,12 +14,12 @@
 
 namespace openwow::game {
 
-int CGUnit_C::OnGroupMemberUpdate(std::uint64_t guid, int opcode, int a3,
+int CGUnit_C::OnGroupMemberUpdate(std::uint64_t guid, int opcode, int arg3,
                                   const std::uint8_t *packet) {
 
   (void)guid;
   (void)opcode;
-  (void)a3;
+  (void)arg3;
   (void)packet;
   return 1;
 }

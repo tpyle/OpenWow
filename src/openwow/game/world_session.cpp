@@ -3366,7 +3366,7 @@ void WorldSession::Update(float dt_seconds, std::uint32_t client_time_ms) {
 void WorldSession::PrepareForWorldLeave() {
 
   CloseActiveLootWindow(*this);
-  CloseQuestDialogLikeIda58CA70(*this, GetActiveQuestDialogCloseState(quests_), false, true);
+  CloseQuestDialog(*this, GetActiveQuestDialogCloseState(quests_), false, true);
 
   ResetSocketUiForWorldLeave(*this, true);
   SuspendIncomingChatDelivery();

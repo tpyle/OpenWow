@@ -220,7 +220,7 @@ bool CSimpleTexture::LoadXMLWithInheritance(
     if (const auto *left_value = FindNodeAttributeValue(child, "left");
         left_value != nullptr && *left_value != '\0') {
       const float left =
-          static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(left_value));
+          static_cast<float>(openwow::core::ParseDecimalFloat(left_value));
       if (GetHorizTile()) {
         if (error_handler != nullptr) {
           error_handler->ReportError(
@@ -243,7 +243,7 @@ bool CSimpleTexture::LoadXMLWithInheritance(
     if (const char *right_value = FindNodeAttributeValue(child, "right");
         right_value != nullptr && *right_value != '\0') {
       const float right =
-          static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(right_value));
+          static_cast<float>(openwow::core::ParseDecimalFloat(right_value));
       if (GetHorizTile()) {
         if (error_handler != nullptr) {
           error_handler->ReportError(
@@ -266,7 +266,7 @@ bool CSimpleTexture::LoadXMLWithInheritance(
     if (const char *top_value = FindNodeAttributeValue(child, "top");
         top_value != nullptr && *top_value != '\0') {
       const float top =
-          static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(top_value));
+          static_cast<float>(openwow::core::ParseDecimalFloat(top_value));
       if (GetVertTile()) {
         if (error_handler != nullptr) {
           error_handler->ReportError(
@@ -289,7 +289,7 @@ bool CSimpleTexture::LoadXMLWithInheritance(
     if (const char *bottom_value = FindNodeAttributeValue(child, "bottom");
         bottom_value != nullptr && *bottom_value != '\0') {
       const float bottom =
-          static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(bottom_value));
+          static_cast<float>(openwow::core::ParseDecimalFloat(bottom_value));
       if (GetVertTile()) {
         if (error_handler != nullptr) {
           error_handler->ReportError(
@@ -346,7 +346,7 @@ bool CSimpleTexture::LoadXMLWithInheritance(
     GetVertexColor(r, g, b, a);
     SetVertexColor(
         r, g, b,
-        std::clamp(static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(alpha)),
+        std::clamp(static_cast<float>(openwow::core::ParseDecimalFloat(alpha)),
                    0.0f,
                    1.0f));
   }

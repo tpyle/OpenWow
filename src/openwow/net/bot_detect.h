@@ -7,14 +7,6 @@
 
 namespace openwow::net {
 
-static constexpr uint32_t kAddr_BotDetectEnabled = 0xB2F9E0;
-
-static constexpr uint32_t kAddr_ConnectionState = 0xB2F9A0;
-
-static constexpr uint32_t kAddr_LastTickTimestamp = 0xB2F9E4;
-
-static constexpr uint32_t kAddr_CountdownTicks = 0xB2F9E8;
-
 static constexpr uint32_t kOpcode_CMSG_BOT_DETECTED = 960;
 static constexpr uint32_t kSessionKeySize            = 0x28;
 static constexpr uint32_t kSHA1DigestSize             = 0x14;

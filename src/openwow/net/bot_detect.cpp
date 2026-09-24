@@ -6,13 +6,13 @@
 
 namespace openwow::net {
 
-static uint8_t  byte_B2F9E0  = 0;
+static uint8_t  s_bot_detect_enabled = 0;
 
-static uint32_t dword_B2F9A0 = 0;
+static uint32_t s_bot_detect_connection_state = 0;
 
-static uint32_t dword_B2F9E4 = 0;
+static uint32_t s_bot_detect_last_tick_ms = 0;
 
-static uint32_t dword_B2F9E8 = 0;
+static uint32_t s_bot_detect_countdown_ticks = 0;
 
 CDataStoreTempPacket* CDataStore__Ctor_TempPacket_960(CDataStoreTempPacket* pkt) {
     pkt->store.data = nullptr;
@@ -54,13 +54,13 @@ void CDataStore__DeleteDtor_TempPacket_960(CDataStoreTempPacket* pkt, char flags
 }
 
 void Tick_CMSG_BOT_DETECTED() {
-    if (!byte_B2F9E0) {
+    if (!s_bot_detect_enabled) {
         return;
     }
 
     void* connection = ClientServices__GetConnectionObject();
 
-    if (!dword_B2F9A0) {
+    if (!s_bot_detect_connection_state) {
         return;
     }
 
@@ -70,17 +70,17 @@ void Tick_CMSG_BOT_DETECTED() {
 
     const uint32_t tick = openwow::core::GameClock::GetTickCount32();
 
-    if (tick - dword_B2F9E4 < kTickCooldownMs) {
+    if (tick - s_bot_detect_last_tick_ms < kTickCooldownMs) {
         return;
     }
 
-    dword_B2F9E4 = tick;
+    s_bot_detect_last_tick_ms = tick;
 
-    if (--dword_B2F9E8 > 0) {
+    if (--s_bot_detect_countdown_ticks > 0) {
         return;
     }
 
-    byte_B2F9E0 = 0;
+    s_bot_detect_enabled = 0;
 
     int v9, v8, v10;
     if (!GetProbeValues(&v9, &v8, &v10)) {

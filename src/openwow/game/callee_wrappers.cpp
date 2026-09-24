@@ -63,10 +63,10 @@ int Camera_FullUpdate_Callee(const float* position, float* out_height) {
             position, out_height));
 }
 
-static int s_client_global_CD7764 = 0;
+static int s_client_init_global_value = 0;
 
 int ClientInit_SetGlobal(int value) {
-    s_client_global_CD7764 = value;
+    s_client_init_global_value = value;
     return value;
 }
 

@@ -76,7 +76,7 @@ namespace {
   const auto value = Attribute(node, name);
   return value.empty()
              ? fallback
-             : openwow::core::ParseSignedDecimalLikeSub76F0D0(value) - 1u;
+             : openwow::core::ParseSignedDecimal(value) - 1u;
 }
 
 [[nodiscard]] int ButtonAttribute(
@@ -87,7 +87,7 @@ namespace {
   return value.empty()
              ? fallback
              : static_cast<int>(
-                   openwow::core::ParseSignedDecimalLikeSub76F0D0(value) -
+                   openwow::core::ParseSignedDecimal(value) -
                    1u);
 }
 
@@ -158,7 +158,7 @@ std::optional<JoystickConfigProfile> ParseJoystickConfigProfile(
       const auto axis = Attribute(*child, "axis");
       if (!axis.empty()) {
         profile.slider_axes.push_back(
-            openwow::core::ParseSignedDecimalLikeSub76F0D0(axis) - 1u);
+            openwow::core::ParseSignedDecimal(axis) - 1u);
       }
     } else if (openwow::text::EqualsIgnoreCaseAscii(
                    child->tag, "hat")) {
@@ -185,7 +185,7 @@ std::optional<JoystickConfigProfile> ParseJoystickConfigProfile(
     const auto speed = Attribute(*mouse, "speedScale");
     if (!speed.empty()) {
       config.speed_scale = static_cast<float>(
-          openwow::core::ParseFloatLikeSub76FB80(speed));
+          openwow::core::ParseDecimalFloat(speed));
     }
     profile.mouse = config;
   }

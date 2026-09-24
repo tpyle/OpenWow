@@ -6,8 +6,7 @@
 
 namespace openwow::net {
 
-inline constexpr char kCDataStoreSourceFile[] =
-    "d:\\buildserver\\wow\\1\\work\\wow-code\\branches\\wow-patch-3_3_5_a-bnet\\engine\\source\\base\\CDataStore.h";
+inline constexpr char kCDataStoreSourceFile[] = __FILE__;
 
 inline bool CDataStore_GrowWithSource(std::uint8_t*& data, std::uint32_t offset,
                                       std::uint32_t length,
@@ -19,7 +18,7 @@ inline bool CDataStore_GrowWithSource(std::uint8_t*& data, std::uint32_t offset,
   const char* resolved_source =
       source_file != nullptr ? source_file : kCDataStoreSourceFile;
   const int resolved_line =
-      source_file != nullptr ? static_cast<int>(source_line) : 280;
+      source_file != nullptr ? static_cast<int>(source_line) : __LINE__;
   data = static_cast<std::uint8_t*>(
       core::SMemReAlloc(data, new_alloc, resolved_source, resolved_line, 0));
   return true;
@@ -93,7 +92,7 @@ inline void CDataStore_GetAndDetach(CDataStore& store, std::uint8_t** out_data,
 inline void CDataStore_Free(std::uint8_t*& data, std::uint32_t& window_base,
                             std::uint32_t& window_size) {
   if (window_size != 0 && data != nullptr) {
-    core::SMemFree(data, kCDataStoreSourceFile, 263, 0);
+    core::SMemFree(data, kCDataStoreSourceFile, __LINE__, 0);
   }
   data = nullptr;
   window_base = 0;
@@ -127,8 +126,8 @@ inline CDataStore* CDataStore_DeleteDtor(CDataStore* store, char flags) {
   return store;
 }
 
-inline int CDataStore_Vf10_ReturnZero(int a1) {
-  return core::IdaSharedReturnZeroArg1(a1);
+inline int CDataStore_Vf10_ReturnZero(int value) {
+  return core::SharedReturnZeroArg1(value);
 }
 
 inline bool CDataStore_GetUInt32(CDataStore& store,

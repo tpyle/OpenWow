@@ -1127,9 +1127,9 @@ void UnitInteractionRuntime::OnNPCInteractionFlagsChanged(
         if (qf_state.interaction_guid.GetRawValue() == my_guid) {
           auto close_state =
               GetActiveQuestDialogCloseState(session.quests());
-          CloseQuestDialogLikeIda58CA70(session, close_state,
-                                        false,
-                                        false);
+          CloseQuestDialog(session, close_state,
+                           false,
+                           false);
         }
       }
     }

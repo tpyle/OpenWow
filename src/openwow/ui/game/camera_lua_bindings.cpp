@@ -42,7 +42,7 @@ float ReadCameraValue(CVarSystem& cvars, const std::string& name,
   return cvars.Exists(name)
              ? cvars.GetCVarFloat(name)
              : static_cast<float>(
-                   openwow::core::ParseFloatLikeSub76FB80(fallback));
+                   openwow::core::ParseDecimalFloat(fallback));
 }
 
 }

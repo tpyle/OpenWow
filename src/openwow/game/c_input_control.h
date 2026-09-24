@@ -421,7 +421,7 @@ class CInputControl {
 };
 
 static_assert(sizeof(CInputControl) == (sizeof(void*) == 4 ? 0x70 : sizeof(CInputControl)),
-              "CInputControl must match the 112-byte IDA layout");
+              "CInputControl must keep its 112-byte legacy 32-bit layout");
 
 void              SetInputControlSingleton(CInputControl* ptr);
 CInputControl*    GetInputControlSingleton();

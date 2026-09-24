@@ -4,7 +4,7 @@
 
 namespace openwow::core {
 
-class IdaBurstThrottle {
+class BurstThrottle {
  public:
   [[nodiscard]] constexpr bool TryConsume(const double now_seconds,
                                           const std::uint32_t free_attempts,

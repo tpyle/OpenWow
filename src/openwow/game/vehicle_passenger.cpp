@@ -891,7 +891,7 @@ void VehiclePassengerC::CreateTransitionData(net::CDataStore& source) {
 
   auto* store = static_cast<net::CDataStore*>(
       core::SMemAlloc(sizeof(net::CDataStore),
-                      ".\\VehiclePassenger_C.cpp", 0x430, 0));
+                      __FILE__, __LINE__, 0));
   if (store == nullptr) {
     return;
   }

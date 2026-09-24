@@ -292,7 +292,7 @@ int ParseSignedDecimalPrefix(std::string_view text) {
 }
 
 const char *TimingMethodNameFromValue(const int value) {
-  return openwow::core::TimingMethodNameFromIdaValue(value).data();
+  return openwow::core::TimingMethodNameFromCVarValue(value).data();
 }
 
 void StoreClientInitLocaleTag(const std::string_view locale) {
@@ -501,17 +501,17 @@ bool DeleteRunOnceFileIfPresent(const std::string &filename) {
 
 }
 
-static uint32_t dword_B2F9A4 = 0;
+static uint32_t g_client_exit_error_code = 0;
 
-static uint32_t dword_B2F9D8 = 0;
+static uint32_t g_startup_timer_error = 0;
 
-static uint32_t dword_B2F994 = 0;
+static uint32_t g_main_event_context = 0;
 
-static uint32_t dword_AB6360 = 0;
+static uint32_t g_error_table_min_id = 0;
 
-static uint32_t dword_AB635C = 0;
+static uint32_t g_error_table_max_id = 0;
 
-static std::uintptr_t dword_AB6370 = 0;
+static std::uintptr_t g_error_table_index = 0;
 
 static std::atomic<bool> g_client_shutdown_requested{false};
 
@@ -615,7 +615,7 @@ static bool IsOnlineMode() {
   return openwow::data::IsOnlineModeActive();
 }
 
-static void WoW_MainInit__callee_41D0B0() {
+static void ShutdownSoundCache() {
   openwow::vfs::SoundCache_Shutdown();
 }
 
@@ -630,7 +630,7 @@ static void InitTimerBaseline(const int value) {
   }
 }
 
-static void nullsub_3() {
+static void NoOpHandler() {
 }
 
 static void SetInvalidParameterHandler(void (*handler)()) {
@@ -645,7 +645,7 @@ static void InitFPU_ClearAndControl() {
   (void)openwow::core::InitFPU();
 }
 
-static void ret_zero_427A90() {
+static void PreMainInitNoOp() {
 
 }
 
@@ -721,7 +721,7 @@ static bool SubDirectoryExists(const char *path) {
   return std::filesystem::is_directory(ResolveStartupFilesystemPath(path), ec);
 }
 
-static void ClientInit__callee_6B0190() {
+static void LoadLoginSurveyTelemetryState() {
   LoadLoginSurveyTelemetryBootstrapState();
 }
 
@@ -745,20 +745,16 @@ static void LocalStrCopy(char *dest, const char *src, int maxlen) {
   dest[copy_len] = '\0';
 }
 
-static void ClientInit__callee_421B50(const char *path) {
+static void SetLocaleDataPath(const char *path) {
   openwow::vfs::ClientInit_SetLocaleDataPath(path);
-}
-
-static void sub_423D70() {
-
 }
 
 static void InitSCritical(int ) {
   openwow::core::InitSCriticalRetail();
 }
 
-static void InitEvtSchedulerConfig_ClientInit(int a1, int a2) {
-  openwow::core::InitEvtSchedulerConfig(static_cast<std::uint32_t>(a1), a2);
+static void InitEvtSchedulerConfig_ClientInit(int thread_count, int init_mode) {
+  openwow::core::InitEvtSchedulerConfig(static_cast<std::uint32_t>(thread_count), init_mode);
 }
 
 static void OS_SetTimingMethod(uint32_t method) {
@@ -798,10 +794,10 @@ static int OS_GetTimerError() {
 
 static void InitErrorTableAndCacheBounds(void *table, const char * , uint32_t line) {
   auto *db = table ? static_cast<openwow::data::WowClientDB *>(table) : &StartupErrorTable();
-  openwow::data::InitErrorTable(db, ".\\Client.cpp", line);
-  dword_AB635C = static_cast<uint32_t>(db->max_id);
-  dword_AB6360 = static_cast<uint32_t>(db->min_id);
-  dword_AB6370 = reinterpret_cast<std::uintptr_t>(db->index);
+  openwow::data::InitErrorTable(db, __FILE__, line);
+  g_error_table_max_id = static_cast<uint32_t>(db->max_id);
+  g_error_table_min_id = static_cast<uint32_t>(db->min_id);
+  g_error_table_index = reinterpret_cast<std::uintptr_t>(db->index);
 }
 
 static void ConsoleDeviceInitialize(const char *title) {
@@ -812,13 +808,13 @@ static void OS_InitPerfCounters(const openwow::core::TimingMethod requested_meth
   GameClock::Instance().Init(requested_method);
 }
 
-static uint32_t CreateMainEventContext(int a1, int init_callback, int shutdown_callback, int a4,
-                                       int a5) {
+static uint32_t CreateMainEventContext(int interactive, int init_callback, int shutdown_callback,
+                                       int idle_time, int flags) {
   return static_cast<uint32_t>(openwow::core::CreateEventContext_Thunk(
-      a1, init_callback, shutdown_callback, a4, static_cast<uint32_t>(a5)));
+      interactive, init_callback, shutdown_callback, idle_time, static_cast<uint32_t>(flags)));
 }
 
-static void ClientInit__callee_4036B0(int a1, int , int , int ) {
+static void InitStreamingSubsystemForClient(int has_new_account, int , int , int ) {
   openwow::data::ArchiveSystemCallbacks callbacks{};
   callbacks.cvar_get_string = [](const std::string &name) { return GetClientInitCVar(name); };
   callbacks.is_online_mode = []() { return IsOnlineMode(); };
@@ -826,7 +822,7 @@ static void ClientInit__callee_4036B0(int a1, int , int , int ) {
     auto *dword_out = static_cast<uint32_t *>(out);
     return dword_out != nullptr && ReadRegistryDword(key, value_name, type, dword_out);
   };
-  openwow::data::InitStreamingSubsystem(static_cast<char>(a1), callbacks);
+  openwow::data::InitStreamingSubsystem(static_cast<char>(has_new_account), callbacks);
 }
 
 static void ApplyPostInitLogFlags() {
@@ -834,7 +830,7 @@ static void ApplyPostInitLogFlags() {
                                static_cast<std::uint8_t>(8));
 }
 
-static void PostInitErrorCheck__callee_86D0C0() {
+static void RestoreDefaultImeContext() {
   void *active_window = openwow::platform::OS_GetActiveWindow(0);
 #if defined(_WIN32)
   if (active_window != nullptr) {
@@ -845,15 +841,11 @@ static void PostInitErrorCheck__callee_86D0C0() {
 #endif
 }
 
-static void PostInitErrorCheck__callee_86D440() {
-
-}
-
 static void AudioSystem_Shutdown() {
   ::openwow::audio::AudioSystem_Shutdown();
 }
 
-static void PostInitErrorCheck__callee_769D40() {
+static void ApplyPendingVideoOptionsVersion() {
   auto &cvars = openwow::ui::game::CVarSystem::Instance();
   cvars.ApplyPendingValue("videoOptionsVersion");
 
@@ -863,7 +855,7 @@ static void CVar_Cleanup() {
   ::openwow::core::ida::CVar_Cleanup();
 }
 
-static void PostInitErrorCheck__callee_7685C0() {
+static void UnregisterAllConsoleCommands() {
   auto &console = openwow::debug::DebugConsole::Get();
   const auto command_names = console.GetCommandNames();
   for (const auto &name : command_names) {
@@ -876,14 +868,14 @@ static void Cleanup_FinalizeDataPreloadRuntime() {
   openwow::vfs::StopDataPreloadRuntimeWorkerIfActive();
 }
 
-static void sub_457680() {
+static void ShutdownStreamingStorage() {
   openwow::core::StreamingStorage::Instance().Shutdown();
 }
 
-static int ShowMessageBox(int , int a2, const char *text, const char *title) {
+static int ShowMessageBox(int , int button_flags, const char *text, const char *title) {
   return openwow::platform::ShowMessageBox(
       text ? text : "", title ? title : "",
-      openwow::platform::detail::DecodeLegacyMessageBoxButtons(a2));
+      openwow::platform::detail::DecodeLegacyMessageBoxButtons(button_flags));
 }
 
 static std::optional<std::string> ReadBlizzardComponentXmlResource() {
@@ -1279,7 +1271,7 @@ void ResetClientInitStateForTests() {
   auto &startup_error_table = StartupErrorTable();
   if (startup_error_table.record_data != nullptr || startup_error_table.index != nullptr ||
       startup_error_table.string_table != nullptr) {
-    openwow::data::WowClientDB_Unload(&startup_error_table, ".\\Client.cpp");
+    openwow::data::WowClientDB_Unload(&startup_error_table, __FILE__);
   }
   startup_error_table = {};
   startup_error_table.max_id = -1;
@@ -1287,12 +1279,12 @@ void ResetClientInitStateForTests() {
 
   StoreClientInitLocaleTag("enUS");
   ResetLoginSurveyTelemetryBootstrapState();
-  dword_B2F9A4 = 0;
-  dword_B2F9D8 = 0;
-  dword_B2F994 = 0;
-  dword_AB6360 = 0;
-  dword_AB635C = 0;
-  dword_AB6370 = 0;
+  g_client_exit_error_code = 0;
+  g_startup_timer_error = 0;
+  g_main_event_context = 0;
+  g_error_table_min_id = 0;
+  g_error_table_max_id = 0;
+  g_error_table_index = 0;
   g_client_shutdown_requested.store(false, std::memory_order_release);
   auto &cvars = openwow::ui::game::CVarSystem::Instance();
   if (cvars.Exists("dbCompress")) {
@@ -1356,7 +1348,7 @@ bool AppendLoginSurveyTelemetryBootstrapRecordImpl(
 }
 
 void RefreshStartupErrorTableForTests() {
-  InitErrorTableAndCacheBounds(&StartupErrorTable(), ".\\Client.cpp", 0x12E3u);
+  InitErrorTableAndCacheBounds(&StartupErrorTable(), __FILE__, __LINE__);
 }
 
 }
@@ -1398,8 +1390,8 @@ int ExecuteWoWGameEntry(const WoWGameEntryDependencies &deps) {
   if (deps.init_fpu_clear_and_control) {
     deps.init_fpu_clear_and_control();
   }
-  if (deps.ret_zero_427a90) {
-    deps.ret_zero_427a90();
+  if (deps.pre_main_init) {
+    deps.pre_main_init();
   }
   if (deps.wow_main_init) {
     return deps.wow_main_init();
@@ -1600,9 +1592,9 @@ int WoW_GameEntry() {
   return detail::ExecuteWoWGameEntry({
       .set_invalid_parameter_handler = SetInvalidParameterHandler,
       .init_fpu_clear_and_control = InitFPU_ClearAndControl,
-      .ret_zero_427a90 = ret_zero_427A90,
+      .pre_main_init = PreMainInitNoOp,
       .wow_main_init = WoW_MainInit,
-      .invalid_parameter_handler = nullsub_3,
+      .invalid_parameter_handler = NoOpHandler,
   });
 }
 
@@ -1674,13 +1666,13 @@ int WoW_MainInit() {
       .post_init_error_check = []() { PostInitErrorCheck(); },
       .register_at_exit_handlers = RegisterAtExitHandlers,
       .is_online_mode = IsOnlineMode,
-      .online_cleanup = WoW_MainInit__callee_41D0B0,
+      .online_cleanup = ShutdownSoundCache,
       .init_timer_baseline = InitTimerBaseline,
       .report_streaming_stats =
           [](bool is_startup, bool has_new_account) {
             openwow::data::Streaming_ReportStats(is_startup, has_new_account);
           },
-      .no_op = nullsub_3,
+      .no_op = NoOpHandler,
       .crash_dump_callback = reinterpret_cast<void *>(Client_BuildBugReport),
       .crash_notify_callback = reinterpret_cast<void *>(&LaunchWowError),
   });
@@ -1699,12 +1691,12 @@ bool ClientInit() {
     WriteInstallPathToRegistry();
   }
 
-  bool v23 = false;
+  bool account_dir_missing = false;
   if (IsOnlineMode()) {
-    v23 = !SubDirectoryExists("WTF/Account");
+    account_dir_missing = !SubDirectoryExists("WTF/Account");
   }
 
-  ClientInit__callee_6B0190();
+  LoadLoginSurveyTelemetryState();
 
   Console_RegisterBasicCommands();
 
@@ -1725,7 +1717,8 @@ bool ClientInit() {
   }
 
   if (IsOnlineMode()) {
-    ClientInit__callee_4036B0(static_cast<int>(v23), 0, 0, static_cast<int>(v23));
+    InitStreamingSubsystemForClient(static_cast<int>(account_dir_missing), 0, 0,
+                                    static_cast<int>(account_dir_missing));
   }
 
   detail::PopulateStartupRetailInstallPathCache({
@@ -1747,9 +1740,7 @@ bool ClientInit() {
   }
 
   const std::string locale_path = detail::BuildClientInitLocaleDataPath(locale);
-  ClientInit__callee_421B50(locale_path.c_str());
-
-  sub_423D70();
+  SetLocaleDataPath(locale_path.c_str());
 
   if (const std::string final_locale = cvars.GetCVar("locale"); !final_locale.empty()) {
     if (!SynchronizeClientLocaleState(final_locale)) {
@@ -1774,13 +1765,13 @@ bool ClientInit() {
   Console_RegisterCommand("timingInfo", reinterpret_cast<void *>(TimingInfoCommandHandler), 0, 0);
 
   int timerError = OS_GetTimerError();
-  dword_B2F9D8 = static_cast<uint32_t>(timerError);
+  g_startup_timer_error = static_cast<uint32_t>(timerError);
   if (ParseSignedDecimalPrefix(cvars.GetCVar("timingTestError")) != timerError) {
     SetClientInitCVar("timingTestError", std::to_string(timerError));
     ConsoleLog("Timing test error: %d", timerError);
   }
 
-  InitErrorTableAndCacheBounds(&StartupErrorTable(), ".\\Client.cpp", 0x12E3u);
+  InitErrorTableAndCacheBounds(&StartupErrorTable(), __FILE__, __LINE__);
 
   const char *windowTitle =
       openwow::data::ResolveStartupWindowTitle(&StartupErrorTable(), "World of Warcraft");
@@ -1797,7 +1788,7 @@ bool ClientInit() {
       reinterpret_cast<std::intptr_t>(&GameSubsystemsInit_EventCallback));
   const int game_subsystems_shutdown_callback = openwow::core::EvtSched_RegisterLegacyCallback(
       reinterpret_cast<std::intptr_t>(&GameSubsystemsShutdown_EventCallback));
-  dword_B2F994 = CreateMainEventContext(1, game_subsystems_init_callback,
+  g_main_event_context = CreateMainEventContext(1, game_subsystems_init_callback,
                                         game_subsystems_shutdown_callback, 0, 0);
 
   return true;
@@ -1817,29 +1808,28 @@ int PostInitErrorCheck() {
 
   ApplyPostInitLogFlags();
 
-  PostInitErrorCheck__callee_86D0C0();
-
-  PostInitErrorCheck__callee_86D440();
+  RestoreDefaultImeContext();
 
   AudioSystem_Shutdown();
 
-  PostInitErrorCheck__callee_769D40();
+  ApplyPendingVideoOptionsVersion();
 
   detail::ProcessRunOnceFilesWithCallback(
       [](const std::string &filename) { detail::DeleteRunOnceFileIfPresent(filename); });
 
   CVar_Cleanup();
 
-  PostInitErrorCheck__callee_7685C0();
+  UnregisterAllConsoleCommands();
 
   Cleanup_FreeAllRegisteredObjects();
 
   Cleanup_FinalizeDataPreloadRuntime();
 
-  sub_457680();
+  ShutdownStreamingStorage();
 
-  int result = static_cast<int>(dword_B2F9A4);
-  if (const auto dialog = ResolvePostInitErrorDialog(dword_B2F9A4); dialog.should_show) {
+  int result = static_cast<int>(g_client_exit_error_code);
+  if (const auto dialog = ResolvePostInitErrorDialog(g_client_exit_error_code);
+      dialog.should_show) {
     return ShowMessageBox(0, 0, dialog.text.c_str(), dialog.title.c_str());
   }
 
@@ -1847,7 +1837,7 @@ int PostInitErrorCheck() {
 }
 
 int RequestClientShutdownWithErrorCode(std::uint32_t error_code) {
-  dword_B2F9A4 = error_code;
+  g_client_exit_error_code = error_code;
   EvtContext_RequestShutdown(0);
   g_client_shutdown_requested.store(true, std::memory_order_release);
   return 0;
@@ -1859,14 +1849,14 @@ bool ConsumeClientShutdownRequest(std::uint32_t *error_code) {
     return false;
   }
   if (error_code != nullptr) {
-    *error_code = dword_B2F9A4;
+    *error_code = g_client_exit_error_code;
   }
   return true;
 }
 
 void ClearClientShutdownRequest() {
   g_client_shutdown_requested.store(false, std::memory_order_release);
-  dword_B2F9A4 = 0;
+  g_client_exit_error_code = 0;
 }
 
 void Cleanup_FreeAllRegisteredObjects() {

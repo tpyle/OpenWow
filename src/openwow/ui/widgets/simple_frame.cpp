@@ -310,7 +310,7 @@ void LoadFrameBackdropFromXmlNode(CSimpleFrame &frame, const openwow::ui::xml::X
                                   const float default_value) {
     if (const char *value = FindNodeAttributeValueNoCase(color_node, name);
         value != nullptr && *value != '\0') {
-      return static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(value));
+      return static_cast<float>(openwow::core::ParseDecimalFloat(value));
     }
     return default_value;
   };
@@ -335,12 +335,12 @@ void LoadFrameBackdropFromXmlNode(CSimpleFrame &frame, const openwow::ui::xml::X
   if (const char *tile_size = FindNodeAttributeValueNoCase(node, "tileSize");
       tile_size != nullptr && *tile_size != '\0') {
     backdrop.tileSize =
-        static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(tile_size));
+        static_cast<float>(openwow::core::ParseDecimalFloat(tile_size));
   }
   if (const char *edge_size = FindNodeAttributeValueNoCase(node, "edgeSize");
       edge_size != nullptr && *edge_size != '\0') {
     backdrop.edgeSize =
-        static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(edge_size));
+        static_cast<float>(openwow::core::ParseDecimalFloat(edge_size));
   }
 
   if (const auto *tile_size_node = FindDirectChildByNameNoCase(node, "TileSize");
@@ -1665,7 +1665,7 @@ void CSimpleFrame::LoadNameAndId(const void *xmlNode, void * ) {
     const auto id_it = frame_def->attributes.find("id");
     if (id_it != frame_def->attributes.end() && !id_it->second.empty()) {
       const auto parsed_id = static_cast<std::int32_t>(
-          openwow::core::ParseSignedDecimalLikeSub76F0D0(id_it->second));
+          openwow::core::ParseSignedDecimal(id_it->second));
       if (parsed_id >= 0) {
         frameId_ = static_cast<uint32_t>(parsed_id);
       }
@@ -2790,7 +2790,7 @@ void CSimpleFrame::LoadXML(const void *xmlNode, void *errorHandler) {
   if (const char *frame_level = FindAttributeValue(*frame_def, "frameLevel");
       frame_level != nullptr && *frame_level != '\0') {
     const auto parsed_level = static_cast<std::int32_t>(
-        openwow::core::ParseSignedDecimalLikeSub76F0D0(frame_level));
+        openwow::core::ParseSignedDecimal(frame_level));
     if (parsed_level > 0) {
       SetFrameLevel(parsed_level);
     } else if (error_handler != nullptr) {
@@ -2802,7 +2802,7 @@ void CSimpleFrame::LoadXML(const void *xmlNode, void *errorHandler) {
   if (const char *alpha = FindAttributeValue(*frame_def, "alpha");
       alpha != nullptr && *alpha != '\0') {
     const auto parsed_alpha = static_cast<float>(std::clamp(
-        openwow::core::ParseFloatLikeSub76FB80(alpha), 0.0, 1.0));
+        openwow::core::ParseDecimalFloat(alpha), 0.0, 1.0));
     const auto alpha_byte = static_cast<std::uint8_t>(parsed_alpha * 255.0f);
     if (alpha_byte != currentAlpha_) {
       currentAlpha_ = alpha_byte;
@@ -2836,7 +2836,7 @@ void CSimpleFrame::LoadXML(const void *xmlNode, void *errorHandler) {
 
   if (const char *depth = FindAttributeValue(*frame_def, "depth");
       depth != nullptr && *depth != '\0') {
-    SetDepth(static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(depth)), false);
+    SetDepth(static_cast<float>(openwow::core::ParseDecimalFloat(depth)), false);
   }
 
   for (const auto &child : frame_def->raw_node.children) {

@@ -9,7 +9,7 @@
 
 namespace openwow::core {
 
-inline std::uint32_t ParseUnsignedDecimalLikeSub76F140(std::string_view text) {
+inline std::uint32_t ParseUnsignedDecimal(std::string_view text) {
   if (text.empty()) {
     return 0;
   }
@@ -36,7 +36,7 @@ namespace detail {
 
 constexpr std::size_t kPrecomputedFractionDigitCount = 20;
 
-constexpr double PowDoubleIntExponentLikeSub76F930(double base, std::int32_t exponent) {
+constexpr double PowDoubleIntExponent(double base, std::int32_t exponent) {
   std::uint32_t magnitude = static_cast<std::uint32_t>(exponent);
   if (exponent < 0) {
     magnitude = 0u - magnitude;
@@ -60,13 +60,13 @@ constexpr double PowDoubleIntExponentLikeSub76F930(double base, std::int32_t exp
 }
 
 constexpr std::array<double, kPrecomputedFractionDigitCount * 10u>
-BuildFloatFractionLookupLikeSub76F970() {
+BuildFloatFractionLookup() {
   std::array<double, kPrecomputedFractionDigitCount * 10u> table{};
   std::size_t index = 0;
 
   for (std::int32_t exponent = -1; exponent >= -20; --exponent) {
     for (std::uint32_t digit = 0; digit < 10u; ++digit) {
-      table[index++] = PowDoubleIntExponentLikeSub76F930(10.0, exponent) *
+      table[index++] = PowDoubleIntExponent(10.0, exponent) *
                        static_cast<double>(digit);
     }
   }
@@ -74,9 +74,9 @@ BuildFloatFractionLookupLikeSub76F970() {
   return table;
 }
 
-inline constexpr auto kFloatFractionLookup = BuildFloatFractionLookupLikeSub76F970();
+inline constexpr auto kFloatFractionLookup = BuildFloatFractionLookup();
 
-inline std::uint32_t ParseSignedDecimalLikeSub76F0D0NonNull(std::string_view text) {
+inline std::uint32_t ParseSignedDecimalNonNull(std::string_view text) {
   if (text.empty()) {
     return 0;
   }
@@ -110,7 +110,7 @@ inline std::uint32_t ParseSignedDecimalLikeSub76F0D0NonNull(std::string_view tex
   return result;
 }
 
-inline std::uint32_t ParseDecimalCursorLikeSub76F190NonNull(const char*& text) {
+inline std::uint32_t ParseDecimalCursorNonNull(const char*& text) {
   std::uint32_t result = 0;
   if (*text >= '0') {
     while (*text >= '0') {
@@ -126,7 +126,7 @@ inline std::uint32_t ParseDecimalCursorLikeSub76F190NonNull(const char*& text) {
   return result;
 }
 
-inline double ParseFloatLikeSub76FB80NonNull(std::string_view text) {
+inline double ParseDecimalFloatNonNull(std::string_view text) {
   if (text.empty()) {
     return 0.0;
   }
@@ -165,7 +165,7 @@ inline double ParseFloatLikeSub76FB80NonNull(std::string_view text) {
           const auto chunk_digits = static_cast<std::int32_t>(cursor - chunk_begin);
           integer_accumulator =
               integer_accumulator *
-                  PowDoubleIntExponentLikeSub76F930(10.0, chunk_digits) +
+                  PowDoubleIntExponent(10.0, chunk_digits) +
               static_cast<double>(chunk_value);
           chunk_value = 0;
           chunk_begin = cursor;
@@ -177,7 +177,7 @@ inline double ParseFloatLikeSub76FB80NonNull(std::string_view text) {
   double result = static_cast<double>(chunk_value);
   if (integer_accumulator != 0.0) {
     const auto trailing_digits = static_cast<std::int32_t>(cursor - chunk_begin);
-    result = PowDoubleIntExponentLikeSub76F930(10.0, trailing_digits) *
+    result = PowDoubleIntExponent(10.0, trailing_digits) *
                  integer_accumulator +
              static_cast<double>(chunk_value);
   }
@@ -198,7 +198,7 @@ inline double ParseFloatLikeSub76FB80NonNull(std::string_view text) {
       if (fractional_digits < kPrecomputedFractionDigitCount) {
         result += kFloatFractionLookup[lookup_index + digit];
       } else {
-        result += PowDoubleIntExponentLikeSub76F930(10.0, exponent) *
+        result += PowDoubleIntExponent(10.0, exponent) *
                   static_cast<double>(digit);
       }
 
@@ -219,8 +219,8 @@ inline double ParseFloatLikeSub76FB80NonNull(std::string_view text) {
     const auto exponent_text =
         std::string_view(cursor, static_cast<std::size_t>(end - cursor));
     const auto signed_exponent = static_cast<std::int32_t>(
-        ParseSignedDecimalLikeSub76F0D0NonNull(exponent_text));
-    result *= PowDoubleIntExponentLikeSub76F930(10.0, signed_exponent);
+        ParseSignedDecimalNonNull(exponent_text));
+    result *= PowDoubleIntExponent(10.0, signed_exponent);
   }
 
   if (negative) {
@@ -231,32 +231,32 @@ inline double ParseFloatLikeSub76FB80NonNull(std::string_view text) {
 
 }
 
-inline std::uint32_t ParseSignedDecimalLikeSub76F0D0(const char* text) {
+inline std::uint32_t ParseSignedDecimal(const char* text) {
   if (text == nullptr) {
     SErrSetLastError(87);
     return 0;
   }
 
-  return detail::ParseSignedDecimalLikeSub76F0D0NonNull(text);
+  return detail::ParseSignedDecimalNonNull(text);
 }
 
-inline std::uint32_t ParseSignedDecimalLikeSub76F0D0(std::string_view text) {
-  return detail::ParseSignedDecimalLikeSub76F0D0NonNull(text);
+inline std::uint32_t ParseSignedDecimal(std::string_view text) {
+  return detail::ParseSignedDecimalNonNull(text);
 }
 
-inline std::uint32_t ParseDecimalCursorLikeSub76F190(const char** text) {
+inline std::uint32_t ParseDecimalCursor(const char** text) {
   if (text == nullptr) {
     SErrSetLastError(87);
     return 0;
   }
 
   const char* cursor = *text;
-  const auto result = detail::ParseDecimalCursorLikeSub76F190NonNull(cursor);
+  const auto result = detail::ParseDecimalCursorNonNull(cursor);
   *text = cursor;
   return result;
 }
 
-inline std::uint32_t ParseDecimalCursorLikeSub76F190(std::string_view& text) {
+inline std::uint32_t ParseDecimalCursor(std::string_view& text) {
   const char* cursor = text.data();
   const char* const begin = cursor;
   const char* const end = cursor + text.size();
@@ -277,17 +277,17 @@ inline std::uint32_t ParseDecimalCursorLikeSub76F190(std::string_view& text) {
   return result;
 }
 
-inline double ParseFloatLikeSub76FB80(const char* text) {
+inline double ParseDecimalFloat(const char* text) {
   if (text == nullptr) {
     SErrSetLastError(87);
     return 0.0;
   }
 
-  return detail::ParseFloatLikeSub76FB80NonNull(text);
+  return detail::ParseDecimalFloatNonNull(text);
 }
 
-inline double ParseFloatLikeSub76FB80(std::string_view text) {
-  return detail::ParseFloatLikeSub76FB80NonNull(text);
+inline double ParseDecimalFloat(std::string_view text) {
+  return detail::ParseDecimalFloatNonNull(text);
 }
 
 }

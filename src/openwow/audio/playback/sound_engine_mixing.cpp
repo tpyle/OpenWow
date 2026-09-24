@@ -376,7 +376,7 @@ void SoundEngine::StopSound(SoundObj* obj, bool ,
 void SoundEngine::StopAllSounds() {
   std::lock_guard<std::mutex> lock(sound_mutex_);
   audio_engine_.StopNonVoiceSounds();
-  LogLine(0, ".\\SoundEngine.cpp", 0, "StopAllSounds");
+  LogLine(0, __FILE__, 0, "StopAllSounds");
 }
 
 void SoundEngine::StartPlayback(SoundObj* obj) {
@@ -430,7 +430,7 @@ bool SoundEngine::CreateSoundInstance(
     const float*  ) {
   if (!initialized_ || !filename || !*filename) return false;
 
-  LogLine(1633, ".\\SoundEngine.cpp", 0, "CreateSoundInstance: %s", filename);
+  LogLine(__LINE__, __FILE__, 0, "CreateSoundInstance: %s", filename);
 
   AudioClipInfo clip;
   clip.path = filename;
@@ -442,7 +442,7 @@ bool SoundEngine::CreateSoundInstance(
 
   AudioPlaybackHandle handle = audio_engine_.Play(clip);
   if (handle.handleId == 0) {
-    LogLine(1633, ".\\SoundEngine.cpp", 0,
+    LogLine(__LINE__, __FILE__, 0,
             "CreateSoundInstance: Play returned 0 for %s", filename);
     return false;
   }
@@ -637,7 +637,7 @@ void SoundEngine::StopChannelGroupSounds(const char* group_name,
     audio.StopHandleChannel(PlaybackChannel::SFX, fade_seconds);
   }
 
-  LogLine(0, ".\\SoundEngine.cpp", 0,
+  LogLine(0, __FILE__, 0,
           "StopChannelGroupSounds: group hash 0x%08X", grp->name_hash);
 }
 
@@ -689,7 +689,7 @@ void SoundEngine::UpdatePositions() {
 void SoundEngine::CompleteNonBlockingLoad(SoundObj* obj,
                                            int result_code) {
   if (result_code != 0 && result_code != 41) {
-    LogLine(5152, ".\\SoundEngine.cpp", 0,
+    LogLine(__LINE__, __FILE__, 0,
             "##### ERROR In CompleteNonBlockingLoad! code=%d", result_code);
 
     if (obj && obj->playback_handle_id != 0) {

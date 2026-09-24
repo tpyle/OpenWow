@@ -152,7 +152,7 @@ static std::uint32_t ResolveMacroItemIdArg(lua_State* L, int index) {
   }
 
   if (const char* payload = std::strstr(raw_value, "item:"); payload != nullptr) {
-    return openwow::core::ParseSignedDecimalLikeSub76F0D0(payload + 5);
+    return openwow::core::ParseSignedDecimal(payload + 5);
   }
 
   auto* session = GetWorldSession(L);

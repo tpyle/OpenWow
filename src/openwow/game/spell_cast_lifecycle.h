@@ -79,15 +79,15 @@ void CancelPendingCastsByGuid(WorldSession& session, std::uint64_t guid);
 
 void CancelPendingCastsForActivePlayer(WorldSession& session);
 
-int HandleSpellStartPacket_806700(const WorldSession& session,
-                                  std::uintptr_t data_store,
-                                  std::uintptr_t spell_entry);
+int HandleSpellStartPacket(const WorldSession& session,
+                           std::uintptr_t data_store,
+                           std::uintptr_t spell_entry);
 
 int HandleSpellFailurePacket(WorldSession& session,
-                              std::uintptr_t a1, std::uintptr_t a2,
-                              std::uintptr_t a3, std::uintptr_t data_store);
+                              std::uintptr_t handler_param, std::uintptr_t opcode,
+                              std::uintptr_t time_ms, std::uintptr_t data_store);
 
-int HandleCooldownEventPacket(std::uintptr_t a1, std::uintptr_t a2,
-                               std::uintptr_t a3, std::uintptr_t data_store);
+int HandleCooldownEventPacket(std::uintptr_t handler_param, std::uintptr_t opcode,
+                               std::uintptr_t time_ms, std::uintptr_t data_store);
 
 }

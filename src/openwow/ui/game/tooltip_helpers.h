@@ -11,8 +11,8 @@ const char* GetColorblindStatSuffix(int stat_index);
 int RegisterTooltipScriptHandler(void* tooltip, const char* event_name,
                                  void* handler_info);
 
-void LoadTooltipXMLAttributes(void* tooltip, void* xml_node, void* a3,
-                              void* a4, int a5);
+void LoadTooltipXMLAttributes(void* tooltip, void* xml_node, void* arg3,
+                              void* arg4, int arg5);
 
 const void* GetItemQualityColorPtr(uint32_t quality);
 
@@ -22,7 +22,7 @@ const char* BuildTalentLink(const uint32_t* talent_id, const char* talent_name,
                             int talent_rank);
 
 void SetItemSetThresholdTableForSort(const uint32_t* thresholds);
-int CompareItemSetSpellThreshold(const void* a1, const void* a2);
+int CompareItemSetSpellThreshold(const void* lhs, const void* rhs);
 
 int FrameStackInfo_Compare(const void* lhs, const void* rhs);
 

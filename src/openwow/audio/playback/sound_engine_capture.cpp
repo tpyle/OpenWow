@@ -42,7 +42,7 @@ void SoundEngine::StartCapture() {
   if (voice_capture_.capture_device_id != 0) {
     SDL_PauseAudioDevice(
         static_cast<SDL_AudioDeviceID>(voice_capture_.capture_device_id), 0);
-    LogLine(0, ".\\SoundEngine.cpp", 0, "StartCapture: SDL capture unpaused");
+    LogLine(0, __FILE__, 0, "StartCapture: SDL capture unpaused");
   }
 }
 
@@ -96,7 +96,7 @@ void SoundEngine::CreateCapturedStream(int stream_handle,
                                         bool ) {
 
   if (!voice_chat_enabled_) {
-    LogLine(0, ".\\SoundEngine.cpp", 0,
+    LogLine(0, __FILE__, 0,
             "CreateCapturedStream: voice chat not enabled");
     return;
   }
@@ -108,7 +108,7 @@ void SoundEngine::CreateCapturedStream(int stream_handle,
 
   voice_capture_.active_capture_stream_handle = stream_handle;
 
-  LogLine(0, ".\\SoundEngine.cpp", 0,
+  LogLine(0, __FILE__, 0,
           "CreateCapturedStream: stream_handle=%d flags=0x%X",
           stream_handle, flags);
 }
@@ -160,8 +160,8 @@ void SoundEngine::ShutdownVoiceChat() {
 
   if (!voice_chat_enabled_ && !capture_enabled_ && !voice_capture_.recording_active) return;
 
-  LogLine(6321, ".\\SoundEngine.cpp", 0, " ");
-  LogLine(6322, ".\\SoundEngine.cpp", 0, "=> Shutting Down Voice Chat");
+  LogLine(__LINE__, __FILE__, 0, " ");
+  LogLine(__LINE__, __FILE__, 0, "=> Shutting Down Voice Chat");
   DisableCapture();
 
   CleanupFinishedSounds();
@@ -180,7 +180,7 @@ void SoundEngine::ShutdownVoiceChat() {
 
   microphone_signal_level_ = 0;
   voice_chat_enabled_ = false;
-  LogLine(6350, ".\\SoundEngine.cpp", 0, "=> Done Shutting Down Voice Chat");
+  LogLine(__LINE__, __FILE__, 0, "=> Done Shutting Down Voice Chat");
 }
 
 bool SoundEngine::InitVoiceChat(int* output_driver,
@@ -190,7 +190,7 @@ bool SoundEngine::InitVoiceChat(int* output_driver,
                                 float ) {
 
   if (!initialized_) {
-    LogLine(0, ".\\SoundEngine.cpp", 0,
+    LogLine(0, __FILE__, 0,
             "InitVoiceChat skipped because the sound engine is not initialized");
     CleanupActiveVoiceCaptureSession();
     voice_chat_enabled_ = false;
@@ -250,7 +250,7 @@ bool SoundEngine::InitVoiceChat(int* output_driver,
       SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
 
   if (capture_dev == 0) {
-    LogLine(0, ".\\SoundEngine.cpp", 0,
+    LogLine(0, __FILE__, 0,
             "InitVoiceChat: SDL_OpenAudioDevice (capture) failed: %s",
             SDL_GetError());
     CleanupActiveVoiceCaptureSession();
@@ -271,7 +271,7 @@ bool SoundEngine::InitVoiceChat(int* output_driver,
         AUDIO_S16SYS, obtained.channels, obtained.freq,
         AUDIO_S16SYS, kDesiredChannels, kDesiredSampleRate);
     if (voice_capture_.capture_conversion_stream == nullptr) {
-      LogLine(0, ".\\SoundEngine.cpp", 0,
+      LogLine(0, __FILE__, 0,
               "InitVoiceChat: SDL_NewAudioStream failed: %s", SDL_GetError());
       SDL_CloseAudioDevice(capture_dev);
       voice_capture_.capture_device_id = 0;
@@ -287,7 +287,7 @@ bool SoundEngine::InitVoiceChat(int* output_driver,
   CleanupActiveVoiceCaptureSession();
   voice_chat_enabled_ = true;
   capture_enabled_    = false;
-  LogLine(0, ".\\SoundEngine.cpp", 0,
+  LogLine(0, __FILE__, 0,
           "=> Initializing Voice Chat (SDL capture dev=%u, %d Hz, %d ch)",
           static_cast<unsigned>(capture_dev), obtained.freq,
           obtained.channels);
@@ -343,7 +343,7 @@ void SoundEngine::CaptureWork(const std::uint32_t context_tick_ms) {
         voice_capture_.capture_conversion_stream);
     if (SDL_AudioStreamPut(converter, capture_data,
                            static_cast<int>(bytes_dequeued)) != 0) {
-      LogLine(0, ".\\SoundEngine.cpp", 0,
+      LogLine(0, __FILE__, 0,
               "CaptureWork: SDL_AudioStreamPut failed: %s", SDL_GetError());
       SDL_AudioStreamClear(converter);
       return;

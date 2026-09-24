@@ -490,14 +490,14 @@ void SoundRuntime::BindRegisteredCvars(openwow::ui::game::CVarSystem &cvars) {
     cvars.SetCVar(name, value, true);
   };
   cvar_get_bool_cb_ = [&cvars](const std::string &name) {
-    return openwow::core::ParseSignedDecimalLikeSub76F0D0(cvars.GetCVar(name)) != 0u;
+    return openwow::core::ParseSignedDecimal(cvars.GetCVar(name)) != 0u;
   };
   cvar_get_int_cb_ = [&cvars](const std::string &name) {
-    return static_cast<int>(openwow::core::ParseSignedDecimalLikeSub76F0D0(cvars.GetCVar(name)));
+    return static_cast<int>(openwow::core::ParseSignedDecimal(cvars.GetCVar(name)));
   };
 
   const auto parse_sound_toggle = [](const std::string &value) {
-    return openwow::core::ParseSignedDecimalLikeSub76F0D0(value) != 0u;
+    return openwow::core::ParseSignedDecimal(value) != 0u;
   };
 
   if (sound_enable_reverb_cvar_callback_handle_ != 0) {
@@ -712,7 +712,7 @@ void SoundRuntime::BindRegisteredCvars(openwow::ui::game::CVarSystem &cvars) {
 }
 
 void SoundRuntime::ApplySoundEnableReverbCVarValue(const std::string_view value) {
-  world_reverb_enabled_ = openwow::core::ParseSignedDecimalLikeSub76F0D0(value) != 0u;
+  world_reverb_enabled_ = openwow::core::ParseSignedDecimal(value) != 0u;
   if (world_reverb_enabled_) {
     RefreshWorldReverbFromActiveSoundProvider();
     return;

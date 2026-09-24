@@ -8,9 +8,6 @@
 
 namespace openwow::net {
 
-[[maybe_unused]] static constexpr std::uint32_t kVtable_CDataStore_Base =
-    0x9E0E24;
-
 struct CDataStore;
 
 using CDataStoreWriteWindowFn =

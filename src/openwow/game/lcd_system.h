@@ -94,11 +94,11 @@ struct EZLCDBitmapElement {
 };
 
 static_assert(sizeof(EZLCDBitmapElement) == 88,
-              "EZLCDBitmapElement must be 88 bytes (IDA SMemAlloc size)");
+              "EZLCDBitmapElement must be 88 bytes (legacy allocation size)");
 static_assert(offsetof(EZLCDBitmapElement, textureHandle) == 0x40,
-              "textureHandle must be at IDA offset +0x40");
+              "textureHandle must be at legacy offset +0x40");
 static_assert(offsetof(EZLCDBitmapElement, alpha) == 0x4C,
-              "alpha must be at IDA offset +0x4C");
+              "alpha must be at legacy offset +0x4C");
 
 static constexpr int32_t kEZLCDResultOK   = 0;
 static constexpr int32_t kEZLCDResultFail = static_cast<int32_t>(0x80004005u);
@@ -138,12 +138,12 @@ struct EZLCDDisplayConnectionStorage {
 };
 
 static_assert(offsetof(EZLCDDisplayConnectionStorage, color_device) == 0x30,
-              "color_device must stay at IDA offset +0x30");
+              "color_device must stay at legacy offset +0x30");
 static_assert(
     offsetof(EZLCDDisplayConnectionStorage, monochrome_device) == 0x38,
-    "monochrome_device must stay at IDA offset +0x38");
+    "monochrome_device must stay at legacy offset +0x38");
 static_assert(sizeof(EZLCDDisplayConnectionStorage) == 0x3C,
-              "EZLCDDisplayConnectionStorage must match the IDA slice size");
+              "EZLCDDisplayConnectionStorage must keep its 0x3C-byte legacy size");
 
 struct EZLCDPageExtent {
     int width = 0;

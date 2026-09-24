@@ -415,7 +415,7 @@ private:
 };
 
 static_assert(sizeof(void*) != 4 || sizeof(IOStreamUnit) == 560,
-              "IOStreamUnit must match the 560-byte IDA layout on 32-bit builds");
+              "IOStreamUnit must keep its 560-byte legacy layout on 32-bit builds");
 
 struct IOStreamUnitSourceLifetimeHooks {
     std::function<void(void*)> retain;

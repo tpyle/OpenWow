@@ -44,7 +44,7 @@ struct ComSatVoiceCodecLspPredictorState {
 };
 
 static_assert(sizeof(ComSatVoiceCodecLspPredictorState) == 100,
-              "LSP predictor state must be 100 bytes to match IDA layout");
+              "LSP predictor state must keep its 100-byte legacy layout");
 
 void ComSatVoiceCodec_InitLspPredictorState(
     ComSatVoiceCodecLspPredictorState& state,

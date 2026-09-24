@@ -870,7 +870,7 @@ struct BNetConversationListContext {
 };
 
 struct BNetCustomMessageThrottleState {
-  openwow::core::IdaBurstThrottle throttle;
+  openwow::core::BurstThrottle throttle;
 
   bool Consume(const double now_seconds) {
     return !throttle.TryConsume(

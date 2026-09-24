@@ -635,7 +635,7 @@ bool ShadowLevelValidationCallback(const std::string&,
                                    const std::string& new_value) {
 
   const auto parsed = std::bit_cast<std::int32_t>(
-      openwow::core::ParseSignedDecimalLikeSub76F0D0(new_value));
+      openwow::core::ParseSignedDecimal(new_value));
   if (parsed > 1) {
     openwow::core::ida::ConsoleAddLine(
         "Shadow mip level must be in range 0 - 1.",
@@ -671,7 +671,7 @@ std::uint32_t PersistenceScopeBits(const CVarSerializationScope scope) {
 }
 
 bool ParseCalendarFilterEnabled(std::string_view value) {
-  return openwow::core::ParseSignedDecimalLikeSub76F0D0(value) != 0u;
+  return openwow::core::ParseSignedDecimal(value) != 0u;
 }
 
 std::string FormatSignedIntCVarValue(const int value) {
@@ -850,7 +850,7 @@ bool ScreenshotQualityValidationCallback(const std::string &, const std::string 
 bool ParticleDensityValidationCallback(const std::string &, const std::string &,
                                        const std::string &new_value) {
   const auto density =
-      static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(new_value));
+      static_cast<float>(openwow::core::ParseDecimalFloat(new_value));
 
   if (!(density >= 0.1f && density <= 1.0f)) {
     openwow::core::ida::ConsoleAddLine("Value must be between 0.1 and 1.0.",
@@ -864,7 +864,7 @@ bool ParticleDensityValidationCallback(const std::string &, const std::string &,
 bool ValidateCameraFloatRange(const std::string& new_value,
                               const double min_value,
                               const double max_value) {
-  const double value = openwow::core::ParseFloatLikeSub76FB80(new_value);
+  const double value = openwow::core::ParseDecimalFloat(new_value);
   if (value >= min_value && value <= max_value) {
     return true;
   }
@@ -1121,9 +1121,9 @@ CVarSystem::CVarSnapshot CVarSystem::MakeSnapshot(const std::string_view registe
   snapshot.registered_name = std::string(registered_name);
   snapshot.value = entry.value;
   snapshot.current_float_value =
-      static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(entry.value));
+      static_cast<float>(openwow::core::ParseDecimalFloat(entry.value));
   snapshot.current_int_value = static_cast<std::int32_t>(
-      openwow::core::ParseSignedDecimalLikeSub76F0D0(entry.value));
+      openwow::core::ParseSignedDecimal(entry.value));
   snapshot.default_value = entry.default_value;
   snapshot.has_default_value = entry.has_default_value;
   snapshot.startup_value = entry.startup_value;
@@ -1175,7 +1175,7 @@ float CVarSystem::GetCVarFloat(const std::string &name) const {
 int CVarSystem::GetCVarInt(const std::string &name) const {
 
   return static_cast<int>(std::bit_cast<std::int32_t>(
-      openwow::core::ParseSignedDecimalLikeSub76F0D0(GetCVar(name).c_str())));
+      openwow::core::ParseSignedDecimal(GetCVar(name).c_str())));
 }
 
 auto CVarSystem::ApplyRegisteredSetValueLocked(const std::string &name, CVarEntry &entry,

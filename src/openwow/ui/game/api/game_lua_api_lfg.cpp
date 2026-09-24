@@ -131,7 +131,7 @@ void PersistLfgRoles(const std::uint8_t roles) {
 }
 
 struct LfgRoleCheckThrottleState {
-  openwow::core::IdaBurstThrottle throttle;
+  openwow::core::BurstThrottle throttle;
 
   [[nodiscard]] bool ConsumeToken(const double now_seconds) {
     return throttle.TryConsume(
@@ -154,7 +154,7 @@ bool ConsumeLfgRoleCheckThrottleToken() {
 constexpr double kLfdLockInfoRequestResetSeconds = 10.0;
 
 struct LfdLockInfoRequestThrottleState {
-  openwow::core::IdaBurstThrottle throttle;
+  openwow::core::BurstThrottle throttle;
 
   [[nodiscard]] bool ConsumeToken(const double now_seconds) {
     return throttle.TryConsume(now_seconds, 2, kLfdLockInfoRequestResetSeconds);

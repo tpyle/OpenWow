@@ -47,8 +47,8 @@ namespace openwow::ui::game::detail {
 
 namespace {
 
-openwow::core::IdaBurstThrottle &GetSetCurrentTitleThrottle() {
-  static openwow::core::IdaBurstThrottle throttle;
+openwow::core::BurstThrottle &GetSetCurrentTitleThrottle() {
+  static openwow::core::BurstThrottle throttle;
   return throttle;
 }
 

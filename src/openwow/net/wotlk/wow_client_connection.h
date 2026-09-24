@@ -143,8 +143,8 @@ int WowClientConnection_DispatchOpcode(WowClientConnection* self,
                                         int flags);
 
 void WowClientConnection_OnConnected(WowClientConnection* self,
-                                      void* connection, int a3,
-                                      uint32_t timestamp, int a5);
+                                      void* connection, int arg3,
+                                      uint32_t timestamp, int arg5);
 
 bool WowClientConnection_ProofOfWork(const void* sha1_state,
                                       uint32_t difficulty,
@@ -170,7 +170,7 @@ void WowClientConnection_InitEncryption(WowClientConnection* self,
                                          uint8_t seed_len);
 
 void WowClientConnection_OnDataReady(WowClientConnection* self,
-                                      int connection, int a3, int a4);
+                                      int connection, int arg3, int arg4);
 
 void WowClientConnection_HandleAuthChallenge(WowClientConnection* self,
                                               void* connection,
@@ -184,7 +184,7 @@ void WowClientConnection_SendPacket(WowClientConnection* self,
                                      void* data_store);
 
 void WowClientConnection_OnTransferDisconnected(WowClientConnection* self,
-                                                void* connection, int a3, int a4);
+                                                void* connection, int arg3, int arg4);
 
 void WowClientConnection_HandleReconnect(WowClientConnection* self,
                                           void* connection,
@@ -197,7 +197,7 @@ void WowClientConnection_HandleTransferRedirect(WowClientConnection* self,
 void* WowClientConnection_FreeHeldMessage(void* list_ptr, HeldMessage* msg);
 
 int WowClientConnection_HandleTransferComplete(WowClientConnection* self,
-                                                void* connection, int a3);
+                                                void* connection, int arg3);
 
 void WowClientConnection_MessageHandler(WowClientConnection* self,
                                          void* connection,

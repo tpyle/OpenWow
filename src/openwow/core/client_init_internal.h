@@ -11,7 +11,7 @@ namespace openwow::core::detail {
 struct WoWGameEntryDependencies {
   std::function<void(void (*handler)())> set_invalid_parameter_handler;
   std::function<void()> init_fpu_clear_and_control;
-  std::function<void()> ret_zero_427a90;
+  std::function<void()> pre_main_init;
   std::function<int()> wow_main_init;
   void (*invalid_parameter_handler)() = nullptr;
 };

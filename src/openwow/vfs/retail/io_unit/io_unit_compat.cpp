@@ -262,24 +262,27 @@ std::uint32_t QueryIOUnitTypeTag(const void *self) {
   return tagged_self->vtable->vf0_type_tag();
 }
 
-int ForwardInnerReadOnlyVf1(IOUnitForwardingCompat *inner, int a2, int a3, int a4, int a5,
-                            int a6) {
-  return inner->vtable->vf1(inner, a2, a3, a4, a5, a6);
+int ForwardInnerReadOnlyVf1(IOUnitForwardingCompat *inner, int buffer, int offset_low,
+                            int offset_high, int size, int allow_truncate) {
+  return inner->vtable->vf1(inner, buffer, offset_low, offset_high, size, allow_truncate);
 }
-IOUnitByteResult ForwardInnerReadOnlyVf1(IOUnitBoundedCompat *inner, int a2, int a3, int a4,
-                                         int a5, int a6) {
-  return static_cast<IOUnitByteResult>(inner->vtable->vf1(inner, a2, a3, a4, a5, a6));
+IOUnitByteResult ForwardInnerReadOnlyVf1(IOUnitBoundedCompat *inner, int buffer, int offset_low,
+                                         int offset_high, int size, int allow_truncate) {
+  return static_cast<IOUnitByteResult>(
+      inner->vtable->vf1(inner, buffer, offset_low, offset_high, size, allow_truncate));
 }
-int ForwardInnerWritableVf2(IOUnitForwardingCompat *inner, int a2, int a3, int a4, int a5) {
-  return inner->vtable->vf2(inner, a2, a3, a4, a5);
+int ForwardInnerWritableVf2(IOUnitForwardingCompat *inner, int buffer, int offset_low,
+                            int offset_high, int size) {
+  return inner->vtable->vf2(inner, buffer, offset_low, offset_high, size);
 }
-IOUnitByteResult ForwardInnerWritableVf2(IOUnitBoundedCompat *inner, int a2, int a3, int a4,
-                                         int a5) {
-  return static_cast<IOUnitByteResult>(inner->vtable->vf2(inner, a2, a3, a4, a5));
+IOUnitByteResult ForwardInnerWritableVf2(IOUnitBoundedCompat *inner, int buffer, int offset_low,
+                                         int offset_high, int size) {
+  return static_cast<IOUnitByteResult>(
+      inner->vtable->vf2(inner, buffer, offset_low, offset_high, size));
 }
 int ForwardInnerFileSize(IOUnitForwardingCompat *inner) { return inner->vtable->vf4(inner); }
-int ForwardInnerVf5(IOUnitForwardingCompat *inner, int a2, int a3) {
-  return inner->vtable->vf5(inner, a2, a3);
+int ForwardInnerVf5(IOUnitForwardingCompat *inner, int size_low, int size_high) {
+  return inner->vtable->vf5(inner, size_low, size_high);
 }
 int ForwardInnerVf3(IOUnitForwardingCompat *inner) { return inner->vtable->vf3(inner); }
 int ForwardInnerVf6(IOUnitForwardingCompat *inner) { return inner->vtable->vf6(inner); }
@@ -290,8 +293,8 @@ IOUnitByteResult ForwardInnerVf3(IOUnitBoundedCompat *inner) {
 IOUnitByteResult ForwardInnerVf4(IOUnitBoundedCompat *inner, std::uint32_t *out_parts) {
   return inner->vtable->vf4(inner, out_parts);
 }
-IOUnitByteResult ForwardInnerVf5(IOUnitBoundedCompat *inner, int a2, int a3) {
-  return inner->vtable->vf5(inner, a2, a3);
+IOUnitByteResult ForwardInnerVf5(IOUnitBoundedCompat *inner, int size_low, int size_high) {
+  return inner->vtable->vf5(inner, size_low, size_high);
 }
 
 int IOUnitContainer_ForwardingWrapper_vf3(void *self) {
@@ -508,8 +511,8 @@ int ComparePackedSignedQwords(const std::uint64_t lhs, const std::uint64_t rhs) 
   return 0;
 }
 
-int ForwardIOUnitVf5(void *inner, int a2, int a3) {
-  return ForwardInnerVf5(static_cast<IOUnitForwardingCompat *>(inner), a2, a3);
+int ForwardIOUnitVf5(void *inner, int size_low, int size_high) {
+  return ForwardInnerVf5(static_cast<IOUnitForwardingCompat *>(inner), size_low, size_high);
 }
 
 }
@@ -822,21 +825,24 @@ bool IOUnitContainerLock_WrapInner(void *lock_wrapper, void *replacement) {
   return true;
 }
 
-int IOUnitContainer_CreateReadOnlyFile_vf1(void *self, int a2, int a3, int a4, int a5,
-                                           int a6) {
+int IOUnitContainer_CreateReadOnlyFile_vf1(void *self, int buffer, int offset_low,
+                                           int offset_high, int size, int allow_truncate) {
   return ForwardInnerReadOnlyVf1(
-      static_cast<IOUnitContainerForwardingWrapperCompat *>(self)->inner, a2, a3, a4, a5, a6);
+      static_cast<IOUnitContainerForwardingWrapperCompat *>(self)->inner, buffer, offset_low,
+      offset_high, size, allow_truncate);
 }
-int IOUnitContainer_CreateWritableFile_vf2(void *self, int a2, int a3, int a4, int a5) {
+int IOUnitContainer_CreateWritableFile_vf2(void *self, int buffer, int offset_low,
+                                           int offset_high, int size) {
   return ForwardInnerWritableVf2(
-      static_cast<IOUnitContainerForwardingWrapperCompat *>(self)->inner, a2, a3, a4, a5);
+      static_cast<IOUnitContainerForwardingWrapperCompat *>(self)->inner, buffer, offset_low,
+      offset_high, size);
 }
 int IOUnitContainer_GetFileSize_vf4(void *self) {
   return ForwardInnerFileSize(static_cast<IOUnitContainerForwardingWrapperCompat *>(self)->inner);
 }
-int IOUnitContainer_ForwardInnerVf5(void *self, int a2, int a3) {
-  return ForwardInnerVf5(static_cast<IOUnitContainerForwardingWrapperCompat *>(self)->inner, a2,
-                         a3);
+int IOUnitContainer_ForwardInnerVf5(void *self, int size_low, int size_high) {
+  return ForwardInnerVf5(static_cast<IOUnitContainerForwardingWrapperCompat *>(self)->inner,
+                         size_low, size_high);
 }
 std::uint8_t IOUnitContainer_ReadOnlySectorReader_vf4(void *self,
                                                       std::uint32_t *out_offset_parts) {
@@ -859,15 +865,18 @@ int IOUnitContainer_CreateFileUnit_SetSize_vf5(void *self, std::uint32_t size_lo
       static_cast<IOUnitContainerFileUnitCompat *>(self)->handle, size, 0);
 }
 
-std::uint8_t IOUnitContainerLock_vf1(void *self, int a2, int a3, int a4, int a5, int a6) {
+std::uint8_t IOUnitContainerLock_vf1(void *self, int buffer, int offset_low, int offset_high,
+                                     int size, int allow_truncate) {
   auto *wrapper = static_cast<IOUnitContainerLockWrapperCompat *>(self);
   StormCriticalSectionScope lock(wrapper->critical_section);
-  return ForwardInnerReadOnlyVf1(wrapper->inner, a2, a3, a4, a5, a6);
+  return ForwardInnerReadOnlyVf1(wrapper->inner, buffer, offset_low, offset_high, size,
+                                 allow_truncate);
 }
-std::uint8_t IOUnitContainerLock_vf2(void *self, int a2, int a3, int a4, int a5) {
+std::uint8_t IOUnitContainerLock_vf2(void *self, int buffer, int offset_low, int offset_high,
+                                     int size) {
   auto *wrapper = static_cast<IOUnitContainerLockWrapperCompat *>(self);
   StormCriticalSectionScope lock(wrapper->critical_section);
-  return ForwardInnerWritableVf2(wrapper->inner, a2, a3, a4, a5);
+  return ForwardInnerWritableVf2(wrapper->inner, buffer, offset_low, offset_high, size);
 }
 std::uint8_t IOUnitContainerLock_vf3(void *self) {
   auto *wrapper = static_cast<IOUnitContainerLockWrapperCompat *>(self);
@@ -879,10 +888,10 @@ std::uint8_t IOUnitContainerLock_vf4(void *self, std::uint32_t *out_offset_parts
   StormCriticalSectionScope lock(wrapper->critical_section);
   return wrapper->inner->vtable->vf4(wrapper->inner, out_offset_parts);
 }
-std::uint8_t IOUnitContainerLock_vf5(void *self, int a2, int a3) {
+std::uint8_t IOUnitContainerLock_vf5(void *self, int size_low, int size_high) {
   auto *wrapper = static_cast<IOUnitContainerLockWrapperCompat *>(self);
   StormCriticalSectionScope lock(wrapper->critical_section);
-  return ForwardInnerVf5(wrapper->inner, a2, a3);
+  return ForwardInnerVf5(wrapper->inner, size_low, size_high);
 }
 int IOUnitContainerLock_vf6(void *self) {
   auto *wrapper = static_cast<IOUnitContainerLockWrapperCompat *>(self);
@@ -904,19 +913,19 @@ void *IOUnitContainerLock_Destroy(void *self, char free_self) {
   return self;
 }
 
-std::uint8_t IOUnitContainer_CreateFileUnit_vf19(void *self, int a2,
+std::uint8_t IOUnitContainer_CreateFileUnit_vf19(void *self, int buffer,
                                                  int relative_offset_low,
                                                  int relative_offset_high, int size,
                                                  int allow_truncate) {
   auto *wrapper = static_cast<IOUnitContainerBoundedFileWrapperCompat *>(self);
-  return ForwardInnerReadOnlyVf1(wrapper->inner, a2, relative_offset_low, relative_offset_high,
+  return ForwardInnerReadOnlyVf1(wrapper->inner, buffer, relative_offset_low, relative_offset_high,
                                  size, allow_truncate);
 }
-std::uint8_t IOUnitContainer_CreateFileUnit_vf20(void *self, int a2,
+std::uint8_t IOUnitContainer_CreateFileUnit_vf20(void *self, int buffer,
                                                  std::uint64_t relative_offset,
                                                  std::uint32_t size) {
   auto *wrapper = static_cast<IOUnitContainerBoundedFileWrapperCompat *>(self);
-  return ForwardInnerWritableVf2(wrapper->inner, a2,
+  return ForwardInnerWritableVf2(wrapper->inner, buffer,
                                  static_cast<int>(relative_offset & 0xFFFFFFFFu),
                                  static_cast<int>(relative_offset >> 32), size);
 }

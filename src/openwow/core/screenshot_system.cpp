@@ -81,7 +81,7 @@ std::string_view FormatExtension(ImageFormat format) {
 }
 
 uint32_t ResolveJpegQualityFromCVar(std::string_view value) {
-    uint32_t level = ParseSignedDecimalLikeSub76F0D0(value);
+    uint32_t level = ParseSignedDecimal(value);
     if (level == 0u) {
         level = 1u;
     } else if (level > 10u) {

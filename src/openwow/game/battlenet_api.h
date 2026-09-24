@@ -731,31 +731,31 @@ public:
   }
   static void FireEvent(std::int32_t event_id, const char *fmt, ...);
 
-  static void OnToonOnline(std::int32_t a1, std::int32_t a2, const BNetVariant *a3);
-  static void OnNewPresence(std::int32_t a1, std::int32_t a2, const BNetVariant *a3);
+  static void OnToonOnline(std::int32_t arg1, std::int32_t arg2, const BNetVariant *payload);
+  static void OnNewPresence(std::int32_t arg1, std::int32_t arg2, const BNetVariant *payload);
   static void OnToonNameChanged(std::int32_t presence_id);
   static void OnFactionChanged(std::int32_t presence_id);
 
-  static void OnGenericPresenceFieldUpdated(std::int32_t a1, std::int32_t a2,
-                                            const BNetVariant *a3);
-  static void OnChatWhisperSent(std::int32_t a1, std::int32_t a2,
-                                const BNetChatWhisperPayload *a3);
-  static void OnChatWhisperReceived(std::int32_t a1, std::int32_t a2,
-                                    const BNetChatWhisperPayload *a3);
-  static void OnChatMessage(std::int32_t a1, std::int32_t a2,
-                            const BNetConversationMessagePayload *a3);
-  static void OnOnlineTimeChanged(std::int32_t a1, std::int32_t a2,
-                                  const BNetOnlineTimeChangedPayload *a3);
-  static void OnCustomMessageChanged(std::int32_t a1, std::int32_t a2,
-                                     const BNetCustomMessageChangedPayload *a3);
-  static void OnOnlineStatusChanged(std::int32_t a1, std::int32_t a2,
-                                    const BNetOnlineStatusChangedPayload *a3);
+  static void OnGenericPresenceFieldUpdated(std::int32_t arg1, std::int32_t arg2,
+                                            const BNetVariant *payload);
+  static void OnChatWhisperSent(std::int32_t arg1, std::int32_t arg2,
+                                const BNetChatWhisperPayload *payload);
+  static void OnChatWhisperReceived(std::int32_t arg1, std::int32_t arg2,
+                                    const BNetChatWhisperPayload *payload);
+  static void OnChatMessage(std::int32_t arg1, std::int32_t arg2,
+                            const BNetConversationMessagePayload *payload);
+  static void OnOnlineTimeChanged(std::int32_t arg1, std::int32_t arg2,
+                                  const BNetOnlineTimeChangedPayload *payload);
+  static void OnCustomMessageChanged(std::int32_t arg1, std::int32_t arg2,
+                                     const BNetCustomMessageChangedPayload *payload);
+  static void OnOnlineStatusChanged(std::int32_t arg1, std::int32_t arg2,
+                                    const BNetOnlineStatusChangedPayload *payload);
   static void OnHandleError(BNetErrorCode code, std::int32_t context);
-  static void OnFOFInfoReceived(std::int32_t a1, std::int32_t a2,
-                                const BNetFriendsOfFriendInfoPayload *a3);
-  static void OnFriendListInitialized(std::int32_t a1, std::int32_t a2, void *a3);
-  static void OnFriendAdded(std::int32_t a1, std::int32_t a2, const BNetVariant *a3);
-  static void OnFriendRemoved(std::int32_t a1, std::int32_t a2, const BNetVariant *a3);
+  static void OnFOFInfoReceived(std::int32_t arg1, std::int32_t arg2,
+                                const BNetFriendsOfFriendInfoPayload *payload);
+  static void OnFriendListInitialized(std::int32_t arg1, std::int32_t arg2, void *event_data);
+  static void OnFriendAdded(std::int32_t arg1, std::int32_t arg2, const BNetVariant *payload);
+  static void OnFriendRemoved(std::int32_t arg1, std::int32_t arg2, const BNetVariant *payload);
 
   void Clear();
 

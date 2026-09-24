@@ -2124,7 +2124,7 @@ int LuaAcceptQuest(lua_State *L) {
   session->interaction().SendQuestGiverAcceptQuest(ResolveQuestAcceptGuid(d), d.quest_id,
                                                    d.accept_packet_value);
   session->quests().MarkQuestDetailsAcceptSubmitted();
-  ::openwow::game::CloseQuestDialogLikeIda58CA70(
+  ::openwow::game::CloseQuestDialog(
       *session, dialog, false,
       false);
   return 0;
@@ -2161,7 +2161,7 @@ int LuaDeclineQuest(lua_State *L) {
   }
 
   if (object->IsPlayer() || object->IsItem() || dialog.close_on_decline) {
-    ::openwow::game::CloseQuestDialogLikeIda58CA70(*session, dialog, false, true);
+    ::openwow::game::CloseQuestDialog(*session, dialog, false, true);
     return 0;
   }
 
@@ -2410,7 +2410,7 @@ int LuaCloseQuest(lua_State *L) {
   if (session) {
     const auto dialog =
         ::openwow::game::GetActiveQuestDialogCloseState(session->quests());
-    ::openwow::game::CloseQuestDialogLikeIda58CA70(
+    ::openwow::game::CloseQuestDialog(
         *session, dialog, false, true);
   }
   return 0;

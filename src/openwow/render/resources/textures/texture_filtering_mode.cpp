@@ -21,7 +21,7 @@ constexpr std::size_t kTextureFilteringModeCount =
 bool TextureFilteringModeValidationCallback(const std::string &, const std::string &,
                                             const std::string &new_value) {
   const std::int32_t parsed_value =
-      static_cast<std::int32_t>(openwow::core::ParseSignedDecimalLikeSub76F0D0(new_value));
+      static_cast<std::int32_t>(openwow::core::ParseSignedDecimal(new_value));
   if (parsed_value >= 0 && parsed_value < 6) {
     return true;
   }

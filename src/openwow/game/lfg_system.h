@@ -182,7 +182,7 @@ class LFGSystem {
     uint32_t comment_send_attempts_ = 0;
     JoinThrottleClock::time_point join_send_window_anchor_{};
     uint32_t join_send_attempts_ = 0;
-    openwow::core::IdaBurstThrottle teleport_send_throttle_{};
+    openwow::core::BurstThrottle teleport_send_throttle_{};
     bool join_request_active_ = false;
     bool join_request_dirty_ = false;
     CommentThrottleClock::time_point boot_vote_send_window_anchor_{};

@@ -42,7 +42,7 @@ struct CAsyncQueue {
     uint32_t staleFrameCheck;
 };
 
-static_assert(sizeof(CAsyncQueue) == 36, "CAsyncQueue must match the IDA layout");
+static_assert(sizeof(CAsyncQueue) == 36, "CAsyncQueue must keep its 36-byte legacy layout");
 
 struct AsyncThreadNode {
     uint32_t       linkPrev = 0;

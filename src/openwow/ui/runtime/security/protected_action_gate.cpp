@@ -260,7 +260,7 @@ void GameUI_ReportProtectedActionFailure(
 bool GameUI_TaintLogCVarValidationCallback(
     const std::string&, const std::string&, const std::string& new_value) {
   TaintLog().SetEnabled(
-      openwow::core::ParseSignedDecimalLikeSub76F0D0(new_value) > 0);
+      openwow::core::ParseSignedDecimal(new_value) > 0);
   return true;
 }
 

@@ -1879,16 +1879,16 @@ void BattleNetApi::FireEvent(std::int32_t event_id, const char *fmt, ...) {
 }
 
 void BattleNetApi::OnToonOnline(std::int32_t , std::int32_t ,
-                                const BNetVariant *a3) {
+                                const BNetVariant *payload) {
   auto &api = Instance();
   if (!HasBNetRidTransportAccess(api))
     return;
 
-  FireEvent(kBNetEventSelfOnline, "%u", static_cast<unsigned int>(a3->ToInt()));
+  FireEvent(kBNetEventSelfOnline, "%u", static_cast<unsigned int>(payload->ToInt()));
 }
 
 void BattleNetApi::OnNewPresence(std::int32_t , std::int32_t ,
-                                 const BNetVariant *a3) {
+                                 const BNetVariant *payload) {
   auto &api = Instance();
   if (!HasBNetRidTransportAccess(api)) {
     return;
@@ -1898,7 +1898,7 @@ void BattleNetApi::OnNewPresence(std::int32_t , std::int32_t ,
     openwow::core::SErrFatalCondition("%s", "");
   }
 
-  const auto presence_id = a3 ? a3->ToInt() : 0;
+  const auto presence_id = payload ? payload->ToInt() : 0;
   if (!api.IsFriendListInitialized()) {
     return;
   }
@@ -1950,7 +1950,7 @@ void BattleNetApi::OnFactionChanged(std::int32_t presence_id) {
 }
 
 void BattleNetApi::OnGenericPresenceFieldUpdated(std::int32_t , std::int32_t ,
-                                                 const BNetVariant *a3) {
+                                                 const BNetVariant *payload) {
   auto &api = Instance();
   if (!HasBNetRidTransportAccess(api)) {
     return;
@@ -1960,7 +1960,7 @@ void BattleNetApi::OnGenericPresenceFieldUpdated(std::int32_t , std::int32_t ,
     openwow::core::SErrFatalCondition("%s", "");
   }
 
-  const auto presence_id = a3 ? a3->ToInt() : 0;
+  const auto presence_id = payload ? payload->ToInt() : 0;
   if (presence_id == 0) {
     return;
   }
@@ -1982,44 +1982,44 @@ void BattleNetApi::OnGenericPresenceFieldUpdated(std::int32_t , std::int32_t ,
 }
 
 void BattleNetApi::OnChatWhisperSent(std::int32_t , std::int32_t ,
-                                     const BNetChatWhisperPayload *a3) {
+                                     const BNetChatWhisperPayload *payload) {
   auto &api = Instance();
-  if (!HasBNetRidTransportAccess(api) || !a3) {
+  if (!HasBNetRidTransportAccess(api) || !payload) {
     return;
   }
 
-  DisplayBNetWhisperMessage(api, *a3, ChatDisplayType::kBnWhisperInform);
+  DisplayBNetWhisperMessage(api, *payload, ChatDisplayType::kBnWhisperInform);
 }
 
 void BattleNetApi::OnChatWhisperReceived(std::int32_t , std::int32_t ,
-                                         const BNetChatWhisperPayload *a3) {
+                                         const BNetChatWhisperPayload *payload) {
   auto &api = Instance();
-  if (!HasBNetRidTransportAccess(api) || !a3) {
+  if (!HasBNetRidTransportAccess(api) || !payload) {
     return;
   }
 
-  DisplayBNetWhisperMessage(api, *a3, ChatDisplayType::kBnWhisper);
+  DisplayBNetWhisperMessage(api, *payload, ChatDisplayType::kBnWhisper);
 }
 
 void BattleNetApi::OnChatMessage(std::int32_t , std::int32_t ,
-                                 const BNetConversationMessagePayload *a3) {
+                                 const BNetConversationMessagePayload *payload) {
   auto &api = Instance();
-  if (!HasBNetRidTransportAccess(api) || !a3) {
+  if (!HasBNetRidTransportAccess(api) || !payload) {
     return;
   }
 
-  DisplayBNetConversationMessage(api, *a3);
+  DisplayBNetConversationMessage(api, *payload);
 }
 
 void BattleNetApi::OnOnlineTimeChanged(std::int32_t , std::int32_t ,
-                                       const BNetOnlineTimeChangedPayload *a3) {
+                                       const BNetOnlineTimeChangedPayload *payload) {
   auto &api = Instance();
   if (!HasBNetRidTransportAccess(api)) {
     return;
   }
 
-  const std::int32_t presence_id = a3 ? a3->presence_id : 0;
-  if (!a3 || !a3->has_online_time || api.IsPresenceIDSelf(presence_id)) {
+  const std::int32_t presence_id = payload ? payload->presence_id : 0;
+  if (!payload || !payload->has_online_time || api.IsPresenceIDSelf(presence_id)) {
     return;
   }
 
@@ -2036,7 +2036,7 @@ void BattleNetApi::OnOnlineTimeChanged(std::int32_t , std::int32_t ,
   }
 
   const std::int32_t previous_online_time = current_online_time.int_val;
-  const std::int32_t incoming_online_time = a3->online_time;
+  const std::int32_t incoming_online_time = payload->online_time;
   if (previous_online_time != 0 && incoming_online_time != 0 &&
       incoming_online_time > previous_online_time) {
     if (is_rid_friend) {
@@ -2053,7 +2053,7 @@ void BattleNetApi::OnOnlineTimeChanged(std::int32_t , std::int32_t ,
 }
 
 void BattleNetApi::OnCustomMessageChanged(std::int32_t , std::int32_t ,
-                                          const BNetCustomMessageChangedPayload *a3) {
+                                          const BNetCustomMessageChangedPayload *payload) {
   auto &api = Instance();
   if (!HasBNetRidTransportAccess(api)) {
     return;
@@ -2064,9 +2064,10 @@ void BattleNetApi::OnCustomMessageChanged(std::int32_t , std::int32_t ,
         "BNPresenceCallback_CustomMessageChanged: BattleNetUI not initialized");
   }
 
-  const std::int32_t payload_presence_id = a3 ? a3->presence_id : 0;
+  const std::int32_t payload_presence_id = payload ? payload->presence_id : 0;
   const std::string_view message_text =
-      (a3 && a3->has_custom_message) ? std::string_view{a3->custom_message} : std::string_view{};
+      (payload && payload->has_custom_message) ? std::string_view{payload->custom_message}
+                                               : std::string_view{};
 
   constexpr auto kOnlineTimeKey = static_cast<std::int32_t>(BNetPresenceKey::kOnlineTime);
   constexpr auto kLastOnlineKey = static_cast<std::int32_t>(BNetPresenceKey::kLastOnline);
@@ -2136,14 +2137,14 @@ void BattleNetApi::OnCustomMessageChanged(std::int32_t , std::int32_t ,
 }
 
 void BattleNetApi::OnOnlineStatusChanged(std::int32_t , std::int32_t ,
-                                         const BNetOnlineStatusChangedPayload *a3) {
+                                         const BNetOnlineStatusChangedPayload *payload) {
   auto &api = Instance();
   if (!HasBNetRidTransportAccess(api)) {
     return;
   }
 
-  const std::int32_t presence_id = a3 ? a3->presence_id : 0;
-  const bool is_online = a3 && a3->has_online_state && a3->is_online;
+  const std::int32_t presence_id = payload ? payload->presence_id : 0;
+  const bool is_online = payload && payload->has_online_state && payload->is_online;
   const bool is_rid_friend = api.IsFriendPresenceID(presence_id);
   const bool is_cid_friend = api.IsCIDFriend(presence_id);
 
@@ -2178,20 +2179,20 @@ void BattleNetApi::OnHandleError(BNetErrorCode code, std::int32_t context) {
 }
 
 void BattleNetApi::OnFOFInfoReceived(std::int32_t , std::int32_t ,
-                                     const BNetFriendsOfFriendInfoPayload *a3) {
+                                     const BNetFriendsOfFriendInfoPayload *payload) {
   auto &api = Instance();
   if (!HasBNetRidTransportAccess(api))
     return;
 
-  const auto error_code = static_cast<BNetErrorCode>(a3 ? a3->error_code : 0);
+  const auto error_code = static_cast<BNetErrorCode>(payload ? payload->error_code : 0);
   if (error_code != 0) {
     api.HandleError(error_code, 0);
     FireEvent(kBNetEventRequestFofFailed, nullptr);
     return;
   }
 
-  if (a3) {
-    api.SetFriendsOfFriendList(a3->source_presence_id, a3->presence_ids);
+  if (payload) {
+    api.SetFriendsOfFriendList(payload->source_presence_id, payload->presence_ids);
   } else {
     api.SetFriendsOfFriendList(0, {});
   }
@@ -2199,12 +2200,12 @@ void BattleNetApi::OnFOFInfoReceived(std::int32_t , std::int32_t ,
   FireEvent(kBNetEventRequestFofSucceeded, nullptr);
 }
 
-void BattleNetApi::OnFriendListInitialized(std::int32_t , std::int32_t , void *a3) {
+void BattleNetApi::OnFriendListInitialized(std::int32_t , std::int32_t , void *event_data) {
   auto &api = Instance();
   if (!HasBNetRidTransportAccess(api))
     return;
 
-  const auto *payload = static_cast<const BNetFriendListInitializedPayload *>(a3);
+  const auto *payload = static_cast<const BNetFriendListInitializedPayload *>(event_data);
 
   api.friends_.clear();
   api.rid_friend_account_presence_ids_.clear();
@@ -2228,12 +2229,12 @@ void BattleNetApi::OnFriendListInitialized(std::int32_t , std::int32_t , void *a
   FireEvent(679, nullptr);
 }
 
-void BattleNetApi::OnFriendAdded(std::int32_t , std::int32_t , const BNetVariant *a3) {
+void BattleNetApi::OnFriendAdded(std::int32_t , std::int32_t , const BNetVariant *payload) {
   auto &api = Instance();
   if (!HasBNetRidTransportAccess(api))
     return;
 
-  const auto presence_id = a3 ? a3->ToInt() : 0;
+  const auto presence_id = payload ? payload->ToInt() : 0;
   if (api.IsFriendPresenceID(presence_id)) {
     api.AddFriendToList(presence_id);
     api.UpdateFriendOnlineToons();
@@ -2248,12 +2249,12 @@ void BattleNetApi::OnFriendAdded(std::int32_t , std::int32_t , const BNetVariant
 }
 
 void BattleNetApi::OnFriendRemoved(std::int32_t , std::int32_t ,
-                                   const BNetVariant *a3) {
+                                   const BNetVariant *payload) {
   auto &api = Instance();
   if (!HasBNetRidTransportAccess(api))
     return;
 
-  const auto presence_id = a3 ? a3->ToInt() : 0;
+  const auto presence_id = payload ? payload->ToInt() : 0;
   const auto friend_index = api.FindFriendIndexByPresenceID(presence_id);
   if (friend_index < 0) {
     return;

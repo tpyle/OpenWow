@@ -35,16 +35,16 @@ void* ResizeLegacyArrayStoragePreservingPrefix(
     LegacyResizableBufferView buffer, uint32_t new_capacity,
     std::size_t element_size, const char* debug_tag);
 
-inline void* TSGrowableArray_4Byte_SetCapacity_47CCC0(
+inline void* TSGrowableArray_4Byte_SetCapacity(
     LegacyResizableBufferView buffer, uint32_t new_capacity,
     const char* debug_tag = "pa<x>") {
     return ResizeLegacyArrayStoragePreservingPrefix(
         buffer, new_capacity, sizeof(uint32_t), debug_tag);
 }
 
-inline constexpr char kFramePriorityPointerStormTypeTag[] = ".PAVFRAMEPRIORITY@@";
+inline constexpr char kFramePriorityPointerStormTypeTag[] = "storm.frame_priority_ptr_array";
 inline constexpr char kVehiclePassengerPointerStormTypeTag[] =
-    ".PAVCVehiclePassenger_C@@";
+    "storm.vehicle_passenger_ptr_array";
 
 inline void* TSGrowableArray_PAVFRAMEPRIORITY_SetCapacityPreservingPrefix(
     LegacyResizableBufferView buffer, uint32_t new_capacity) {
@@ -61,7 +61,7 @@ inline void* TSGrowableArray_PAVCVehiclePassenger_C_SetCapacityPreservingPrefix(
 }
 
 inline constexpr char kSkillLineAbilityRecPointerStormTypeTag[] =
-    ".PBVSkillLineAbilityRec@@";
+    "storm.skill_line_ability_ptr_array";
 
 inline void*
 TSGrowableArray_PBVSkillLineAbilityRec_SetCapacityPreservingPrefix(
@@ -71,7 +71,7 @@ TSGrowableArray_PBVSkillLineAbilityRec_SetCapacityPreservingPrefix(
         kSkillLineAbilityRecPointerStormTypeTag);
 }
 
-inline constexpr char kTSGrowableArrayUint16StormTypeTag[] = ".G";
+inline constexpr char kTSGrowableArrayUint16StormTypeTag[] = "storm.u16_array";
 
 inline void* TSGrowableArray_uint16_SetCapacityPreservingPrefix(
     LegacyResizableBufferView buffer, uint32_t new_capacity) {
@@ -87,8 +87,8 @@ inline void* TSGrowableArray_8Byte_SetCapacityPreservingPrefix(
         buffer, new_capacity, sizeof(std::uint64_t), debug_tag);
 }
 
-inline constexpr char kC2iVectorStormTypeTag[] = ".?AVC2iVector@NTempest@@";
-inline constexpr char kCImVectorStormTypeTag[] = ".?AVCImVector@NTempest@@";
+inline constexpr char kC2iVectorStormTypeTag[] = "storm.c2i_vector";
+inline constexpr char kCImVectorStormTypeTag[] = "storm.cim_vector";
 
 inline void* TSGrowableArray_C2iVector_SetCapacityPreservingPrefix(
     LegacyResizableBufferView buffer, uint32_t new_capacity) {
@@ -109,7 +109,7 @@ void TSGrowableArray_4Byte_ResizeExactCount(
 void TSGrowableArray_CImVector_Resize(LegacyResizableBufferView buffer,
                                       uint32_t new_count);
 
-bool InitSCritical_callee_47CBC0();
+bool InitEvtContextTlsSlot();
 
 void* GetEvtContextTlsValue();
 bool SetEvtContextTlsValue(void* value);

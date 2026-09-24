@@ -53,7 +53,7 @@ struct WoWSDispatcherPayload {
   std::array<WoWSComponentEntry, kWoWSMaxComponents> components{};
 };
 static_assert(sizeof(WoWSDispatcherPayload) == 1804,
-              "Must match IDA stack frame: 0x70C bytes");
+              "Dispatcher payload must be 0x70C bytes");
 
 enum class BattlenetDispatchValueType : std::uint8_t {
   kString,
@@ -116,7 +116,7 @@ struct RealmRecommendedEntry {
   std::uint32_t recommended = 0;
 };
 static_assert(sizeof(RealmRecommendedEntry) == 16,
-              "Must match IDA 16-byte stride in sub_8C9310 fill loop");
+              "Realm recommendation entries use a 16-byte stride");
 
 struct BnRealmEntry {
   std::uint8_t  type              = 0;
@@ -149,7 +149,7 @@ struct BNetVariantSlot {
   std::array<std::uint8_t, kBNetVariantSlotDataBytes> data{};
 };
 static_assert(sizeof(BNetVariantSlot) == kBNetVariantSlotDwords * sizeof(std::uint32_t),
-              "Must match IDA variant slot stride: 260 DWORDs");
+              "Variant slot stride must be 260 DWORDs");
 
 struct BNetVariantSlotArray {
   std::uint32_t count = 0;
@@ -207,7 +207,7 @@ struct BNetLoginRedirectEventBuf {
   void Init();
 };
 static_assert(sizeof(BNetLoginRedirectEventBuf) == kBNetLoginRedirectBytes,
-              "Must match IDA: 11 DWORDs = 44 bytes");
+              "Redirect event buffer must be 11 DWORDs = 44 bytes");
 
 std::int32_t *BNetEventBuf_InitLoginRedirectEvent(
     BNetLoginRedirectEventBuf &buf);

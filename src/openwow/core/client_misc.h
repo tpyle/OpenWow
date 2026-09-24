@@ -68,11 +68,11 @@ int GameCleanup();
 
 int fn_timingMethod();
 
-int CompareFunction(const char **a1, const char **a2);
+int CompareFunction(const char **lhs, const char **rhs);
 
 char *AppendRealmInfoToCrashDump(char *buf, int buf_size);
 
-int LaunchWowError(int a1, int a2, int a3, int a4, int a5);
+int LaunchWowError(int arg1, int arg2, int arg3, int arg4, int arg5);
 
 char *AppendLocalZoneInfoToCrashDump(void *obj, char *buf, int buf_size);
 

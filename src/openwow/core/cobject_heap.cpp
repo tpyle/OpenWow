@@ -620,7 +620,7 @@ void CObjectHeapList::DumpUsageToDebugTrace() const {
 
 bool CVar_HeapAllocTracking_Handler(const char* new_value) {
     const bool enabled =
-        ParseSignedDecimalLikeSub76F0D0(new_value) != 0u;
+        ParseSignedDecimal(new_value) != 0u;
     SetLogFlags(enabled ? 0x20u : 0u, 0x20u);
     ida::ConsoleAddLine(enabled ? "Heap tracking switched ON"
                                 : "Heap tracking switched OFF",

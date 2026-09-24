@@ -275,7 +275,7 @@ void ReportSocketCreateFailure(int socket_result) {
   char message[160];
   std::snprintf(message, sizeof(message), "socket() returned %d, reason: %s", socket_result,
                 "can't create socket (No network connection available?)");
-  openwow::core::SErrDisplayError(0x85100000, ".\\WowConnection.cpp", 0x68, message, 0, 1u,
+  openwow::core::SErrDisplayError(0x85100000, __FILE__, __LINE__, message, 0, 1u,
                                   0x11111111);
 }
 
@@ -353,7 +353,7 @@ void SplitRetailHostPortString(const char *endpoint, std::array<char, 256> &host
     return;
   }
 
-  port = static_cast<std::uint16_t>(openwow::core::ParseSignedDecimalLikeSub76F0D0(
+  port = static_cast<std::uint16_t>(openwow::core::ParseSignedDecimal(
       delimiter + 1));
 
   const std::size_t copy_limit =

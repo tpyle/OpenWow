@@ -17,9 +17,8 @@ namespace openwow::storage::persistence {
 
 namespace {
 
-constexpr char kProfileSourceFile[] = ".\\Profile.cpp";
-constexpr char kProfileSectionTag[] = "AU:Section<Profile>";
-constexpr char kProfileKeyValueTag[] = "AU:KEYVALUE<Profile>";
+constexpr char kProfileSectionTag[] = "profile.section";
+constexpr char kProfileKeyValueTag[] = "profile.key_value";
 constexpr int kErrorInvalidParameter = 87;
 
 const void* s_profileVtable = nullptr;
@@ -158,7 +157,7 @@ void DestroyOwnedProfileString(const char* text) {
     return;
   }
 
-  openwow::core::SMemFree(const_cast<char*>(text), kProfileSourceFile, -2, 0);
+  openwow::core::SMemFree(const_cast<char*>(text), __FILE__, -2, 0);
 }
 
 void DestroyProfileKeyValue(ProfileHashEntry* entry) {
@@ -417,7 +416,7 @@ bool InsertProfileHashEntry(ProfileHashTable* table, ProfileHashEntry* entry) {
 
 char* AllocateOwnedProfileString(const std::string_view value) {
   auto* storage = static_cast<char*>(
-      openwow::core::SMemAlloc(value.size() + 1, kProfileSourceFile, -2, 0x8));
+      openwow::core::SMemAlloc(value.size() + 1, __FILE__, -2, 0x8));
   if (!storage) {
     return nullptr;
   }
@@ -485,9 +484,9 @@ bool AppendProfileValue(ProfileKeyValue* key_value,
       static_cast<std::size_t>(key_value->value_count) + 1;
   auto** new_values = static_cast<const char**>(
       openwow::core::SMemAlloc(sizeof(const char*) * new_count,
-                               kProfileSourceFile, -2, 0x8));
+                               __FILE__, -2, 0x8));
   if (!new_values) {
-    openwow::core::SMemFree(value, kProfileSourceFile, -2, 0);
+    openwow::core::SMemFree(value, __FILE__, -2, 0);
     return false;
   }
 
@@ -593,7 +592,7 @@ CProfileBuffer* CProfileBuffer_Create(std::uint32_t requestedSize) {
 
   auto* buf = static_cast<CProfileBuffer*>(
       openwow::core::SMemAlloc(sizeof(CProfileBuffer) + data_size,
-                               kProfileSourceFile, 0x52, 0));
+                               __FILE__, __LINE__, 0));
   if (!buf) {
     return nullptr;
   }
@@ -652,8 +651,8 @@ void ProfileHashTable_Init(ProfileHashTable* ht,
 }
 
 CProfile* CProfile_Create() {
-  void* storage = openwow::core::SMemAlloc(sizeof(CProfile), kProfileSourceFile,
-                                           0x1FE, 0);
+  void* storage = openwow::core::SMemAlloc(sizeof(CProfile), __FILE__,
+                                           __LINE__, 0);
   if (!storage) {
     return nullptr;
   }

@@ -76,7 +76,7 @@ SoundEngine::~SoundEngine() = default;
 void SoundEngine_LogError(SoundEngine& engine, const int context, const char* format, ...) {
   va_list args;
   va_start(args, format);
-  engine.LogLineV(0, ".\\SoundEngine.cpp", context, format, args);
+  engine.LogLineV(0, __FILE__, context, format, args);
   va_end(args);
 }
 
@@ -196,7 +196,7 @@ void SoundEngine::LogOutputDeviceInfo(int driver_index,
              driver_index < static_cast<int>(input_devices_.size())) {
     name = input_devices_[driver_index].name;
   }
-  LogLine(2267, ".\\SoundEngine.cpp", 0,
+  LogLine(__LINE__, __FILE__, 0,
           " - Using [%d] %s for %s", driver_index, name, usage);
 }
 
@@ -221,7 +221,7 @@ void SoundEngine::CreateStream(const char* path,
 
   if (!initialized_ || !path || !*path) return;
 
-  LogLine(0, ".\\SoundEngine.cpp", 0, "CreateStream: %s", path);
+  LogLine(0, __FILE__, 0, "CreateStream: %s", path);
 
   AudioClipInfo clip;
   clip.path = path;
@@ -231,7 +231,7 @@ void SoundEngine::CreateStream(const char* path,
 
   AudioPlaybackHandle handle = audio_engine_.Play(clip);
   if (handle.handleId == 0) {
-    LogLine(0, ".\\SoundEngine.cpp", 0,
+    LogLine(0, __FILE__, 0,
             "CreateStream: Play returned 0 for %s", path);
     return;
   }
@@ -329,9 +329,9 @@ bool SoundEngine::Init(int max_channels,
   std::error_code ec;
   std::filesystem::remove(std::filesystem::path("Logs") / "Sound.log", ec);
 
-  LogLine(0, ".\\SoundEngine.cpp", 0, " ");
-  LogLine(0, ".\\SoundEngine.cpp", 0, "=> Initializing Game Sound");
-  LogLine(0, ".\\SoundEngine.cpp", 0, "Version 3.3.5 / Build 12340");
+  LogLine(0, __FILE__, 0, " ");
+  LogLine(0, __FILE__, 0, "=> Initializing Game Sound");
+  LogLine(0, __FILE__, 0, "Version 3.3.5 / Build 12340");
 
   position_callback_ = pos_cb;
 
@@ -361,7 +361,7 @@ bool SoundEngine::Init(int max_channels,
         sample_rate, 2, kRetailDspBlockSamples);
   }
   if (!output_opened) {
-    LogLine(0, ".\\SoundEngine.cpp", 33, "AudioEngine init failed");
+    LogLine(0, __FILE__, 33, "AudioEngine init failed");
     if (error_out) *error_out = 33;
     return false;
   }
@@ -386,14 +386,14 @@ bool SoundEngine::Init(int max_channels,
           : output_devices_[output_driver_index].name;
 
   const OutputDriverChannelCounts output_channel_counts = QueryOutputDriverChannelCounts();
-  LogLine(2557, ".\\SoundEngine.cpp", 0,
+  LogLine(__LINE__, __FILE__, 0,
           " - Sound Driver Reports: %d Hardware Channels Available.",
           output_channel_counts.hardware_3d);
 
   last_tick_ms_ = GetTickCountMs();
   initialized_ = true;
 
-  LogLine(0, ".\\SoundEngine.cpp", 0,
+  LogLine(0, __FILE__, 0,
           "=> Done Initializing Game Sound (%d sw channels, %d Hz)",
           sw_channels, sample_rate);
   return true;
@@ -425,8 +425,8 @@ void SoundEngine::Shutdown() {
 }
 
 void SoundEngine::ShutdownGameSound(bool keep_channel_groups) {
-  LogLine(3009, ".\\SoundEngine.cpp", 0, " ");
-  LogLine(3010, ".\\SoundEngine.cpp", 0, "=> Shutting Down Game Sound");
+  LogLine(__LINE__, __FILE__, 0, " ");
+  LogLine(__LINE__, __FILE__, 0, "=> Shutting Down Game Sound");
 
   if (!keep_channel_groups) {
     channel_groups_.clear();
@@ -436,7 +436,7 @@ void SoundEngine::ShutdownGameSound(bool keep_channel_groups) {
   ResetDspGraph();
   initialized_ = false;
 
-  LogLine(3046, ".\\SoundEngine.cpp", 0, "=> Done Shutting Down Game Sound");
+  LogLine(__LINE__, __FILE__, 0, "=> Done Shutting Down Game Sound");
 }
 
 bool SoundEngine::ProcessUpdateTick() {

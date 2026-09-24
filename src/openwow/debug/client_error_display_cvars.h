@@ -34,7 +34,7 @@ inline constexpr std::array<std::string_view, kClientErrorFilterCategoryCount>
 
 inline std::uint32_t ParseClientErrorDisplayCVarValue(
     const std::string& value) {
-  return openwow::core::ParseSignedDecimalLikeSub76F0D0(
+  return openwow::core::ParseSignedDecimal(
       std::string_view(value));
 }
 

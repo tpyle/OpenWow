@@ -27,7 +27,7 @@ struct ComSatVoiceCodecResamplerState {
 };
 
 static_assert(sizeof(ComSatVoiceCodecResamplerState) == 360,
-              "Resampler state must be 360 bytes to match IDA layout");
+              "Resampler state must keep its 360-byte legacy layout");
 
 void ComSatVoiceCodec_ResetResamplerState(
     ComSatVoiceCodecResamplerState& state) noexcept;

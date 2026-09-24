@@ -277,7 +277,7 @@ public:
                                    const WorldSession& session,
                                    std::uint64_t guid);
 
-  static int OnGroupMemberUpdate(std::uint64_t guid, int opcode, int a3,
+  static int OnGroupMemberUpdate(std::uint64_t guid, int opcode, int arg3,
                                  const std::uint8_t *packet);
 
   static void InitVf0_ScalarDeletingDestructor(void *block, bool free_mem);

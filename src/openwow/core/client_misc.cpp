@@ -68,7 +68,7 @@
 
 namespace openwow::core {
 
-static uint32_t dword_AC3228 = 0;
+static uint32_t g_game_cleanup_flag = 0;
 
 namespace {
 
@@ -157,24 +157,24 @@ void ExecuteWorldportCommand(std::string_view raw_args) {
       return;
     }
 
-    destination.map_id = openwow::core::ParseSignedDecimalLikeSub76F0D0(tokens[0]);
+    destination.map_id = openwow::core::ParseSignedDecimal(tokens[0]);
     destination.x = active_player_state->x;
     destination.y = active_player_state->y;
     destination.z = active_player_state->z;
     destination.orientation = active_player_state->orientation;
 
     if (tokens.size() >= 2) {
-      destination.x = ParseFloatLikeSub76FB80(tokens[1]);
+      destination.x = ParseDecimalFloat(tokens[1]);
     }
     if (tokens.size() >= 3) {
-      destination.y = ParseFloatLikeSub76FB80(tokens[2]);
+      destination.y = ParseDecimalFloat(tokens[2]);
     }
     if (tokens.size() >= 4) {
-      destination.z = ParseFloatLikeSub76FB80(tokens[3]);
+      destination.z = ParseDecimalFloat(tokens[3]);
     }
     if (tokens.size() >= 5) {
       destination.orientation =
-          ParseFloatLikeSub76FB80(tokens[4]) * kWorldportDegreesToRadians;
+          ParseDecimalFloat(tokens[4]) * kWorldportDegreesToRadians;
     }
   } else {
 
@@ -490,7 +490,7 @@ int ShutdownCombatData() {
 }
 
 void ClearGameCleanupFlag() {
-  dword_AC3228 = 0;
+  g_game_cleanup_flag = 0;
 }
 
 detail::GameCleanupDependencies MakeGameCleanupDependencies() {
@@ -538,15 +538,15 @@ detail::GameCleanupDependencies &MutableGameCleanupDependencies() {
 
 }
 
-static uint32_t *dword_B2FA04 = nullptr;
+static uint32_t *g_async_thread_sleep_cvar = nullptr;
 
-static uint32_t *dword_B2FA08 = nullptr;
+static uint32_t *g_async_handler_timeout_cvar = nullptr;
 
-static float flt_B2FEDC = 0.0f;
+static float g_trial_loading_progress = 0.0f;
 
-static char byte_B2FED9 = 0;
+static char g_trial_loading_message_enabled = 0;
 
-static char byte_B302F0[0x400] = {};
+static char g_trial_loading_message_text[0x400] = {};
 
 struct LoadingScreenStormInitState {
   std::mutex mutex;
@@ -1083,7 +1083,7 @@ static int GetCurrentTimingMethod() {
 }
 
 static const char *GetTimingMethodName(int method) {
-  return TimingMethodNameFromIdaValue(method).data();
+  return TimingMethodNameFromCVarValue(method).data();
 }
 
 struct RealmInfo_Stub {
@@ -1169,15 +1169,15 @@ void detail::ExecuteMoveLogFile(const MoveLogFileDependencies &deps) {
 int detail::ExecuteAsyncIORegisterCVars(const AsyncIORegisterDependencies &deps) {
   assert(deps.initialize_async_io);
 
-  dword_B2FA04 = reinterpret_cast<uint32_t *>(
+  g_async_thread_sleep_cvar = reinterpret_cast<uint32_t *>(
       CVar_Register("asyncThreadSleep", "Engine option: Async read thread sleep", 1, "0",
                     AsyncIO_ValidateThreadSleepMax100, 0, 0, 0, 0));
-  dword_B2FA08 = reinterpret_cast<uint32_t *>(
+  g_async_handler_timeout_cvar = reinterpret_cast<uint32_t *>(
       CVar_Register("asyncHandlerTimeout", "Engine option: Async read main thread timeout", 1,
                     "100", AsyncIO_ValidateHandlerTimeout20To250, 0, 0, 0, 0));
 
-  auto *cvar_sleep = reinterpret_cast<CVar_Stub *>(dword_B2FA04);
-  auto *cvar_timeout = reinterpret_cast<CVar_Stub *>(dword_B2FA08);
+  auto *cvar_sleep = reinterpret_cast<CVar_Stub *>(g_async_thread_sleep_cvar);
+  auto *cvar_timeout = reinterpret_cast<CVar_Stub *>(g_async_handler_timeout_cvar);
   return deps.initialize_async_io(static_cast<std::uint32_t>(cvar_sleep->intValue),
                                   static_cast<std::uint32_t>(cvar_timeout->intValue));
 }
@@ -1305,11 +1305,11 @@ void detail::ResetGameCleanupDependenciesForTests() {
 }
 
 std::uint32_t detail::GetGameCleanupFlagForTests() {
-  return dword_AC3228;
+  return g_game_cleanup_flag;
 }
 
 void detail::SetGameCleanupFlagForTests(std::uint32_t value) {
-  dword_AC3228 = value;
+  g_game_cleanup_flag = value;
 }
 
 int AsyncIO_RegisterCVars() {
@@ -1338,9 +1338,9 @@ int fn_timingMethod() {
   return 1;
 }
 
-int CompareFunction(const char **a1, const char **a2) {
+int CompareFunction(const char **lhs, const char **rhs) {
 
-  return SStrCmpNoCaseCollate(*a1, *a2, 0x7FFFFFFF);
+  return SStrCmpNoCaseCollate(*lhs, *rhs, 0x7FFFFFFF);
 }
 
 char *AppendRealmInfoToCrashDump(char *buf, int buf_size) {
@@ -1774,8 +1774,8 @@ const char *fn_TRIAL_LOADING_MESSAGE(char enable) {
   const char *msg = GetLocalizedString("TRIAL_LOADING_MESSAGE", -1, 0);
   auto &loading_screen = openwow::screens::LoadingScreenManager::Get();
 
-  flt_B2FEDC = 0.0f;
-  byte_B2FED9 = enable;
+  g_trial_loading_progress = 0.0f;
+  g_trial_loading_message_enabled = enable;
   if (enable) {
 
 #if defined(__clang__)
@@ -1783,12 +1783,12 @@ const char *fn_TRIAL_LOADING_MESSAGE(char enable) {
 #pragma clang diagnostic ignored "-Wformat-security"
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
 #endif
-    SStrPrintf(byte_B302F0, 0x400, msg);
+    SStrPrintf(g_trial_loading_message_text, 0x400, msg);
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
     loading_screen.SetTrialLoadingMessage(true);
-    return LoadingScreen_SetTextSource(byte_B302F0);
+    return LoadingScreen_SetTextSource(g_trial_loading_message_text);
   }
   loading_screen.SetTrialLoadingMessage(false);
   return msg;

@@ -1142,8 +1142,7 @@ int Minimap_InitRenderTarget(
 static TSGrowableArray<POIDirectionEntry> s_poiDirectionEntries;
 
 static_assert(sizeof(POIDirectionEntry) == 76,
-              "POIDIRECTIONDATA element size must be 76 bytes "
-              "(matches 0x4C stride in binary 0x7f3d70)");
+              "POIDIRECTIONDATA element size must be 76 bytes (0x4C stride)");
 static_assert(std::is_trivially_copyable_v<POIDirectionEntry>,
               "POIDirectionEntry must be trivially copyable for "
               "SetCountUninitialized / memcpy-based resize");

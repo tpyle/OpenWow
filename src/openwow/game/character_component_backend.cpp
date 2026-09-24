@@ -1021,12 +1021,12 @@ void CompositeSmallArgb8PalettedCharacterComponentMipRegion(
 [[nodiscard]] std::int32_t
 ParseCharacterComponentTextureLevel(const openwow::ui::game::CVarSystem &cvars) {
   return static_cast<std::int32_t>(
-      openwow::core::ParseSignedDecimalLikeSub76F0D0(cvars.GetCVar("componentTextureLevel")));
+      openwow::core::ParseSignedDecimal(cvars.GetCVar("componentTextureLevel")));
 }
 
 [[nodiscard]] bool ParseCharacterComponentToggle(const openwow::ui::game::CVarSystem &cvars,
                                                  const char *name) {
-  return openwow::core::ParseSignedDecimalLikeSub76F0D0(cvars.GetCVar(name)) != 0u;
+  return openwow::core::ParseSignedDecimal(cvars.GetCVar(name)) != 0u;
 }
 
 void ResetCompositeFlushLog(CharacterModelCompositeFlushState &flush) {

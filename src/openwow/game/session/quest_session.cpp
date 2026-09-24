@@ -193,9 +193,9 @@ QuestDialogCloseState GetActiveQuestDialogCloseState(const QuestManager &quests)
   return state;
 }
 
-void CloseQuestDialogLikeIda58CA70(WorldSession &session, const QuestDialogCloseState &dialog,
-                                   const bool keep_dialog_open,
-                                   const bool notify_server_for_shared_player_dialog) {
+void CloseQuestDialog(WorldSession &session, const QuestDialogCloseState &dialog,
+                      const bool keep_dialog_open,
+                      const bool notify_server_for_shared_player_dialog) {
   if (!dialog.is_open) {
     return;
   }
@@ -511,7 +511,7 @@ void DisplayQuestCompletionRewards(WorldSession &session, const QuestCompleteInf
   const auto dialog = GetActiveQuestDialogCloseState(session.quests());
   const auto keep_dialog_open =
       dialog.is_open && ShouldKeepQuestDialogOpenAfterTurnIn(session, quest_id);
-  CloseQuestDialogLikeIda58CA70(session, dialog, keep_dialog_open, false);
+  CloseQuestDialog(session, dialog, keep_dialog_open, false);
 }
 
 }
@@ -852,7 +852,7 @@ void WorldSession::HandleQuestGiverQuestFailed(const net::wotlk::WorldPacket &pk
     return;
   }
   DisplayQuestgiverQuestFailedMessage(*this, *quests_.last_quest_failed());
-  CloseQuestDialogLikeIda58CA70(*this, dialog, false, false);
+  CloseQuestDialog(*this, dialog, false, false);
 }
 
 void WorldSession::HandleQuestUpdateFailed(const net::wotlk::WorldPacket &pkt) {
@@ -900,7 +900,7 @@ void WorldSession::HandleQuestgiverQuestInvalid(const net::wotlk::WorldPacket &p
     return;
   }
   DisplayQuestgiverQuestInvalidMessage(quests_.quest_invalid_reason());
-  CloseQuestDialogLikeIda58CA70(*this, dialog, false, false);
+  CloseQuestDialog(*this, dialog, false, false);
 }
 
 void WorldSession::HandleQuestUpdateAddItem(const net::wotlk::WorldPacket &pkt) {

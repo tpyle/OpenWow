@@ -20,8 +20,8 @@ bool ConfirmSpellGroundTarget(const WorldSession& session,
 bool SpellAction_PlaceGlyphInSocket(WorldSession& session, int socket_index);
 
 void SpellAction_CastTalentGroupSpell(const WorldSession& session,
-                                      std::uint32_t spell_id, int a4, int a5,
-                                      int a6);
+                                      std::uint32_t spell_id, int arg4, int arg5,
+                                      int arg6);
 
 bool SpellAction_TryAssignTargetByGuid(WorldSession& session,
                                        std::uint64_t guid);

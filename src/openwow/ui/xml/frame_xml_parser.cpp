@@ -55,7 +55,7 @@ int XMLNode::GetAttrInt(const std::string& name, int def) const {
 float XMLNode::GetAttrFloat(const std::string& name, float def) const {
   const auto s = Trim(GetAttr(name));
   if (s.empty()) return def;
-  return static_cast<float>(openwow::core::ParseFloatLikeSub76FB80(s));
+  return static_cast<float>(openwow::core::ParseDecimalFloat(s));
 }
 
 bool XMLNode::GetAttrBool(const std::string& name, bool def) const {

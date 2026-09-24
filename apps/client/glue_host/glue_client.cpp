@@ -285,7 +285,7 @@ void RegisterTextureCacheBudget(openwow::ui::game::CVarSystem &cvars) {
   cvars.SetValidationCallback("textureCacheSize", [&cvars](const std::string &, const std::string &,
                                                            const std::string &value) {
     const auto result = openwow::render::ValidateTextureCacheSizeChange(
-        openwow::core::ParseSignedDecimalLikeSub76F0D0(value), TextureCacheBudgetContext(cvars));
+        openwow::core::ParseSignedDecimal(value), TextureCacheBudgetContext(cvars));
     openwow::core::ida::ConsoleAddLine(result.console_message, openwow::core::ida::COLOR_DEFAULT);
     return result.accepted;
   });

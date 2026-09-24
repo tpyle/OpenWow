@@ -33,8 +33,8 @@ bool ValidateSpellTarget(WorldSession& session, std::uintptr_t caster,
                           bool show_error, std::uintptr_t extra);
 
 int HandleSpellDelayedPacket(WorldSession& session,
-                              std::uintptr_t a1, std::uintptr_t a2,
-                              std::uintptr_t a3, std::uintptr_t data_store);
+                              std::uintptr_t handler_param, std::uintptr_t opcode,
+                              std::uintptr_t time_ms, std::uintptr_t data_store);
 
 int ComputeMissileTrajectory(std::uintptr_t visual_kit, std::uintptr_t caster,
                               std::uintptr_t spell_entry, std::uintptr_t spell_rec,
