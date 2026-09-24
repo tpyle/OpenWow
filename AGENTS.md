@@ -85,6 +85,7 @@ have a specific reason to diverge.
 | `src/openwow/` | Almost all implementation code — see "Source architecture" below. |
 | `include/openwow/` | A curated *subset* of headers, not a full public API surface — see below. |
 | `apps/client/` | The `openwow-client` executable: composition root, SDL2 adapters, scripted scenario runner. |
+| `tests/` | Catch2 unit tests (`openwow_tests`) — see "Testing" below. |
 | `third_party/` | Vendored dependencies not pulled from vcpkg (StormLib, a modified Lua 5.1, stb, dr_libs, minimp3, the Dear ImGui SDL2 backend). |
 | `cmake/` | Build-option definitions, the shared `openwow_configure_target`/warning-flag setup, ThinLTO/PGO wiring, shader compilation, CPack packaging. |
 | `packaging/` | Per-OS packaging inputs: Linux `.desktop`/AppRun/AppImage builder script/Dockerfile, macOS `Info.plist`/notarization script, Windows manifest/resource templates/signing script, shared icons. |
@@ -216,21 +217,31 @@ match the newer boilerplate; it's ordering, not inconsistency to fix.
   offline world fixture. This is the project's de facto integration-test
   and manual-QA harness — it is **not** a Catch2 suite (see Testing below).
 
-## Testing — provisioned but not wired up
+## Testing
 
-`CMakeLists.txt` runs `include(CTest)` and `vcpkg.json` depends on
-`catch2`, which looks like a test suite exists. **It doesn't, yet.** There
-are no `TEST_CASE`/`SCENARIO` usages anywhere in the tree, and no
-`add_test`/`catch_discover_tests`/`enable_testing()` calls in any
-`CMakeLists.txt` outside `third_party/`. The only filenames containing
-"test" (`data`'s `terrain_aabb_test.{h,cpp}`,
-`vfs/retail/sfile_test_support.{h,cpp}`) are helpers/fixtures, not tests.
+`tests/` holds a Catch2 unit-test suite (`openwow_tests`, registered with
+CTest via `catch_discover_tests`). It is added when `BUILD_TESTING` is on:
+the `ci-*` presets leave it at CTest's default (ON), while the local
+`release`/`debug` presets and `ci-windows-arm64` (a cross build that can't
+run tests) set it OFF, so pass `-DBUILD_TESTING=ON` locally. CI's
+"Build and run unit tests" step builds and runs it on every CI lane.
 
-Don't assume `ctest` runs anything meaningful, and don't silently invent a
-test suite as a side effect of an unrelated change — CLAUDE.md's "write
-unit tests" instruction and this repo's actual state are in tension right
-now; if a task needs real tests, that's worth surfacing explicitly rather
-than quietly wiring up Catch2 as a drive-by.
+```sh
+cmake --preset ci-linux-gcc
+cmake --build --preset ci-linux-gcc --target openwow_tests
+ctest --test-dir build/ci-linux-gcc --output-on-failure
+```
+
+Coverage is concentrated on dependency-light code: `foundation` (math,
+hashing, text, containers, memory, threading), `network/serialization`,
+`data` format parsers, the server patch-file-name check, and the frame
+scheduler. To keep the test binary from linking the large runtime
+libraries, a few single-file units with no heavy dependencies are compiled
+straight into it (see the comment in `tests/CMakeLists.txt`); follow that
+pattern for new pure-logic tests. Most gameplay, UI and rendering code has
+no unit tests yet; `apps/client/scenarios/` (above) remains the integration
+harness. The filenames `terrain_aabb_test.{h,cpp}` (`data`) and
+`sfile_test_support.{h,cpp}` (`vfs/retail`) are runtime helpers, not tests.
 
 ## Build system
 

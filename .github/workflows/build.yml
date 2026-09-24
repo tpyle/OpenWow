@@ -244,6 +244,19 @@ jobs:
           VCPKG_ROOT: ${{ github.workspace }}/vcpkg
         run: cmake --build --preset ${{ matrix.preset }} --target openwow-client --parallel -- -k 0
 
+      # The ci-* presets leave BUILD_TESTING at CTest's default (ON), so the
+      # Catch2 suite in tests/ is configured on every lane; build and run it
+      # on the CI path. Release builds skip it (they already passed CI).
+      - name: Build and run unit tests
+        if: ${{ !inputs.package }}
+        shell: bash
+        env:
+          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+        run: |
+          set -euo pipefail
+          cmake --build --preset "${{ matrix.preset }}" --target openwow_tests --parallel -- -k 0
+          ctest --test-dir "build/${{ matrix.preset }}" --output-on-failure
+
       # ------------------------------------------------------------------
       # CI path: the bare executable, enough to prove the lane links.
       # ------------------------------------------------------------------
