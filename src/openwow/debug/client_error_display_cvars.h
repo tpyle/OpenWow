@@ -155,8 +155,8 @@ inline std::string_view NextClientErrorFilterToken(std::string_view input,
 inline void LogClientErrorFilterStatus() {
   const std::uint32_t mask = GetClientErrorFilterMask();
   if (mask == kClientErrorFilterAllMessages) {
-    openwow::core::ida::ConsoleAddLine("Now filtering: all messages",
-                                       openwow::core::ida::COLOR_DEFAULT);
+    openwow::core::legacy::ConsoleAddLine("Now filtering: all messages",
+                                       openwow::core::legacy::COLOR_DEFAULT);
     return;
   }
 
@@ -172,7 +172,7 @@ inline void LogClientErrorFilterStatus() {
     message.push_back(' ');
   }
 
-  openwow::core::ida::ConsoleLog("Now filtering: %s", message.c_str());
+  openwow::core::legacy::ConsoleLog("Now filtering: %s", message.c_str());
 }
 
 inline bool ParseAndStoreClientErrorFilterMask(const std::string& value) {
@@ -217,15 +217,15 @@ inline bool ParseAndStoreClientErrorFilterMask(const std::string& value) {
 
     if (ClientErrorFilterTokenEquals(token, "except")) {
       const std::string owned_token(token);
-      openwow::core::ida::ConsoleLog("Unknown filter %s", owned_token.c_str());
-      openwow::core::ida::ConsoleAddLine(
+      openwow::core::legacy::ConsoleLog("Unknown filter %s", owned_token.c_str());
+      openwow::core::legacy::ConsoleAddLine(
           "Filters: general world ui animation models objects sound movement all",
-          openwow::core::ida::COLOR_DEFAULT);
-      openwow::core::ida::ConsoleAddLine(
+          openwow::core::legacy::COLOR_DEFAULT);
+      openwow::core::legacy::ConsoleAddLine(
           "         use \"except\" to invert mask",
-          openwow::core::ida::COLOR_DEFAULT);
-      openwow::core::ida::ConsoleAddLine("         i.e.: all except objects",
-                                         openwow::core::ida::COLOR_DEFAULT);
+          openwow::core::legacy::COLOR_DEFAULT);
+      openwow::core::legacy::ConsoleAddLine("         i.e.: all except objects",
+                                         openwow::core::legacy::COLOR_DEFAULT);
       return false;
     }
 
@@ -245,9 +245,9 @@ inline bool CVar_Errors_Callback(const std::string&,
 
   g_client_error_display_last_value.store(parsed, std::memory_order_relaxed);
 
-  openwow::core::ida::ConsoleAddLine(
+  openwow::core::legacy::ConsoleAddLine(
       parsed != 0 ? "Error display enabled" : "Error display disabled",
-      openwow::core::ida::COLOR_DEFAULT);
+      openwow::core::legacy::COLOR_DEFAULT);
   return true;
 }
 
@@ -262,9 +262,9 @@ inline bool CVar_ShowErrors_Callback(const std::string&,
   }
   g_client_error_display_last_value.store(parsed, std::memory_order_relaxed);
 
-  openwow::core::ida::ConsoleAddLine(
+  openwow::core::legacy::ConsoleAddLine(
       parsed != 0 ? "Error display shown" : "Error display hidden",
-      openwow::core::ida::COLOR_DEFAULT);
+      openwow::core::legacy::COLOR_DEFAULT);
   return true;
 }
 
@@ -272,8 +272,8 @@ inline void LogClientErrorLevelRangeStatus() {
   const auto [min_level, max_level] = GetClientErrorLevelRange();
 
   if (min_level == 0u && max_level == 3u) {
-    openwow::core::ida::ConsoleAddLine("Displaying all system messages",
-                                       openwow::core::ida::COLOR_DEFAULT);
+    openwow::core::legacy::ConsoleAddLine("Displaying all system messages",
+                                       openwow::core::legacy::COLOR_DEFAULT);
     return;
   }
 
@@ -315,7 +315,7 @@ inline void LogClientErrorLevelRangeStatus() {
     }
   }
 
-  openwow::core::ida::ConsoleAddLine(text, openwow::core::ida::COLOR_DEFAULT);
+  openwow::core::legacy::ConsoleAddLine(text, openwow::core::legacy::COLOR_DEFAULT);
 }
 
 inline bool CVar_ErrorLevelMin_Callback(const std::string&,
@@ -323,9 +323,9 @@ inline bool CVar_ErrorLevelMin_Callback(const std::string&,
                                         const std::string& new_value) {
   const std::uint32_t parsed = ParseClientErrorDisplayCVarValue(new_value);
   if (parsed > 3u) {
-    openwow::core::ida::ConsoleLogColored(
+    openwow::core::legacy::ConsoleLogColored(
         "%i is not valid, valid values are 0 - %i",
-        openwow::core::ida::COLOR_DEFAULT,
+        openwow::core::legacy::COLOR_DEFAULT,
         static_cast<std::int32_t>(parsed),
         3);
     return false;
@@ -341,9 +341,9 @@ inline bool CVar_ErrorLevelMax_Callback(const std::string&,
                                         const std::string& new_value) {
   const std::uint32_t parsed = ParseClientErrorDisplayCVarValue(new_value);
   if (parsed > 3u) {
-    openwow::core::ida::ConsoleLogColored(
+    openwow::core::legacy::ConsoleLogColored(
         "%i is not valid, valid values are 0 - %i",
-        openwow::core::ida::COLOR_DEFAULT,
+        openwow::core::legacy::COLOR_DEFAULT,
         static_cast<std::int32_t>(parsed),
         3);
     return false;

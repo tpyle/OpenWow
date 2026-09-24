@@ -193,7 +193,7 @@ void DBClient_BuildResistancesIndex() {
   g_armor_resistance_index = -1;
 
   if (loader != nullptr && raw_count != kRetailSpellSchoolCount) {
-    openwow::core::ida::ConsoleLog(
+    openwow::core::legacy::ConsoleLog(
         "Warning: The Resistances table has the wrong number of entries");
     count = std::min(count, kRetailSpellSchoolCount);
   }

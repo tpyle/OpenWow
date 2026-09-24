@@ -64,8 +64,8 @@ int GetRenderBootstrapFpsOverlayConsoleColorClass(
     RenderBootstrapFpsOverlaySeverity severity) {
     return severity == RenderBootstrapFpsOverlaySeverity::kInfo ||
                    severity == RenderBootstrapFpsOverlaySeverity::kWarning
-               ? ida::COLOR_WARNING
-               : ida::COLOR_ERROR;
+               ? legacy::COLOR_WARNING
+               : legacy::COLOR_ERROR;
 }
 
 void ResetRenderBootstrapFpsOverlayEntry(RenderBootstrapFpsOverlayEntry& entry) {
@@ -155,7 +155,7 @@ void RenderBootstrap_FpsOverlayQueueLine(
     state.next_entry_index = (state.next_entry_index + 1u) %
                              static_cast<std::uint32_t>(state.entries.size());
 
-    ida::ConsoleAddLine(std::string(text),
+    legacy::ConsoleAddLine(std::string(text),
                         GetRenderBootstrapFpsOverlayConsoleColorClass(severity));
 }
 

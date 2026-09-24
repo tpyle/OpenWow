@@ -252,7 +252,7 @@ void LoginConsoleDiagnostics::DrainToConsole() {
     }
 
     for (const std::string& line : pending_lines) {
-        ida::ConsoleAddLine(line, ida::COLOR_DEFAULT);
+        legacy::ConsoleAddLine(line, legacy::COLOR_DEFAULT);
     }
 }
 

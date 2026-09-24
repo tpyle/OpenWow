@@ -274,7 +274,7 @@ public:
                  const ReputationInfo& reputation,
                  SpellCastRuntime& spell_cast_runtime,
                  openwow::audio::SoundRuntime& sound_runtime,
-                 openwow::core::ida::GameTimeData* shared_game_time = nullptr);
+                 openwow::core::legacy::GameTimeData* shared_game_time = nullptr);
   ~WorldSession();
 
   [[nodiscard]] openwow::audio::SoundRuntime& sound_runtime() const noexcept {

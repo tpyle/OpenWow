@@ -298,7 +298,7 @@ void GlueClient::ApplyApplicationActiveChange(const bool active) {
       active ? "Application entered foreground" : "Application entered background");
   if (!active) {
     (void)game_loop_.PersistRuntimeConfiguration();
-    (void)openwow::core::ida::CVar_FlushToFile();
+    (void)openwow::core::legacy::CVar_FlushToFile();
 #if defined(OPENWOW_PLATFORM_IOS)
     texture_manager_.ClearCache();
     sound_runtime_.ClearSoundKitProviderCaches();
@@ -1053,7 +1053,7 @@ void GlueClient::HandleKeyDown(const SDL_Event &event) {
   if ((event.key.keysym.mod & KMOD_ALT) != 0 &&
       (scancode == SDL_SCANCODE_RETURN ||
        scancode == SDL_SCANCODE_KP_ENTER)) {
-    if (openwow::core::ida::GxToggleFullscreen()) {
+    if (openwow::core::legacy::GxToggleFullscreen()) {
       RefreshLayout();
     } else {
       openwow::diagnostics::Log(openwow::diagnostics::LogLevel::kWarn,

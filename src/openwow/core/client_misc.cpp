@@ -151,9 +151,9 @@ void ExecuteWorldportCommand(std::string_view raw_args) {
   if (numeric_mode) {
     const std::vector<std::string_view> tokens = TokenizeWorldportArguments(raw_args);
     if (tokens.empty()) {
-      openwow::core::ida::ConsoleAddLine(
+      openwow::core::legacy::ConsoleAddLine(
           "Usage: worldport <continentID> [x y z] [facing]",
-          openwow::core::ida::COLOR_WARNING);
+          openwow::core::legacy::COLOR_WARNING);
       return;
     }
 
@@ -178,7 +178,7 @@ void ExecuteWorldportCommand(std::string_view raw_args) {
     }
   } else {
 
-    openwow::core::ida::ConsoleLog("Could not find location: %s",
+    openwow::core::legacy::ConsoleLog("Could not find location: %s",
                                    raw_args_text.c_str());
     return;
   }
@@ -186,8 +186,8 @@ void ExecuteWorldportCommand(std::string_view raw_args) {
   const bool is_valid_map = bindings.is_valid_map_id &&
                             bindings.is_valid_map_id(destination.map_id);
   if (!is_valid_map) {
-    openwow::core::ida::ConsoleLogColored("Bad world number: %i\n",
-                                          openwow::core::ida::COLOR_ERROR,
+    openwow::core::legacy::ConsoleLogColored("Bad world number: %i\n",
+                                          openwow::core::legacy::COLOR_ERROR,
                                           static_cast<std::int32_t>(destination.map_id));
     return;
   }

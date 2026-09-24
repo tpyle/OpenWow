@@ -89,12 +89,12 @@ void FireCalendarError(lua_State *L, const char *error_token, std::string_view f
 
 [[nodiscard]] static CalendarDate OffsetCalendarDateByDays(const CalendarDate &date,
                                                            const int day_offset) {
-  ::openwow::core::ida::CalendarDateFields fields{
+  ::openwow::core::legacy::CalendarDateFields fields{
       .day = date.day - 1,
       .month = date.month - 1,
       .year = date.year - 2000,
   };
-  ::openwow::core::ida::CalendarDateFields_AddDaysLocal(&fields, day_offset, false);
+  ::openwow::core::legacy::CalendarDateFields_AddDaysLocal(&fields, day_offset, false);
   return {
       .weekday = fields.weekday + 1,
       .month = fields.month + 1,
@@ -117,12 +117,12 @@ void FireCalendarError(lua_State *L, const char *error_token, std::string_view f
 }
 
 static int WeekdayForDate(const int month, const int day, const int year) {
-  ::openwow::core::ida::CalendarDateFields fields{
+  ::openwow::core::legacy::CalendarDateFields fields{
       .day = day - 1,
       .month = month - 1,
       .year = year - 2000,
   };
-  ::openwow::core::ida::CalendarDateFields_AddDaysLocal(&fields, 0, false);
+  ::openwow::core::legacy::CalendarDateFields_AddDaysLocal(&fields, 0, false);
   return fields.weekday + 1;
 }
 

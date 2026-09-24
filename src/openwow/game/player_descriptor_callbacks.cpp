@@ -148,7 +148,7 @@ void OnSkillValueDescriptorChanged(WorldSession& session,
 
     ui::game::ScriptEventDispatch::Get().FirePlayerCombatStatEvents();
 
-    core::ida::ConsoleLog("Skill %d increased from %d to %d",
+    core::legacy::ConsoleLog("Skill %d increased from %d to %d",
                           info.skill_line_id, info.old_raw_value,
                           info.new_adjusted_value);
 

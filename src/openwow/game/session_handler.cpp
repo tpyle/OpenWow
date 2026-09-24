@@ -15,7 +15,7 @@ using openwow::diagnostics::LogLevel;
 namespace {
 
 void DispatchGameTimeMinute(
-    const openwow::core::ida::GameTimeData& current_time,
+    const openwow::core::legacy::GameTimeData& current_time,
     void* const context) {
   auto& session = *static_cast<SessionHandler*>(context);
   session.game_time_callbacks().Dispatch(GameTimeCallbackMoment{
@@ -32,7 +32,7 @@ void DispatchGameTimeMinute(
 }
 
 SessionHandler::SessionHandler(
-    openwow::core::ida::GameTimeData* const shared_game_time) noexcept
+    openwow::core::legacy::GameTimeData* const shared_game_time) noexcept
     : game_time_(shared_game_time != nullptr ? shared_game_time
                                              : &owned_game_time_) {}
 
@@ -120,7 +120,7 @@ bool SessionHandler::HandleLoginSetTimeSpeed(const std::uint8_t* data,
   if (r.Remaining() != 0) return false;
 
   SetPackedGameTime(packed_time, timezone_hint, true);
-  (void)openwow::core::ida::GameTime_SetSpeed(*game_time_, new_speed);
+  (void)openwow::core::legacy::GameTime_SetSpeed(*game_time_, new_speed);
 
   return true;
 }
@@ -143,7 +143,7 @@ bool SessionHandler::HandleGameSpeedSet(const std::uint8_t* data,
   float game_speed = 0.0f;
   if (!r.ReadFloat(game_speed)) return false;
   if (r.Remaining() != 0) return false;
-  (void)openwow::core::ida::GameTime_SetSpeed(*game_time_, game_speed);
+  (void)openwow::core::legacy::GameTime_SetSpeed(*game_time_, game_speed);
   return true;
 }
 
@@ -369,7 +369,7 @@ bool SessionHandler::HandleClientCacheVersion(const std::uint8_t* data,
 }
 
 void SessionHandler::Clear() {
-  *game_time_ = openwow::core::ida::GameTimeData{};
+  *game_time_ = openwow::core::legacy::GameTimeData{};
   game_time_callbacks_.Clear();
   acct_data_ = AccountDataTimesInfo{};
   transfer_ = TransferPendingInfo{};
@@ -427,9 +427,9 @@ bool SessionHandler::HandleGameTimeUpdate(const std::uint8_t* data,
   if (!r.ReadU32(info.unk)) return false;
   if (r.Remaining() != 0) return false;
 
-  const auto incoming = openwow::core::ida::GameTimeData_FromPacked(
+  const auto incoming = openwow::core::legacy::GameTimeData_FromPacked(
       info.time, info.unk);
-  openwow::core::ida::GameTime_Sync(
+  openwow::core::legacy::GameTime_Sync(
       *game_time_, incoming, false, DispatchGameTimeMinute, this);
   last_game_time_update_ = info;
   return true;
@@ -437,7 +437,7 @@ bool SessionHandler::HandleGameTimeUpdate(const std::uint8_t* data,
 
 GameTimeInfo SessionHandler::game_time() const {
   return {
-      .packed_time = openwow::core::ida::GameTimeData_ToPacked(*game_time_),
+      .packed_time = openwow::core::legacy::GameTimeData_ToPacked(*game_time_),
       .game_speed = game_time_->time_speed,
       .tz_hint = static_cast<std::uint32_t>(game_time_->tz_offset),
   };
@@ -446,20 +446,20 @@ GameTimeInfo SessionHandler::game_time() const {
 void SessionHandler::SetPackedGameTime(const std::uint32_t packed_time,
                                        const std::uint32_t timezone_hint,
                                        const bool notify_current_minute) {
-  const auto incoming = openwow::core::ida::GameTimeData_FromPacked(
+  const auto incoming = openwow::core::legacy::GameTimeData_FromPacked(
       packed_time, timezone_hint);
-  openwow::core::ida::GameTime_Set(
+  openwow::core::legacy::GameTime_Set(
       *game_time_, incoming, notify_current_minute,
       DispatchGameTimeMinute, this);
 }
 
 float SessionHandler::GetGameTimeHourOfDay() const {
   return static_cast<float>(
-      openwow::core::ida::GameTime_GetNormalizedTimeOfDay(game_time_) * 24.0);
+      openwow::core::legacy::GameTime_GetNormalizedTimeOfDay(game_time_) * 24.0);
 }
 
 void SessionHandler::AdvanceGameTime(const float dt_seconds) {
-  openwow::core::ida::GameTime_Advance(
+  openwow::core::legacy::GameTime_Advance(
       *game_time_, dt_seconds, DispatchGameTimeMinute, this);
 }
 

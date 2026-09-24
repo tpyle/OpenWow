@@ -86,7 +86,7 @@ std::optional<std::uint16_t> LookupAttributes(const std::filesystem::path &path)
 }
 
 std::int64_t FileTimeTicksToNsSince2000(const std::uint64_t ticks) {
-  return openwow::core::ida::TimeNsSince2000FromFileTimeTicks(ticks);
+  return openwow::core::legacy::TimeNsSince2000FromFileTimeTicks(ticks);
 }
 
 #if !defined(_WIN32)

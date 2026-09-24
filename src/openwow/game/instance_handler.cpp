@@ -128,9 +128,9 @@ void RegisterInstanceConsoleCommands() {
                              [](std::string_view raw_args) -> std::string {
                                const auto difficulty = ParseStormSignedDecimalPrefix(raw_args);
                                if (difficulty > 1u) {
-                                 openwow::core::ida::ConsoleAddLine(
+                                 openwow::core::legacy::ConsoleAddLine(
                                      std::string(kInvalidDifficultyMessage),
-                                     openwow::core::ida::COLOR_ERROR);
+                                     openwow::core::legacy::COLOR_ERROR);
                                  return {};
                                }
 

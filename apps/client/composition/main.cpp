@@ -173,7 +173,7 @@ class ScenarioProfileIsolation {
       return false;
     }
 
-    openwow::core::ida::CVar_SetConfigFileOverride(config_path.string());
+    openwow::core::legacy::CVar_SetConfigFileOverride(config_path.string());
     prepared_ = true;
     return true;
   }
@@ -208,7 +208,7 @@ class ScenarioProfileIsolation {
 
   ~ScenarioProfileIsolation() {
     LeaveClientWorkingDirectory();
-    openwow::core::ida::CVar_SetConfigFileOverride({});
+    openwow::core::legacy::CVar_SetConfigFileOverride({});
     if (!root_.empty()) {
       std::error_code ec;
       std::filesystem::remove_all(root_, ec);

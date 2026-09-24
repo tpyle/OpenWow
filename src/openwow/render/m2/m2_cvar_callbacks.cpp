@@ -92,16 +92,16 @@ namespace {
         const char* disabledLine) {
         if (enabled) {
             SetM2GlobalFlags(currentFlags | flagBit);
-            openwow::core::ida::ConsoleAddLine(
+            openwow::core::legacy::ConsoleAddLine(
                 enabledLine,
-                openwow::core::ida::COLOR_DEFAULT);
+                openwow::core::legacy::COLOR_DEFAULT);
             return;
         }
 
         SetM2GlobalFlags(currentFlags & ~flagBit);
-        openwow::core::ida::ConsoleAddLine(
+        openwow::core::legacy::ConsoleAddLine(
             disabledLine,
-            openwow::core::ida::COLOR_DEFAULT);
+            openwow::core::legacy::COLOR_DEFAULT);
     }
 }
 

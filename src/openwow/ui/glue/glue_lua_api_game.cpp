@@ -150,21 +150,21 @@ std::uint32_t ReadGameAccountIndex(lua_State *state, const char *usage) {
 }
 
 void ExecuteGxRestartConsoleCommand() {
-  openwow::core::ida::Console_ExecuteGraphicsRestart();
+  openwow::core::legacy::Console_ExecuteGraphicsRestart();
 }
 
 void ApplyRestoreVideoDefaultsByMode(openwow::ui::game::CVarSystem &sys,
                                      const openwow::core::DisplayCallbackMode mode) {
 
-  (void)openwow::core::ida::RefreshStartupGraphicsQualityProfileFromDetectedHardware();
+  (void)openwow::core::legacy::RefreshStartupGraphicsQualityProfileFromDetectedHardware();
 
   (void)sys.SetRegisteredCVarValueDirect("fixedFunction", "0");
   if (mode == openwow::core::DisplayCallbackMode::ResetGamma) {
 
-    (void)openwow::core::ida::GxApplyRegisteredDefaultDisplayCVars();
+    (void)openwow::core::legacy::GxApplyRegisteredDefaultDisplayCVars();
     openwow::ui::game::ScriptEventDispatch::Get().FireEvent(
         openwow::ui::game::events::DISPLAY_SIZE_CHANGED);
-    (void)openwow::core::ida::GxRestartCurrentDisplayMode();
+    (void)openwow::core::legacy::GxRestartCurrentDisplayMode();
   }
 
   openwow::core::DispatchVideoDefaultsModeCallbacks(static_cast<std::uint32_t>(mode));
@@ -3553,7 +3553,7 @@ int LuaConsoleExec(lua_State *s) {
   }
 
   const char *command = lua_tostring(s, 1);
-  openwow::core::ida::Console_Execute(command != nullptr ? command : "", false);
+  openwow::core::legacy::Console_Execute(command != nullptr ? command : "", false);
   return 0;
 }
 

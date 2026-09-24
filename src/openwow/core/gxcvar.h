@@ -16,7 +16,7 @@ namespace openwow::ui::game {
 class CVarSystem;
 }
 
-namespace openwow::core::ida {
+namespace openwow::core::legacy {
 
 struct HardwareInfo;
 

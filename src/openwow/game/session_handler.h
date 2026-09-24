@@ -18,7 +18,7 @@ namespace openwow::game {
 
 struct GameTimeInfo {
   std::uint32_t packed_time = 0;
-  float game_speed = openwow::core::ida::kRetailMinimumGameSpeed;
+  float game_speed = openwow::core::legacy::kRetailMinimumGameSpeed;
 
   std::uint32_t tz_hint = 0;
 };
@@ -133,7 +133,7 @@ struct SessionPacketEffects {
 class SessionHandler {
  public:
   explicit SessionHandler(
-      openwow::core::ida::GameTimeData* shared_game_time = nullptr) noexcept;
+      openwow::core::legacy::GameTimeData* shared_game_time = nullptr) noexcept;
   SessionHandler(const SessionHandler&) = delete;
   SessionHandler& operator=(const SessionHandler&) = delete;
   SessionHandler(SessionHandler&&) = delete;
@@ -174,7 +174,7 @@ class SessionHandler {
   bool HandleGameTimeUpdate(const std::uint8_t* data, std::size_t len);
 
   [[nodiscard]] GameTimeInfo game_time() const;
-  [[nodiscard]] const openwow::core::ida::GameTimeData& game_time_data() const {
+  [[nodiscard]] const openwow::core::legacy::GameTimeData& game_time_data() const {
     return *game_time_;
   }
   [[nodiscard]] const AccountDataTimesInfo& account_data() const { return acct_data_; }
@@ -236,8 +236,8 @@ class SessionHandler {
 
  private:
 
-  openwow::core::ida::GameTimeData owned_game_time_{};
-  openwow::core::ida::GameTimeData* game_time_{&owned_game_time_};
+  openwow::core::legacy::GameTimeData owned_game_time_{};
+  openwow::core::legacy::GameTimeData* game_time_{&owned_game_time_};
   AccountDataTimesInfo acct_data_{};
   TransferPendingInfo transfer_{};
   NewWorldInfo new_world_{};

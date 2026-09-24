@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-namespace openwow::core::ida {
+namespace openwow::core::legacy {
 
 enum CVarFlag : uint32_t {
     CVAR_REGISTERED      = 0x001,

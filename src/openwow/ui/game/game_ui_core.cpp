@@ -311,13 +311,13 @@ void GameUI_RegisterKeyboardEvents() {
   const std::string& global_config =
       account_data.GetData(openwow::game::AccountDataType::GlobalConfig);
   if (!global_config.empty()) {
-    openwow::core::ida::CVar_ParseConfigBuffer(global_config);
+    openwow::core::legacy::CVar_ParseConfigBuffer(global_config);
   }
 
   const std::string& per_char_config =
       account_data.GetData(openwow::game::AccountDataType::PerCharacterConfig);
   if (!per_char_config.empty()) {
-    openwow::core::ida::CVar_ParseConfigBuffer(per_char_config);
+    openwow::core::legacy::CVar_ParseConfigBuffer(per_char_config);
   }
 
   if (auto* manager = runtime::WorldUiRuntimeContext::FromActiveLua(); manager != nullptr) {

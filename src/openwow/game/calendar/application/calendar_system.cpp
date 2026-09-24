@@ -86,7 +86,7 @@ HolidayDateFields DecodeHolidayPackedTime(const std::uint32_t packed_time) {
 }
 
 std::int64_t HolidayDateFieldsToNsSince2000(const HolidayDateFields &fields) {
-  return ::openwow::core::ida::CalendarTimeNsSince2000FromFields({
+  return ::openwow::core::legacy::CalendarTimeNsSince2000FromFields({
       .year = 2000 + fields[5],
       .month = fields[4] + 1,
       .day = fields[3] + 1,
@@ -115,7 +115,7 @@ constexpr std::uint32_t kCalendarInviteThrottleMs = 2000;
 }
 
 HolidayDateFields HolidayDateFieldsFromNsSince2000(const std::int64_t ns_since_2000) {
-  const auto breakdown = ::openwow::core::ida::CalendarTimeBreakdownFromNsSince2000(ns_since_2000);
+  const auto breakdown = ::openwow::core::legacy::CalendarTimeBreakdownFromNsSince2000(ns_since_2000);
   return {
       breakdown.minute,  breakdown.hour,      breakdown.day_of_week,
       breakdown.day - 1, breakdown.month - 1, breakdown.year - 2000,
@@ -183,8 +183,8 @@ bool ResolveHolidayOccurrenceWindow(
           candidate_start[0], candidate_start[1], candidate_start[2],
           candidate_start[3], candidate_start[4], candidate_start[5],
       };
-      ::openwow::core::ida::CalendarTimeContext time_context{};
-      ::openwow::core::ida::Calendar_ConvertToLocalTime(&time_context, local_time_fields);
+      ::openwow::core::legacy::CalendarTimeContext time_context{};
+      ::openwow::core::legacy::Calendar_ConvertToLocalTime(&time_context, local_time_fields);
       candidate_start = {
           local_time_fields[0], local_time_fields[1], local_time_fields[2],
           local_time_fields[3], local_time_fields[4], local_time_fields[5],
@@ -303,12 +303,12 @@ void AdvanceCalendarDate(CalendarIndexDate &parts) {
     return;
   }
 
-  openwow::core::ida::CalendarDateFields fields{
+  openwow::core::legacy::CalendarDateFields fields{
       .day = parts.day - 1,
       .month = parts.month - 1,
       .year = parts.year - 2000,
   };
-  ::openwow::core::ida::CalendarDateFields_AddDaysLocal(&fields, 1, false);
+  ::openwow::core::legacy::CalendarDateFields_AddDaysLocal(&fields, 1, false);
   parts.year = fields.year + 2000;
   parts.month = fields.month + 1;
   parts.day = fields.day + 1;
@@ -2163,20 +2163,20 @@ bool CalendarSystem::CanSendInvite(const bool bypass_cooldown) const {
 MonthInfo CalendarSystem::GetMonthInfo(uint32_t month, uint32_t year) {
   MonthInfo info;
 
-  openwow::core::ida::CalendarDateFields first_day{
+  openwow::core::legacy::CalendarDateFields first_day{
       .day = 0,
       .month = static_cast<std::int32_t>(month),
       .year = static_cast<std::int32_t>(year) - 2000,
   };
-  ::openwow::core::ida::CalendarDateFields_AddDaysLocal(&first_day, 0, false);
+  ::openwow::core::legacy::CalendarDateFields_AddDaysLocal(&first_day, 0, false);
   info.firstWeekday = static_cast<uint32_t>(first_day.weekday);
 
-  openwow::core::ida::CalendarDateFields last_day{
+  openwow::core::legacy::CalendarDateFields last_day{
       .day = 0,
       .month = static_cast<std::int32_t>(month == 11 ? 0 : month + 1),
       .year = static_cast<std::int32_t>(year) - 2000 + (month == 11 ? 1 : 0),
   };
-  ::openwow::core::ida::CalendarDateFields_AddDaysLocal(&last_day, -1, false);
+  ::openwow::core::legacy::CalendarDateFields_AddDaysLocal(&last_day, -1, false);
   info.numDays = static_cast<uint32_t>(last_day.day + 1);
 
   return info;

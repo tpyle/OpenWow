@@ -10,7 +10,7 @@
 namespace openwow::ui::game::detail {
 
 int LuaRestartGx([[maybe_unused]] lua_State* L) {
-  openwow::core::ida::Console_ExecuteGraphicsRestart();
+  openwow::core::legacy::Console_ExecuteGraphicsRestart();
   return 0;
 }
 

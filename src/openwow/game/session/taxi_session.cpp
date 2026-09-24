@@ -130,7 +130,7 @@ void LogRetailTaxiNodeConsoleDump(const TaxiNodeDisplay& display,
       if (const auto* node = dbc->taxi_nodes().LookupEntry(node_id);
           node != nullptr) {
 
-        core::ida::ConsoleLog("[%02d]: %.*s", node->id,
+        core::legacy::ConsoleLog("[%02d]: %.*s", node->id,
                               static_cast<int>(node->name.size()),
                               node->name.data());
       }

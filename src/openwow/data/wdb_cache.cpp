@@ -212,7 +212,7 @@ void WDBCache::CancelCallback(WDBCallbackHandle handle) {
         return;
     }
     if (entry_it->second.dispatching_callbacks) {
-        openwow::core::ida::ConsoleLog(
+        openwow::core::legacy::ConsoleLog(
             "DBCache::CancelCallback ignored for id %016llX.",
             static_cast<unsigned long long>(static_cast<uint64_t>(
                 static_cast<int64_t>(static_cast<int32_t>(handle.entry_id)))));

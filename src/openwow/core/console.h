@@ -10,7 +10,7 @@
 #include <vector>
 #include "openwow/foundation/compiler/printf_format.h"
 
-namespace openwow::core::ida {
+namespace openwow::core::legacy {
 
 enum ConsoleColorClass : int {
   COLOR_DEFAULT = 0,

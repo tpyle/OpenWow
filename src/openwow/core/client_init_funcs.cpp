@@ -601,7 +601,7 @@ std::string BuildBugReport() {
 
   {
     std::vector<char> cvar_buf(8192, '\0');
-    ida::CVar_AppendAllToBuffer(cvar_buf.data(),
+    legacy::CVar_AppendAllToBuffer(cvar_buf.data(),
                            static_cast<int>(cvar_buf.size()), 0, 0x40);
     if (cvar_buf[0] != '\0') {
       report += cvar_buf.data();
@@ -643,7 +643,7 @@ bool EnterWorldInit(const EnterWorldInitParams &params,
 
 void ProcessRunOnceFiles() {
   detail::ProcessRunOnceFilesWithCallback(
-      [](const std::string &filename) { ida::CVar_LoadFromFile(filename); });
+      [](const std::string &filename) { legacy::CVar_LoadFromFile(filename); });
 }
 
 void SetConvertedTrialFlag(const bool converted) {

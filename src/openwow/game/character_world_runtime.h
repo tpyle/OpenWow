@@ -98,10 +98,10 @@ class CharacterWorldRuntime final {
   [[nodiscard]] std::uint64_t map_generation() const noexcept {
     return map_generation_;
   }
-  [[nodiscard]] openwow::core::ida::GameTimeData& game_time() noexcept {
+  [[nodiscard]] openwow::core::legacy::GameTimeData& game_time() noexcept {
     return game_time_;
   }
-  [[nodiscard]] const openwow::core::ida::GameTimeData& game_time() const noexcept {
+  [[nodiscard]] const openwow::core::legacy::GameTimeData& game_time() const noexcept {
     return game_time_;
   }
   [[nodiscard]] PlayerInventoryReplica* inventory_replica() noexcept {
@@ -129,7 +129,7 @@ class CharacterWorldRuntime final {
   const ReputationInfo& reputation_;
   openwow::audio::SoundRuntime& sound_runtime_;
 
-  openwow::core::ida::GameTimeData game_time_{};
+  openwow::core::legacy::GameTimeData game_time_{};
   std::unique_ptr<SpellCastRuntime> spell_cast_runtime_;
   std::unique_ptr<PlayerControlRuntime> player_control_runtime_;
   std::unique_ptr<PlayerInventoryReplica> inventory_replica_;

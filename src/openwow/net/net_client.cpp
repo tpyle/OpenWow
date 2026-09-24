@@ -1137,11 +1137,11 @@ void NetClient_ShutdownWorkers(NetClient *self) {
   NetClient_SignalWakeEvent(self);
   auto *main_stop_event = GetNetClientMainStopEvent(self);
   if (self->main_thread_handle && main_stop_event && main_stop_event->Wait(10000) != 0) {
-    openwow::core::ida::ConsoleLog("Main network thread did not send stop event normally");
+    openwow::core::legacy::ConsoleLog("Main network thread did not send stop event normally");
   }
   if (self->main_thread_handle) {
     if (!WaitForThreadHandle(self->main_thread_handle, 5000)) {
-      openwow::core::ida::ConsoleLog("Main network thread did not exit normally");
+      openwow::core::legacy::ConsoleLog("Main network thread did not exit normally");
     } else {
       JoinThreadHandle(self->main_thread_handle);
     }
@@ -1160,7 +1160,7 @@ void NetClient_ShutdownWorkers(NetClient *self) {
     }
 
     if (!WaitForThreadHandle(self->workers[i].thread_handle, 10000)) {
-      openwow::core::ida::ConsoleLog("Network thread %d did not exit normally", i);
+      openwow::core::legacy::ConsoleLog("Network thread %d did not exit normally", i);
       continue;
     }
 

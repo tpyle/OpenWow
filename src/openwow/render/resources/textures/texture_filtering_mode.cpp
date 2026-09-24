@@ -26,8 +26,8 @@ bool TextureFilteringModeValidationCallback(const std::string &, const std::stri
     return true;
   }
 
-  openwow::core::ida::ConsoleAddLine(kTextureFilteringModeRangeError,
-                                     openwow::core::ida::COLOR_DEFAULT);
+  openwow::core::legacy::ConsoleAddLine(kTextureFilteringModeRangeError,
+                                     openwow::core::legacy::COLOR_DEFAULT);
   return false;
 }
 

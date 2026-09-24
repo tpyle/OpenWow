@@ -168,20 +168,20 @@ void DefaultLoadLoginConfigs(const int reload, const char* locale) {
 
   if (!locale_prefix.empty()) {
     const std::string battlenet_path = locale_prefix + "realmlistbn.wtf";
-    if (!openwow::core::ida::CVar_LoadFromFile(battlenet_path)) {
-      openwow::core::ida::CVar_LoadFromFile("realmlistbn.wtf");
+    if (!openwow::core::legacy::CVar_LoadFromFile(battlenet_path)) {
+      openwow::core::legacy::CVar_LoadFromFile("realmlistbn.wtf");
     }
   } else {
-    openwow::core::ida::CVar_LoadFromFile("realmlistbn.wtf");
+    openwow::core::legacy::CVar_LoadFromFile("realmlistbn.wtf");
   }
 
   if (!locale_prefix.empty()) {
     const std::string realm_list_path = locale_prefix + "realmlist.wtf";
-    if (!openwow::core::ida::CVar_LoadFromFile(realm_list_path)) {
-      openwow::core::ida::CVar_LoadFromFile("realmlist.wtf");
+    if (!openwow::core::legacy::CVar_LoadFromFile(realm_list_path)) {
+      openwow::core::legacy::CVar_LoadFromFile("realmlist.wtf");
     }
   } else {
-    openwow::core::ida::CVar_LoadFromFile("realmlist.wtf");
+    openwow::core::legacy::CVar_LoadFromFile("realmlist.wtf");
   }
 }
 

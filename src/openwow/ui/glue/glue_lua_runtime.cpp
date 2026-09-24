@@ -339,7 +339,7 @@ void GlueLuaRuntime::ResetVm() {
     lua_pushlightuserdata(lua_state_, game_state_);
     lua_setfield(lua_state_, LUA_REGISTRYINDEX, detail::kGlueGameStateRegistryKey);
     lua_pushlightuserdata(
-        lua_state_, const_cast<openwow::core::ida::GameTimeData*>(game_time_));
+        lua_state_, const_cast<openwow::core::legacy::GameTimeData*>(game_time_));
     lua_setfield(lua_state_, LUA_REGISTRYINDEX, detail::kGameTimeRegistryKey);
 
     lua_pushlightuserdata(
@@ -488,11 +488,11 @@ void GlueLuaRuntime::BindGameState(GlueGameState* game_state) {
 }
 
 void GlueLuaRuntime::BindGameTimeData(
-    const openwow::core::ida::GameTimeData* const game_time) {
+    const openwow::core::legacy::GameTimeData* const game_time) {
   game_time_ = game_time;
   if (lua_state_ != nullptr) {
     lua_pushlightuserdata(
-        lua_state_, const_cast<openwow::core::ida::GameTimeData*>(game_time_));
+        lua_state_, const_cast<openwow::core::legacy::GameTimeData*>(game_time_));
     lua_setfield(lua_state_, LUA_REGISTRYINDEX, detail::kGameTimeRegistryKey);
   }
 }

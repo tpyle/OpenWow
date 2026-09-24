@@ -96,7 +96,7 @@ class GlueLuaRuntime {
   void BindFontRegistry(const GlueFontRegistry* font_registry);
   void BindHost(GlueHost* host);
   void BindGameState(GlueGameState* game_state);
-  void BindGameTimeData(const openwow::core::ida::GameTimeData* game_time);
+  void BindGameTimeData(const openwow::core::legacy::GameTimeData* game_time);
   void BindDbcLoader(const openwow::data::dbc::DbcLoader* dbc);
   void BindLuaEventTrace(GlueLuaEventTrace* trace);
   bool HasFunction(const std::string& function_name) const;
@@ -298,7 +298,7 @@ class GlueLuaRuntime {
   const openwow::vfs::VirtualFileSystem* vfs_{nullptr};
   GlueHost* host_{nullptr};
   GlueGameState* game_state_{nullptr};
-  const openwow::core::ida::GameTimeData* game_time_{nullptr};
+  const openwow::core::legacy::GameTimeData* game_time_{nullptr};
   const openwow::data::dbc::DbcLoader* dbc_loader_{nullptr};
   std::unordered_map<std::string, std::vector<std::string>> widgets_by_event_;
   std::unordered_map<std::string, std::vector<std::string>> events_by_widget_;

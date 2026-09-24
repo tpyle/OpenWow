@@ -811,7 +811,7 @@ void WorldSession::HandleNotification(const net::wotlk::WorldPacket &pkt) {
   DispatchNotificationUiMessage(routing);
 
   std::string notification_text(routing.text);
-  core::ida::ConsoleLogColored("%s", routing.console_color_class, notification_text.c_str());
+  core::legacy::ConsoleLogColored("%s", routing.console_color_class, notification_text.c_str());
 
   if (routing.route_to_chat_frame) {
     ChatFrame_DisplayMessage(objects(), notification_text.c_str(), routing.chat_type, nullptr, 0, nullptr,
@@ -1633,8 +1633,8 @@ void WorldSession::HandleChangeDifficultyResult(const net::wotlk::WorldPacket &p
     break;
   case PlayerDifficultyChangeResultCode::kChanged:
     openwow::core::LoadingScreen_CleanupResources(sound_runtime_);
-    openwow::core::ida::ConsoleAddLine("Changed difficulty successfully",
-                                       openwow::core::ida::COLOR_DEFAULT);
+    openwow::core::legacy::ConsoleAddLine("Changed difficulty successfully",
+                                       openwow::core::legacy::COLOR_DEFAULT);
     ui::game::ScriptEventDispatch::Get().FireEvent(ui::game::events::PLAYER_DIFFICULTY_CHANGED);
     DisplayPlayerDifficultyChangedMessage(instance_.player_difficulty());
     break;

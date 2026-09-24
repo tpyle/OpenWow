@@ -41,7 +41,7 @@
 #include "openwow/ui/display/settings/adapters/platform/display_mode_catalog.h"
 #include "openwow/foundation/text/ascii.h"
 
-namespace openwow::core::ida {
+namespace openwow::core::legacy {
 
 static HardwareInfo s_hw_info{};
 static bool s_hw_detected = false;

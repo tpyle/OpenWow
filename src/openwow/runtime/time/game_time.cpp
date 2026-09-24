@@ -10,7 +10,7 @@
 #include <ctime>
 #include <limits>
 
-namespace openwow::core::ida {
+namespace openwow::core::legacy {
 
 namespace {
 

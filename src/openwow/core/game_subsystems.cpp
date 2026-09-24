@@ -65,7 +65,7 @@ void ResetRetailVideoDefault(openwow::ui::game::CVarSystem& cvars,
 
 void ApplyRetailVideoEffectsDefaults(openwow::ui::game::CVarSystem& cvars) {
 
-    const auto* const profile = openwow::core::ida::GetStartupGraphicsQualityProfile();
+    const auto* const profile = openwow::core::legacy::GetStartupGraphicsQualityProfile();
     if (profile == nullptr) {
         return;
     }
@@ -122,7 +122,7 @@ void DisplaySettingsCallback(DisplayCallbackMode mode) {
             ApplyRetailVideoEffectsDefaults(cvars);
             if (cvars.Exists("UIFaster")) {
                 const auto* startup_profile =
-                    openwow::core::ida::GetStartupGraphicsQualityProfile();
+                    openwow::core::legacy::GetStartupGraphicsQualityProfile();
                 if (startup_profile != nullptr) {
                     (void)cvars.SetRegisteredCVarValueDirect(
                         "UIFaster",
@@ -254,7 +254,7 @@ std::vector<SubsystemInfo> GetShutdownSubsystemOrder() {
         {SubsystemId::FontInit,                  "FontSubsystem_Shutdown"},
         {SubsystemId::M2SystemShutdown,           "M2System_Shutdown"},
         {SubsystemId::ModelBlobShutdown,         "ModelBlob_Shutdown"},
-        {SubsystemId::TextureFunctions,          "Texture_func10"},
+        {SubsystemId::TextureFunctions,          "TextureFunctions"},
         {SubsystemId::AsyncFileShutdown,         "AsyncFile_Shutdown"},
         {SubsystemId::LightListShutdown,         "LightList_Shutdown"},
         {SubsystemId::HeapUsageUnregisterCmd,    "HeapUsage_UnregisterConsoleCmd"},

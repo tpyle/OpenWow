@@ -389,8 +389,8 @@ bool BattlenetLogin::OnConnected(const void *address) {
                 static_cast<unsigned>(ip[0]), static_cast<unsigned>(ip[1]),
                 static_cast<unsigned>(ip[2]), static_cast<unsigned>(ip[3]),
                 static_cast<unsigned>(port));
-  openwow::core::ida::ConsoleAddLine(connected_message,
-                                     openwow::core::ida::COLOR_DEFAULT);
+  openwow::core::legacy::ConsoleAddLine(connected_message,
+                                     openwow::core::legacy::COLOR_DEFAULT);
   if (dispatcher_backend_ != nullptr && transport_service_ != nullptr) {
     dispatcher_backend_->OnConnected(transport_service_->connection(), address);
   }
@@ -735,7 +735,7 @@ int BattlenetLogin::Connect(const uint8_t *address, int ) {
   std::snprintf(buffer, sizeof(buffer), "%d.%d.%d.%d:%d",
                 address[0], address[1], address[2], address[3], port);
 
-  openwow::core::ida::ConsoleLog("Connecting to %s", buffer);
+  openwow::core::legacy::ConsoleLog("Connecting to %s", buffer);
 
   openwow::net::WowConnection_ConnectByHostPortString(
       transport_service_->connection(), buffer, 5000);
@@ -774,7 +774,7 @@ int BattlenetLogin::CreateDispatcher() {
   payload.country = locale_fourcc;
   payload.language = locale_fourcc;
 
-  openwow::core::ida::ConsoleLog("Login program=%s platform=%s locale=%s",
+  openwow::core::legacy::ConsoleLog("Login program=%s platform=%s locale=%s",
                             "WoW", "Mac", locale_code);
 
   constexpr std::uint32_t kBuildNumber = 12340;
@@ -884,7 +884,7 @@ int BattlenetLogin::CreateDispatcher() {
     char plat_str[8];
     FourCCToString(comp.program, prog_str, sizeof(prog_str));
     FourCCToString(comp.platform, plat_str, sizeof(plat_str));
-    openwow::core::ida::ConsoleLog("Component %s.%s.%d", prog_str, plat_str,
+    openwow::core::legacy::ConsoleLog("Component %s.%s.%d", prog_str, plat_str,
                               static_cast<int>(comp.build));
   }
 
@@ -1422,8 +1422,8 @@ void BattlenetLogin::TranslateAuthResult(const std::uint32_t auth_result_code) {
 }
 
 void BattlenetLogin::HandleSunkenConnectFailure() {
-  openwow::core::ida::ConsoleAddLine("BattlenetLogin was unable to connect to Sunken",
-                                     openwow::core::ida::COLOR_DEFAULT);
+  openwow::core::legacy::ConsoleAddLine("BattlenetLogin was unable to connect to Sunken",
+                                     openwow::core::legacy::COLOR_DEFAULT);
 
   DispatchStatus(5, 12);
   sunken_connect_failure_latched_ = true;

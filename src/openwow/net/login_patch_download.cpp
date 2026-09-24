@@ -223,7 +223,7 @@ class BattlenetManifestPatchSession final : public LoginPatchDownloadSession {
       const std::vector<game::PatchDownloadManifestEntry>& downloads) {
     for (std::size_t index = 0; index < downloads.size(); ++index) {
       const auto& entry = downloads[index];
-      openwow::core::ida::ConsoleLog("Downloading patch %s;%s;%s;%s",
+      openwow::core::legacy::ConsoleLog("Downloading patch %s;%s;%s;%s",
                                      entry.url.c_str(),
                                      entry.destination.c_str(),
                                      entry.detail_2.c_str(),

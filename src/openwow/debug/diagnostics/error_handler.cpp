@@ -17,7 +17,7 @@ constexpr std::size_t kMaximumFilenameLength = 4 * 1024;
 constexpr std::uint32_t kMaximumErrorRecords = 5000;
 
 std::string FormatAssertTimestampUtc() {
-  const auto fields = openwow::core::ida::CalendarTimeBreakdownFromNsSince2000(
+  const auto fields = openwow::core::legacy::CalendarTimeBreakdownFromNsSince2000(
       openwow::core::GameClock::GetCurrentTimeNsSince2000());
 
   char ts[64];

@@ -1454,7 +1454,7 @@ int LuaGetExpansionLevel(lua_State *L) {
 }
 
 int LuaApi_IsConsoleActive(lua_State *L) {
-  if (openwow::core::ida::IsConsoleVisible()) {
+  if (openwow::core::legacy::IsConsoleVisible()) {
     lua_pushnumber(L, 1.0);
   } else {
     lua_pushnil(L);
@@ -1488,11 +1488,11 @@ int LuaApi_RegisterStaticConstants(lua_State *L) {
 }
 
 int LuaApi_SetConsoleKey(lua_State *L) {
-  namespace ida = openwow::core::ida;
+  namespace legacy = openwow::core::legacy;
   if (lua_isstring(L, 1)) {
-    ida::SetConsoleToggleKeyCode(ida::ResolveConsoleToggleKeyCode(lua_tostring(L, 1)));
+    legacy::SetConsoleToggleKeyCode(legacy::ResolveConsoleToggleKeyCode(lua_tostring(L, 1)));
   } else {
-    ida::SetConsoleToggleKeyCode(ida::kDefaultConsoleToggleKeyCode);
+    legacy::SetConsoleToggleKeyCode(legacy::kDefaultConsoleToggleKeyCode);
   }
   return 0;
 }

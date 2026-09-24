@@ -54,7 +54,7 @@ struct TickCount64FallbackState {
 }
 
 [[nodiscard]] std::int64_t ReadSystemTimeNsSince2000() noexcept {
-    return ida::TimeNsSince2000FromFileTimeTicks(ReadSystemClockFileTimeTicks());
+    return legacy::TimeNsSince2000FromFileTimeTicks(ReadSystemClockFileTimeTicks());
 }
 
 [[nodiscard]] bool IsPerformanceCounterBackendSupported() noexcept {

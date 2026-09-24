@@ -24,7 +24,7 @@
 #include "openwow/game/simple_script.h"
 #include "openwow/platform/adapters/clipboard/os_clipboard.h"
 
-namespace openwow::core::ida {
+namespace openwow::core::legacy {
 
 namespace {
 

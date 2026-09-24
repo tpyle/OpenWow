@@ -285,7 +285,7 @@ void RegisterTextureCacheBudget(openwow::ui::game::CVarSystem &cvars) {
                                                            const std::string &value) {
     const auto result = openwow::render::ValidateTextureCacheSizeChange(
         openwow::core::ParseSignedDecimal(value), TextureCacheBudgetContext(cvars));
-    openwow::core::ida::ConsoleAddLine(result.console_message, openwow::core::ida::COLOR_DEFAULT);
+    openwow::core::legacy::ConsoleAddLine(result.console_message, openwow::core::legacy::COLOR_DEFAULT);
     return result.accepted;
   });
 }
@@ -1432,8 +1432,8 @@ bool GlueClient::Initialize() {
     return false;
   }
 
-  openwow::core::ida::InitializeStartupHardwareDetectionState(&login_vfs_);
-  openwow::core::ida::GxCVarInitializeRuntime("World of Warcraft");
+  openwow::core::legacy::InitializeStartupHardwareDetectionState(&login_vfs_);
+  openwow::core::legacy::GxCVarInitializeRuntime("World of Warcraft");
 
   if (!InitGraphics()) {
     glue_host_.FinishAudioDevicePrepare();
@@ -1476,15 +1476,15 @@ bool GlueClient::InitCVars() {
 
   auto &cvar_sys = openwow::ui::game::CVarSystem::Instance();
 
-  openwow::core::ida::CVar_LoadConfig("Config.wtf");
-  openwow::core::ida::GxCVarRegister();
+  openwow::core::legacy::CVar_LoadConfig("Config.wtf");
+  openwow::core::legacy::GxCVarRegister();
   cvar_sys.RegisterDefaults();
   openwow::core::MemoryStorm_RegisterConsoleCommands();
   gamma_controller_.Register(cvar_sys, window_);
   openwow::render::RegisterTextureFilteringModeCVarCallback(cvar_sys);
   openwow::render::RegisterUiFasterCVarCallback(cvar_sys);
   RegisterTextureCacheBudget(cvar_sys);
-  openwow::core::ida::RegisterWindowResizeLockCVarCallback(cvar_sys, window_);
+  openwow::core::legacy::RegisterWindowResizeLockCVarCallback(cvar_sys, window_);
   EnsureConvertedTrialCVarCallbackRegistered(cvar_sys);
 
   cvar_sys.ApplyClientRegisterCVarsValueFixups();
@@ -1505,7 +1505,7 @@ bool GlueClient::InitCVars() {
 
   simple_ui_fast_path_enabled_ =
       openwow::render::ApplyCurrentUiFasterCVar(cvar_sys).simple_ui_fast_path_enabled;
-  (void)openwow::core::ida::ApplyCurrentWindowResizeLockCVar(cvar_sys, window_);
+  (void)openwow::core::legacy::ApplyCurrentWindowResizeLockCVar(cvar_sys, window_);
 
   openwow::diagnostics::Log(openwow::diagnostics::LogLevel::kInfo,
                             "CVarSystem: " + std::to_string(cvar_sys.Count()) +
@@ -1675,14 +1675,14 @@ bool GlueClient::InitGraphics() {
     return false;
   }
 
-  openwow::core::ida::ConsoleAndFont_StartupInitialize();
+  openwow::core::legacy::ConsoleAndFont_StartupInitialize();
   {
     auto &cvars = openwow::ui::game::CVarSystem::Instance();
 
     (void)ApplyGraphicsStartupBootstrapSequence(
         cvars, simple_ui_fast_path_enabled_,
         {.registration_immediate_pass = false,
-         .display_ready_pass = openwow::core::ida::ShouldReplayStartupDisplaySettings()});
+         .display_ready_pass = openwow::core::legacy::ShouldReplayStartupDisplaySettings()});
   }
   (void)startup_m2_flags_;
 
@@ -1845,7 +1845,7 @@ void GlueClient::FireInitialScreenEventIfNeeded() {
   const InitialGlueScreen initial_screen =
       SelectInitialGlueScreenAndConsumeMovieCvrs(cvars, startup_level);
   if (initial_screen == InitialGlueScreen::kMovie) {
-    (void)openwow::core::ida::CVar_FlushToFile();
+    (void)openwow::core::legacy::CVar_FlushToFile();
   }
   const std::string screen_name = InitialGlueScreenName(initial_screen);
 
@@ -3282,7 +3282,7 @@ void GlueClient::Shutdown() {
 
   openwow::net::ClientServices::Instance().FullLogout();
   openwow::core::LoginConsoleDiagnostics::Instance().Shutdown();
-  openwow::core::ida::ConsoleAndFont_Shutdown();
+  openwow::core::legacy::ConsoleAndFont_Shutdown();
   fps_overlay_text_renderer_.Shutdown();
   openwow::data::AsyncFile_Shutdown();
   db_cache_runtime_.DestroyBeforeWarden();
@@ -3296,7 +3296,7 @@ void GlueClient::Shutdown() {
   sound_runtime_.ShutdownOutputDevice();
   openwow::platform::SystemMouseSpeedController::Instance().RestoreSystemDefault();
   gamma_controller_.Shutdown(openwow::ui::game::CVarSystem::Instance());
-  openwow::core::ida::ClearWindowResizeLockBoundWindow();
+  openwow::core::legacy::ClearWindowResizeLockBoundWindow();
 
   if (renderer_context_ != nullptr) {
     game_loop_.SetRendererContext(nullptr);
@@ -3304,7 +3304,7 @@ void GlueClient::Shutdown() {
     renderer_context_.reset();
   }
 
-  openwow::core::ida::CVar_Cleanup();
+  openwow::core::legacy::CVar_Cleanup();
 }
 
 }

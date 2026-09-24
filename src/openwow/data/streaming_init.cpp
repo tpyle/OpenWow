@@ -550,13 +550,13 @@ std::int64_t ParseManifestTimeslotTime(std::string_view value) {
   const std::string storage(value);
   std::sscanf(storage.c_str(), "%d:%d", &hour, &minute);
 
-  openwow::core::ida::CalendarTimeFields fields;
+  openwow::core::legacy::CalendarTimeFields fields;
   fields.year = 2000;
   fields.month = 1;
   fields.day = 1;
   fields.hour = hour;
   fields.minute = minute;
-  return openwow::core::ida::CalendarTimeNsSince2000FromFields(fields);
+  return openwow::core::legacy::CalendarTimeNsSince2000FromFields(fields);
 }
 
 bool TryApplyManifestTimeslotField(std::string_view key,
@@ -2474,15 +2474,15 @@ const StreamingManifestState& GetStreamingManifestState() {
 std::int64_t NormalizeManifestScheduleQueryTime(
     const std::int64_t time_ns_since_2000) {
   const auto breakdown =
-      openwow::core::ida::CalendarTimeBreakdownFromNsSince2000(
+      openwow::core::legacy::CalendarTimeBreakdownFromNsSince2000(
           time_ns_since_2000);
-  openwow::core::ida::CalendarTimeFields fields;
+  openwow::core::legacy::CalendarTimeFields fields;
   fields.year = 2000;
   fields.month = 1;
   fields.day = 1;
   fields.hour = breakdown.hour;
   fields.minute = breakdown.minute;
-  return openwow::core::ida::CalendarTimeNsSince2000FromFields(fields);
+  return openwow::core::legacy::CalendarTimeNsSince2000FromFields(fields);
 }
 
 std::int32_t GetManifestServerCurrentScheduleUsage(

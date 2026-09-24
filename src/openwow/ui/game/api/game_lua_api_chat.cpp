@@ -1447,7 +1447,7 @@ int LuaConsoleAddMessage(lua_State *L) {
 
   const char *msg = lua_tostring(L, 1);
   if (msg != nullptr && msg[0] != '\0') {
-    openwow::core::ida::ConsoleLog("%s", msg);
+    openwow::core::legacy::ConsoleLog("%s", msg);
   }
   return 0;
 }

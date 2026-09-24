@@ -219,7 +219,7 @@ inline void CalendarPackedTime_UnpackToArray(
 
 inline void CalendarPackedTime_UnpackToDateFields(
     const std::uint32_t packed,
-    ::openwow::core::ida::CalendarDateFields& out) noexcept {
+    ::openwow::core::legacy::CalendarDateFields& out) noexcept {
   std::int32_t flags_ignored = 0;
   CalendarPackedTime_UnpackFields(
       packed,

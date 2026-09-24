@@ -31,9 +31,9 @@ std::int64_t TimePointToTimeNsSince2000(
       .count();
 }
 
-ida::CalendarTimeBreakdown DecomposeUtc(
+legacy::CalendarTimeBreakdown DecomposeUtc(
     const std::chrono::system_clock::time_point tp) {
-  return ida::CalendarTimeBreakdownFromNsSince2000(
+  return legacy::CalendarTimeBreakdownFromNsSince2000(
       TimePointToTimeNsSince2000(tp));
 }
 
@@ -103,7 +103,7 @@ std::array<char, 512> BuildFileStackBaseRoot(
 }
 
 void AppendFormattedFileStackToken(char* cursor, const std::size_t capacity,
-                                   const ida::CalendarTimeBreakdown& ts,
+                                   const legacy::CalendarTimeBreakdown& ts,
                                    const char token) {
   if (!cursor || capacity == 0) {
     return;

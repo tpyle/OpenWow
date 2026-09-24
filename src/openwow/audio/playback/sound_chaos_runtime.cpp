@@ -104,7 +104,7 @@ SoundRuntime::AdvanceChaosModeFrame(const int mode, const double delta_seconds,
       return;
     }
 
-    openwow::core::ida::ConsoleLog("##RESTART SOUND ENGINE!!");
+    openwow::core::legacy::ConsoleLog("##RESTART SOUND ENGINE!!");
     Shutdown(true);
     const bool initialized = InitializeFull(true) == 0;
     RegisterEnterWorldAudioCallbacks();
@@ -266,28 +266,28 @@ void SoundRuntime::RegisterChaosModeIfEnabled() {
 
   chaos_mode_cvar_callback_handle_ = cvars.AddCallback(
       "Sound_ChaosMode", [](const std::string &, const std::string &new_value) {
-        openwow::core::ida::ConsoleLog("CHAOS!!");
-        openwow::core::ida::ConsoleLog("Modes:");
-        openwow::core::ida::ConsoleLog("0: Off");
-        openwow::core::ida::ConsoleLog("1: Generate 1 random 3d sound per frame");
-        openwow::core::ida::ConsoleLog("2: Generate 2 random 3d sounds per frame");
-        openwow::core::ida::ConsoleLog("3: Start and stop 1 2d and 1 3d sound every frame");
-        openwow::core::ida::ConsoleLog("4: Start and stop 2 2d and 2 3d sounds every frame");
-        openwow::core::ida::ConsoleLog("5: Play the same random sound x20 (in 2d) every second");
-        openwow::core::ida::ConsoleLog("6: Play the same random sound x20 (in 3d) every second");
-        openwow::core::ida::ConsoleLog(
+        openwow::core::legacy::ConsoleLog("CHAOS!!");
+        openwow::core::legacy::ConsoleLog("Modes:");
+        openwow::core::legacy::ConsoleLog("0: Off");
+        openwow::core::legacy::ConsoleLog("1: Generate 1 random 3d sound per frame");
+        openwow::core::legacy::ConsoleLog("2: Generate 2 random 3d sounds per frame");
+        openwow::core::legacy::ConsoleLog("3: Start and stop 1 2d and 1 3d sound every frame");
+        openwow::core::legacy::ConsoleLog("4: Start and stop 2 2d and 2 3d sounds every frame");
+        openwow::core::legacy::ConsoleLog("5: Play the same random sound x20 (in 2d) every second");
+        openwow::core::legacy::ConsoleLog("6: Play the same random sound x20 (in 3d) every second");
+        openwow::core::legacy::ConsoleLog(
             "7: Play the same random looping sound x20 (in 3d) every second");
-        openwow::core::ida::ConsoleLog("8: Play Alert.mp3 from Data folder a lot");
-        openwow::core::ida::ConsoleLog(
+        openwow::core::legacy::ConsoleLog("8: Play Alert.mp3 from Data folder a lot");
+        openwow::core::legacy::ConsoleLog(
             "9: Restart game sound system (NOT INCLUDING VOICE CHAT SYSTEM) every 10 seconds");
-        openwow::core::ida::ConsoleLog(
+        openwow::core::legacy::ConsoleLog(
             "   ALERT! This mode breaks voice chat, and will cause a crash on game exit.");
-        openwow::core::ida::ConsoleLog("10: Mode 2 + Mode 9");
-        openwow::core::ida::ConsoleLog("11: Generate 1 random 2d sound per frame");
-        openwow::core::ida::ConsoleLog("12: Generate 2 random 2d sounds per frame");
-        openwow::core::ida::ConsoleLog(
+        openwow::core::legacy::ConsoleLog("10: Mode 2 + Mode 9");
+        openwow::core::legacy::ConsoleLog("11: Generate 1 random 2d sound per frame");
+        openwow::core::legacy::ConsoleLog("12: Generate 2 random 2d sounds per frame");
+        openwow::core::legacy::ConsoleLog(
             "13: Generate 2 random 2d sounds AND 2 random 3d sounds per frame");
-        openwow::core::ida::ConsoleLog("14: Mode 10 + Mode 6");
+        openwow::core::legacy::ConsoleLog("14: Mode 10 + Mode 6");
 
         const long mode = std::atol(new_value.c_str());
 

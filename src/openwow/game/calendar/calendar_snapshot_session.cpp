@@ -120,7 +120,7 @@ GameTimeCallbackMoment BuildCalendarEventAlarmMoment(
   const auto reminder_ns = PackedCalendarTimeToNsSince2000(event_time) -
                            kCalendarEventAlarmLeadMinutes * kCalendarNsPerMinute;
   const auto breakdown =
-      ::openwow::core::ida::CalendarTimeBreakdownFromNsSince2000(reminder_ns);
+      ::openwow::core::legacy::CalendarTimeBreakdownFromNsSince2000(reminder_ns);
   return {.minute = breakdown.minute,
           .hour = breakdown.hour,
           .weekday = breakdown.day_of_week,

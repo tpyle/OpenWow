@@ -581,9 +581,9 @@ std::string HandleCVarConsoleCommand(const std::string& registered_name,
 
   if (!raw_args.empty()) {
     if (HasFlag(snapshot->flags, CVarFlags::ConsoleReadOnly)) {
-      openwow::core::ida::ConsoleAddLine(
+      openwow::core::legacy::ConsoleAddLine(
           snapshot->registered_name + " is read only.",
-          openwow::core::ida::COLOR_DEFAULT);
+          openwow::core::legacy::COLOR_DEFAULT);
       return {};
     }
 
@@ -596,8 +596,8 @@ std::string HandleCVarConsoleCommand(const std::string& registered_name,
   }
 
   const auto write_line = [](std::string line) {
-    openwow::core::ida::ConsoleAddLine(std::move(line),
-                                      openwow::core::ida::COLOR_DEFAULT);
+    openwow::core::legacy::ConsoleAddLine(std::move(line),
+                                      openwow::core::legacy::COLOR_DEFAULT);
   };
   write_line("CVar \"" + snapshot->registered_name + "\" is \"" +
              snapshot->value + "\"");
@@ -623,10 +623,10 @@ bool FfxEnabledValidationCallback(const std::string&,
                                   const std::string&,
                                   const std::string& new_value) {
 
-  openwow::core::ida::ConsoleAddLine(std::atoi(new_value.c_str()) != 0
+  openwow::core::legacy::ConsoleAddLine(std::atoi(new_value.c_str()) != 0
                                         ? "enabled"
                                         : "disabled",
-                                    openwow::core::ida::COLOR_DEFAULT);
+                                    openwow::core::legacy::COLOR_DEFAULT);
   return true;
 }
 
@@ -637,15 +637,15 @@ bool ShadowLevelValidationCallback(const std::string&,
   const auto parsed = std::bit_cast<std::int32_t>(
       openwow::core::ParseSignedDecimal(new_value));
   if (parsed > 1) {
-    openwow::core::ida::ConsoleAddLine(
+    openwow::core::legacy::ConsoleAddLine(
         "Shadow mip level must be in range 0 - 1.",
-        openwow::core::ida::COLOR_DEFAULT);
+        openwow::core::legacy::COLOR_DEFAULT);
     return false;
   }
 
-  openwow::core::ida::ConsoleAddLine(
+  openwow::core::legacy::ConsoleAddLine(
       "Shadow mip level changed upon restart.",
-      openwow::core::ida::COLOR_DEFAULT);
+      openwow::core::legacy::COLOR_DEFAULT);
   return true;
 }
 
@@ -824,7 +824,7 @@ bool ProcessAffinityMaskValidationCallback(const std::string &, const std::strin
     return true;
   }
 
-  openwow::core::ida::ConsoleLog(
+  openwow::core::legacy::ConsoleLog(
       "Specified mask %08x is greater than the maximum allowable value of %08x", requested_mask,
       max_mask);
   return false;
@@ -853,8 +853,8 @@ bool ParticleDensityValidationCallback(const std::string &, const std::string &,
       static_cast<float>(openwow::core::ParseDecimalFloat(new_value));
 
   if (!(density >= 0.1f && density <= 1.0f)) {
-    openwow::core::ida::ConsoleAddLine("Value must be between 0.1 and 1.0.",
-                                       openwow::core::ida::COLOR_DEFAULT);
+    openwow::core::legacy::ConsoleAddLine("Value must be between 0.1 and 1.0.",
+                                       openwow::core::legacy::COLOR_DEFAULT);
     return false;
   }
 
@@ -869,9 +869,9 @@ bool ValidateCameraFloatRange(const std::string& new_value,
     return true;
   }
 
-  openwow::core::ida::ConsoleLogColored(
+  openwow::core::legacy::ConsoleLogColored(
       "Value out of range (%f - %f)\n",
-      openwow::core::ida::COLOR_DEFAULT, min_value, max_value);
+      openwow::core::legacy::COLOR_DEFAULT, min_value, max_value);
   return false;
 }
 
@@ -1325,7 +1325,7 @@ bool CVarSystem::SetCVar(const std::string &name, const std::string &value, bool
 
   if (should_mark_dirty) {
     TraceDirtyCVar(name);
-    openwow::core::ida::CVar_MarkValueDirty();
+    openwow::core::legacy::CVar_MarkValueDirty();
   }
 
   for (const auto &cb : callbacks_to_fire) {
@@ -1351,7 +1351,7 @@ bool CVarSystem::SetRegisteredCVarValue(const std::string &name,
 
   if (set_result.should_mark_dirty) {
     TraceDirtyCVar(name);
-    openwow::core::ida::CVar_MarkValueDirty();
+    openwow::core::legacy::CVar_MarkValueDirty();
   }
 
   for (const auto &cb : set_result.callbacks_to_fire) {

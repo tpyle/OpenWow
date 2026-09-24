@@ -340,7 +340,7 @@ bool HandleConvertedTrialTransition(GlueFlowContext& ctx,
   if (has_account_data) {
     (void)cvars.SetCVar("converted", "1", true);
     openwow::core::SetConvertedTrialFlag(true);
-    (void)openwow::core::ida::CVar_FlushToFile();
+    (void)openwow::core::legacy::CVar_FlushToFile();
     CloseStatusDialog(ctx, state);
     state.status_dialog_open = false;
     state.last_status_text.clear();
@@ -499,7 +499,7 @@ void PrepareEnterWorldLoadingState(
   PrepareEnterWorldStreamingState(character);
   openwow::core::LoadingScreen_InitFont(
       static_cast<int>(character.map_id), true);
-  (void)openwow::core::ida::CVar_FlushToFile();
+  (void)openwow::core::legacy::CVar_FlushToFile();
 }
 
 std::string LoginErrorText(const GlueFlowContext &ctx,

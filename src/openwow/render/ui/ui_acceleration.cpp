@@ -10,7 +10,7 @@ namespace {
 
 UiFasterDevicePathState BuildRuntimeUiFasterDevicePathState() {
   const auto* hardware_info =
-      openwow::core::ida::GetDetectedHardwareInfoIfReady();
+      openwow::core::legacy::GetDetectedHardwareInfoIfReady();
   if (hardware_info == nullptr) {
     return {};
   }
@@ -27,9 +27,9 @@ UiFasterDevicePathState BuildRuntimeUiFasterDevicePathState() {
 
 void ReportUiFasterResult(const UiFasterCallbackResult& result) {
   if (result.emitted_texture_atlas_disabled_message) {
-    openwow::core::ida::ConsoleAddLine(
+    openwow::core::legacy::ConsoleAddLine(
         "Texture atlas disabled.",
-        openwow::core::ida::COLOR_DEFAULT);
+        openwow::core::legacy::COLOR_DEFAULT);
   }
 }
 

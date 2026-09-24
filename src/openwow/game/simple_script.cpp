@@ -772,7 +772,7 @@ void* StartupPendingString_Set(void* value) {
 }
 
 int IsConsoleActive() {
-    return openwow::core::ida::IsConsoleVisible() ? 1 : 0;
+    return openwow::core::legacy::IsConsoleVisible() ? 1 : 0;
 }
 
 void ConsoleClient_GrowLineBuffer(int textLen, void* consoleLine) {
@@ -853,7 +853,7 @@ void ConsoleClient_DeleteCharAtCursor(void* consoleLine) {
 
 void ConsoleClient_LoadOlderHistoryEntry(void* consoleLine) {
   const char* history_entry = nullptr;
-  if (!openwow::core::ida::CommandHistoryBrowseOlder(&history_entry)) {
+  if (!openwow::core::legacy::CommandHistoryBrowseOlder(&history_entry)) {
     return;
   }
 
@@ -862,7 +862,7 @@ void ConsoleClient_LoadOlderHistoryEntry(void* consoleLine) {
 
 void ConsoleClient_LoadNewerHistoryEntry(void* consoleLine) {
   const char* history_entry = nullptr;
-  if (!openwow::core::ida::CommandHistoryBrowseNewer(&history_entry)) {
+  if (!openwow::core::legacy::CommandHistoryBrowseNewer(&history_entry)) {
     return;
   }
 

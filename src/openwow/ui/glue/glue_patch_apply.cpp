@@ -228,7 +228,7 @@ void PreparePatchProcessLaunch() {
   }
 
   (void)cvars.SetCVar("gxWindow", "1", true);
-  openwow::core::ida::Console_Execute("gxRestart", true);
+  openwow::core::legacy::Console_Execute("gxRestart", true);
   (void)cvars.SetCVar("gxWindow", "0", true);
 }
 

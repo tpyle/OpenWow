@@ -1916,8 +1916,8 @@ bool DayNight_IsCloudLayerEnabled() {
 void DayNight_SetSunGlareEnabled(const bool enabled, const bool showOutput) {
   if (enabled) {
     if (showOutput) {
-      openwow::core::ida::ConsoleAddLine(kSunGlareEnabledMessage,
-                                         openwow::core::ida::COLOR_DEFAULT);
+      openwow::core::legacy::ConsoleAddLine(kSunGlareEnabledMessage,
+                                         openwow::core::legacy::COLOR_DEFAULT);
     }
     s_sunGlareState.enabled = true;
     s_moonGlareState.enabled = true;
@@ -1925,8 +1925,8 @@ void DayNight_SetSunGlareEnabled(const bool enabled, const bool showOutput) {
   }
 
   if (showOutput) {
-    openwow::core::ida::ConsoleAddLine(kSunGlareDisabledMessage,
-                                       openwow::core::ida::COLOR_DEFAULT);
+    openwow::core::legacy::ConsoleAddLine(kSunGlareDisabledMessage,
+                                       openwow::core::legacy::COLOR_DEFAULT);
   }
   s_sunGlareState.enabled = false;
   s_moonGlareState.enabled = false;
@@ -2245,7 +2245,7 @@ int DayNight_OnSkyCloudLODChanged(int , int showOutput, const char *value) {
   val = std::clamp(val, 0, 3);
   DayNight_InitCloudLayer(static_cast<std::uint8_t>(val), 0);
   if (showOutput) {
-    openwow::core::ida::ConsoleLog("SkyCloudLOD set to %i", val);
+    openwow::core::legacy::ConsoleLog("SkyCloudLOD set to %i", val);
   }
   return 1;
 }
@@ -2267,7 +2267,7 @@ bool DayNight_ApplySkyCloudLod(const int lodLevel, const bool showOutput) {
 
   DayNight_InitCloudLayer(static_cast<std::uint8_t>(clamped_lod), 0);
   if (showOutput) {
-    openwow::core::ida::ConsoleLog("SkyCloudLOD set to %i", clamped_lod);
+    openwow::core::legacy::ConsoleLog("SkyCloudLOD set to %i", clamped_lod);
   }
   return true;
 }

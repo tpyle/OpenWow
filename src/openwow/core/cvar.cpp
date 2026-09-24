@@ -22,7 +22,7 @@
 #include "openwow/foundation/text/ascii.h"
 #include "openwow/vfs/sfile_core.h"
 
-namespace openwow::core::ida {
+namespace openwow::core::legacy {
 
 static std::atomic_bool s_dirty_flag{false};
 

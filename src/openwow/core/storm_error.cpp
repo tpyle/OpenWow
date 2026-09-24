@@ -649,7 +649,7 @@ void SErrShutdown() {
 
 void SErrAssertHandler(const char *expression, const char *message, const char *file, int line) {
   const auto calendar_fields =
-      ida::CalendarTimeBreakdownFromNsSince2000(GameClock::GetCurrentTimeNsSince2000());
+      legacy::CalendarTimeBreakdownFromNsSince2000(GameClock::GetCurrentTimeNsSince2000());
 
   char normalized_file[256]{};
   SErrAssertHandler_NormalizePath(file, normalized_file, sizeof(normalized_file));

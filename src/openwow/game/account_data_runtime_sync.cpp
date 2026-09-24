@@ -270,7 +270,7 @@ void ApplyCachedAccountDataPayload(WorldSession& session,
     case AccountDataType::GlobalConfig:
     case AccountDataType::PerCharacterConfig:
 
-      (void)openwow::core::ida::CVar_ParseConfigBuffer(data);
+      (void)openwow::core::legacy::CVar_ParseConfigBuffer(data);
       if (type == AccountDataType::PerCharacterConfig) {
         RestoreSavedCameraConfigCVars(session);
       }

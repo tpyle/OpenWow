@@ -76,7 +76,7 @@ inline constexpr std::int64_t kCalendarNsPerMinute =
 [[nodiscard]] inline std::int64_t PackedCalendarTimeToNsSince2000(
     const std::uint32_t packed_time) {
   const auto parts = DecodePackedCalendarTime(packed_time);
-  return ::openwow::core::ida::CalendarTimeNsSince2000FromFields({
+  return ::openwow::core::legacy::CalendarTimeNsSince2000FromFields({
       .year = static_cast<std::int32_t>(parts.year),
       .month = static_cast<std::int32_t>(parts.month),
       .day = static_cast<std::int32_t>(parts.day),
@@ -90,7 +90,7 @@ inline constexpr std::int64_t kCalendarNsPerMinute =
 [[nodiscard]] inline std::uint32_t NsSince2000ToPackedCalendarTime(
     const std::int64_t ns_since_2000) {
   const auto breakdown =
-      ::openwow::core::ida::CalendarTimeBreakdownFromNsSince2000(
+      ::openwow::core::legacy::CalendarTimeBreakdownFromNsSince2000(
           ns_since_2000);
   return PackCalendarTime({
       .year = static_cast<std::uint32_t>(breakdown.year),

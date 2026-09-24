@@ -622,9 +622,9 @@ bool CVar_HeapAllocTracking_Handler(const char* new_value) {
     const bool enabled =
         ParseSignedDecimal(new_value) != 0u;
     SetLogFlags(enabled ? 0x20u : 0u, 0x20u);
-    ida::ConsoleAddLine(enabled ? "Heap tracking switched ON"
+    legacy::ConsoleAddLine(enabled ? "Heap tracking switched ON"
                                 : "Heap tracking switched OFF",
-                        ida::COLOR_DEFAULT);
+                        legacy::COLOR_DEFAULT);
     return true;
 }
 
@@ -685,7 +685,7 @@ void ConsoleCmd_HeapUsage() {
     std::string line;
     while (std::getline(lines, line)) {
         if (!line.empty()) {
-            ida::ConsoleAddLine(line, ida::COLOR_DEFAULT);
+            legacy::ConsoleAddLine(line, legacy::COLOR_DEFAULT);
         }
     }
 }
@@ -824,11 +824,11 @@ void ObjUsage_PrintObjectManagerListStatus() {
 
     const std::uint32_t visible_count = active_count;
 
-    ida::ConsoleAddLine("Object manager list status:", 7);
-    ida::ConsoleLogColored(
+    legacy::ConsoleAddLine("Object manager list status:", 7);
+    legacy::ConsoleLogColored(
         "    Active objects:              %u objects (%u visible)", 7,
         active_count, visible_count);
-    ida::ConsoleLogColored(
+    legacy::ConsoleLogColored(
         "    Objects waiting to be freed: %u objects", 7,
         pending_free_count);
 }

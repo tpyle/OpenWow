@@ -67,9 +67,9 @@ inline GlueGameState* GetGameState(lua_State* state) {
   return gs;
 }
 
-inline const openwow::core::ida::GameTimeData* GetGameTimeData(lua_State* state) {
+inline const openwow::core::legacy::GameTimeData* GetGameTimeData(lua_State* state) {
   lua_getfield(state, LUA_REGISTRYINDEX, kGameTimeRegistryKey);
-  auto* game_time = static_cast<const openwow::core::ida::GameTimeData*>(
+  auto* game_time = static_cast<const openwow::core::legacy::GameTimeData*>(
       lua_touserdata(state, -1));
   lua_pop(state, 1);
   return game_time;

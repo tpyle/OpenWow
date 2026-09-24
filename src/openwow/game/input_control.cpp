@@ -157,7 +157,7 @@ void ApplyJoystickConfigForValue(std::string_view value) {
         return;
     }
 
-    openwow::core::ida::ConsoleLog("Joystick: %s", joystick_name->c_str());
+    openwow::core::legacy::ConsoleLog("Joystick: %s", joystick_name->c_str());
 
     const auto xml_text =
         g_joystick_config_xml_text_provider != nullptr

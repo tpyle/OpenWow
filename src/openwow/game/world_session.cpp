@@ -631,7 +631,7 @@ WorldSession::WorldSession(openwow::data::DBCacheRuntime& db_cache_runtime,
                              const ReputationInfo& reputation,
                              SpellCastRuntime& spell_cast_runtime,
                               openwow::audio::SoundRuntime& sound_runtime,
-                              openwow::core::ida::GameTimeData* const shared_game_time)
+                              openwow::core::legacy::GameTimeData* const shared_game_time)
     : packet_dispatcher_(packet_dispatcher),
       player_control_runtime_(player_control_runtime),
       db_cache_runtime_(db_cache_runtime),
@@ -798,9 +798,9 @@ WorldSession::WorldSession(openwow::data::DBCacheRuntime& db_cache_runtime,
       [](const std::string& text, const DanceStudioSystem::ConsoleColor color) {
         const int console_color =
             color == DanceStudioSystem::ConsoleColor::kError
-                ? core::ida::COLOR_ERROR
-                : core::ida::COLOR_DEFAULT;
-        core::ida::ConsoleAddLine(text, console_color);
+                ? core::legacy::COLOR_ERROR
+                : core::legacy::COLOR_DEFAULT;
+        core::legacy::ConsoleAddLine(text, console_color);
       });
   dance_studio_->SetSystemMessageSink(
       [](const DanceSystemMessageId message_id) {
@@ -3177,7 +3177,7 @@ bool WorldSession::HandlePacket(const net::wotlk::WorldPacket &pkt) {
     PacketReader reader(pkt.payload.data(), pkt.payload.size());
     std::string response;
     (void)reader.ReadCString(response, kWhoisResponseStringReadBound);
-    core::ida::ConsoleAddLine(response, core::ida::COLOR_DEFAULT);
+    core::legacy::ConsoleAddLine(response, core::legacy::COLOR_DEFAULT);
     return true;
   }
 
@@ -3186,13 +3186,13 @@ bool WorldSession::HandlePacket(const net::wotlk::WorldPacket &pkt) {
     std::int32_t account_count = 0;
     (void)reader.ReadI32(account_count);
     if (account_count == kRWhoisFailureResult) {
-      core::ida::ConsoleAddLine(kRWhoisFailureText,
-                                core::ida::COLOR_ERROR);
+      core::legacy::ConsoleAddLine(kRWhoisFailureText,
+                                core::legacy::COLOR_ERROR);
       return true;
     }
     if (account_count == 0) {
-      core::ida::ConsoleAddLine(kRWhoisNotFoundText,
-                                core::ida::COLOR_WARNING);
+      core::legacy::ConsoleAddLine(kRWhoisNotFoundText,
+                                core::legacy::COLOR_WARNING);
       return true;
     }
     if (account_count < 0) {
@@ -3203,7 +3203,7 @@ bool WorldSession::HandlePacket(const net::wotlk::WorldPacket &pkt) {
          ++account_index) {
       std::string account;
       (void)reader.ReadCString(account, kRWhoisAccountStringReadBound);
-      core::ida::ConsoleLog(kRWhoisAccountFormat, account.c_str());
+      core::legacy::ConsoleLog(kRWhoisAccountFormat, account.c_str());
 
       std::int32_t character_count = 0;
       std::int32_t selected_character_index = 0;
@@ -3214,11 +3214,11 @@ bool WorldSession::HandlePacket(const net::wotlk::WorldPacket &pkt) {
         std::string character_name;
         (void)reader.ReadCString(character_name,
                                  kRWhoisCharacterStringReadBound);
-        core::ida::ConsoleLogColored(
+        core::legacy::ConsoleLogColored(
             kRWhoisCharacterFormat,
             character_index == selected_character_index
-                ? core::ida::COLOR_WARNING
-                : core::ida::COLOR_DEFAULT,
+                ? core::legacy::COLOR_WARNING
+                : core::legacy::COLOR_DEFAULT,
             character_name.c_str());
       }
     }

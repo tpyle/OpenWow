@@ -83,7 +83,7 @@ WorldRenderState& State() {
 
 void WriteConsoleLine(const char* const text) {
 
-  openwow::core::ida::ConsoleAddLine(text, openwow::core::ida::COLOR_DEFAULT);
+  openwow::core::legacy::ConsoleAddLine(text, openwow::core::legacy::COLOR_DEFAULT);
 }
 
 int ToggleRenderFlag(const WorldRenderFlag flag, const char* const disabled_message,

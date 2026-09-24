@@ -424,7 +424,7 @@ std::vector<std::string> CollectRunOnceEntryNames() {
 }
 
 void LoadRunOnceConfigFile(const std::string &filename) {
-  ida::CVar_LoadFromFile(filename);
+  legacy::CVar_LoadFromFile(filename);
 }
 
 void ApplyWoWMainInitStormSetting(int command, int value) {
@@ -726,7 +726,7 @@ static void LoadLoginSurveyTelemetryState() {
 }
 
 static void Console_RegisterBasicCommands() {
-  openwow::core::ida::Console_RegisterBasicCommands();
+  openwow::core::legacy::Console_RegisterBasicCommands();
 }
 
 static void LocalStrCopy(char *dest, const char *src, int maxlen) {
@@ -801,7 +801,7 @@ static void InitErrorTableAndCacheBounds(void *table, const char * , uint32_t li
 }
 
 static void ConsoleDeviceInitialize(const char *title) {
-  openwow::core::ida::ConsoleDeviceInitialize(title);
+  openwow::core::legacy::ConsoleDeviceInitialize(title);
 }
 
 static void OS_InitPerfCounters(const openwow::core::TimingMethod requested_method) {
@@ -852,7 +852,7 @@ static void ApplyPendingVideoOptionsVersion() {
 }
 
 static void CVar_Cleanup() {
-  ::openwow::core::ida::CVar_Cleanup();
+  ::openwow::core::legacy::CVar_Cleanup();
 }
 
 static void UnregisterAllConsoleCommands() {
@@ -1155,7 +1155,7 @@ static void Client_BuildBugReport(char* buf, int buf_size) {
 
 static void GameSubsystemsInit() {
   openwow::core::RegisterVideoDefaultsModeCallback(&openwow::core::DispatchDisplaySettingsCallback);
-  if (openwow::core::ida::ShouldReplayStartupDisplaySettings()) {
+  if (openwow::core::legacy::ShouldReplayStartupDisplaySettings()) {
     for (std::uint32_t mode = 0; mode < 3; ++mode) {
       openwow::core::DispatchDisplaySettingsCallback(mode);
     }
@@ -1196,7 +1196,7 @@ OPENWOW_PRINTF_FORMAT(1, 2) static void ConsoleLog(const char *fmt, ...) {
   std::vsnprintf(buffer.data(), buffer.size(), fmt, args);
   va_end(args);
 
-  openwow::core::ida::ConsoleAddLine(buffer.data(), openwow::core::ida::COLOR_DEFAULT);
+  openwow::core::legacy::ConsoleAddLine(buffer.data(), openwow::core::legacy::COLOR_DEFAULT);
 }
 
 namespace detail {
@@ -1700,11 +1700,11 @@ bool ClientInit() {
 
   Console_RegisterBasicCommands();
 
-  ida::CVar_LoadConfig("Config.wtf");
+  legacy::CVar_LoadConfig("Config.wtf");
 
   detail::RegisterClientInitCVars();
 
-  ida::CVar_SetDirtyFlag();
+  legacy::CVar_SetDirtyFlag();
 
   detail::ProcessRunOnceFilesWithCallback(LoadRunOnceConfigFile);
 

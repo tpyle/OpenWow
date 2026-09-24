@@ -199,8 +199,8 @@ void WorldSession::ApplyPetitionUiTransition(const PetitionUiTransition &transit
     }
   }
   if (!transition.console_line.empty()) {
-    openwow::core::ida::ConsoleAddLine(transition.console_line,
-                                       openwow::core::ida::COLOR_DEFAULT);
+    openwow::core::legacy::ConsoleAddLine(transition.console_line,
+                                       openwow::core::legacy::COLOR_DEFAULT);
   }
   if (transition.fire_closed) {
     dispatch.FireEvent(ui::game::events::PETITION_CLOSED);

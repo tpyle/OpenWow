@@ -6,7 +6,7 @@
 #include <ctime>
 #include <type_traits>
 
-namespace openwow::core::ida {
+namespace openwow::core::legacy {
 
 inline constexpr float kRetailMinimumGameSpeed = 1.0f / 60.0f;
 inline constexpr float kRetailMaximumGameSpeed = 60.0f;
