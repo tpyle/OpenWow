@@ -169,7 +169,7 @@ bool ReadOptionalSkinChunk(const BinaryReader &reader, const std::uint32_t count
   }
 
   const auto span =
-      reader.ReadSpan<T>(static_cast<std::size_t>(offset), static_cast<std::size_t>(count));
+      reader.ReadVector<T>(static_cast<std::size_t>(offset), static_cast<std::size_t>(count));
   if (!span.has_value()) {
     return false;
   }
@@ -212,8 +212,8 @@ bool ValidateOptionalSkinChunk(const BinaryReader &reader, const std::uint32_t c
     return true;
   }
 
-  return reader.ReadSpan<T>(static_cast<std::size_t>(offset), static_cast<std::size_t>(count))
-      .has_value();
+  return reader.CanReadArray<T>(static_cast<std::size_t>(offset),
+                                static_cast<std::size_t>(count));
 }
 
 struct M2TrackHeader {
@@ -285,9 +285,9 @@ bool ReadTrackData(const BinaryReader &r, const M2TrackHeader &h,
   }
 
   const auto times_outer =
-      r.ReadSpan<M2Array>(static_cast<std::size_t>(h.times.offset), outer_times);
+      r.ReadVector<M2Array>(static_cast<std::size_t>(h.times.offset), outer_times);
   const auto values_outer =
-      r.ReadSpan<M2Array>(static_cast<std::size_t>(h.values.offset), outer_values);
+      r.ReadVector<M2Array>(static_cast<std::size_t>(h.values.offset), outer_values);
   if (!times_outer.has_value() || !values_outer.has_value()) {
     if (error)
       *error = "M2: track outer arrays out of bounds";
@@ -353,7 +353,7 @@ bool ReadDiscreteTrackTimes(const BinaryReader &r, const M2DiscreteTrackHeader &
 
   const std::size_t outer_times = static_cast<std::size_t>(h.times.count);
   const auto times_outer =
-      r.ReadSpan<M2Array>(static_cast<std::size_t>(h.times.offset), outer_times);
+      r.ReadVector<M2Array>(static_cast<std::size_t>(h.times.offset), outer_times);
   if (!times_outer.has_value()) {
     if (error)
       *error = "M2: discrete track outer arrays out of bounds";
@@ -747,7 +747,7 @@ M2LoadResult LoadM2FromBytes(const std::vector<std::uint8_t> &bytes,
       out.error = "M2: vertices out of bounds";
       return out;
     }
-    const auto span = r.ReadSpan<M2Vertex>(ofs, count);
+    const auto span = r.ReadVector<M2Vertex>(ofs, count);
     if (!span.has_value()) {
       out.error = "M2: failed to map vertices";
       return out;
@@ -1244,7 +1244,7 @@ M2LoadResult LoadM2FromBytes(const std::vector<std::uint8_t> &bytes,
 
           const auto ribbon_id = r.ReadU32(e + 0);
           const auto bone_index = r.ReadU32(e + 4);
-          const auto pos = r.ReadSpan<float>(e + 8, 3);
+          const auto pos = r.ReadVector<float>(e + 8, 3);
           if (!ribbon_id || !bone_index || !pos) {
             out.error = "M2: truncated ribbon emitter header";
             return out;

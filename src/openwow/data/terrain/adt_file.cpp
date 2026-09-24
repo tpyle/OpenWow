@@ -121,7 +121,7 @@ bool ParseMddf(const BinaryReader &r, size_t data_offset, uint32_t data_size, Ad
   const size_t count = data_size / sizeof(DoodadPlacement);
   if (count == 0)
     return true;
-  auto span = r.ReadSpan<DoodadPlacement>(data_offset, count);
+  auto span = r.ReadVector<DoodadPlacement>(data_offset, count);
   if (!span)
     return true;
   adt.doodads.assign(span->begin(), span->end());
@@ -135,7 +135,7 @@ bool ParseModf(const BinaryReader &r, size_t data_offset, uint32_t data_size, Ad
   const size_t count = data_size / sizeof(WmoPlacement);
   if (count == 0)
     return true;
-  auto span = r.ReadSpan<WmoPlacement>(data_offset, count);
+  auto span = r.ReadVector<WmoPlacement>(data_offset, count);
   if (!span)
     return true;
   adt.wmo_placements.assign(span->begin(), span->end());
@@ -149,7 +149,7 @@ bool ParseMtxf(const BinaryReader &r, size_t data_offset, uint32_t data_size, Ad
   const size_t count = data_size / sizeof(uint32_t);
   if (count == 0)
     return true;
-  auto span = r.ReadSpan<uint32_t>(data_offset, count);
+  auto span = r.ReadVector<uint32_t>(data_offset, count);
   if (!span)
     return true;
   adt.texture_flags.assign(span->begin(), span->end());
@@ -245,7 +245,7 @@ void ParseMclv(const BinaryReader &r, size_t data_offset, uint32_t data_size, Te
   constexpr size_t kExpectedBytes = kVerticesPerChunk * sizeof(VertexColor);
   if (data_size < kExpectedBytes)
     return;
-  auto span = r.ReadSpan<VertexColor>(data_offset, kVerticesPerChunk);
+  auto span = r.ReadVector<VertexColor>(data_offset, kVerticesPerChunk);
   if (!span)
     return;
   chunk.low_res_vertex_colors.assign(span->begin(), span->end());
@@ -255,7 +255,7 @@ void ParseMcvt(const BinaryReader &r, size_t data_offset, uint32_t data_size, Te
   constexpr size_t kExpectedBytes = kVerticesPerChunk * sizeof(float);
   if (data_size < kExpectedBytes)
     return;
-  auto span = r.ReadSpan<float>(data_offset, kVerticesPerChunk);
+  auto span = r.ReadVector<float>(data_offset, kVerticesPerChunk);
   if (!span)
     return;
   std::copy(span->begin(), span->end(), chunk.heights.begin());
@@ -265,7 +265,7 @@ void ParseMcnr(const BinaryReader &r, size_t data_offset, uint32_t data_size, Te
   constexpr size_t kExpectedBytes = kVerticesPerChunk * sizeof(PackedNormal);
   if (data_size < kExpectedBytes)
     return;
-  auto span = r.ReadSpan<PackedNormal>(data_offset, kVerticesPerChunk);
+  auto span = r.ReadVector<PackedNormal>(data_offset, kVerticesPerChunk);
   if (!span)
     return;
   std::copy(span->begin(), span->end(), chunk.normals.begin());
@@ -277,7 +277,7 @@ void ParseMcly(const BinaryReader &r, size_t data_offset, uint32_t data_size, Te
   const size_t count = data_size / sizeof(TextureLayer);
   if (count == 0)
     return;
-  auto span = r.ReadSpan<TextureLayer>(data_offset, count);
+  auto span = r.ReadVector<TextureLayer>(data_offset, count);
   if (!span)
     return;
   chunk.layers.assign(span->begin(), span->end());
@@ -296,7 +296,7 @@ void ParseMccv(const BinaryReader &r, size_t data_offset, uint32_t data_size, Te
   constexpr size_t kExpectedBytes = kVerticesPerChunk * sizeof(VertexColor);
   if (data_size < kExpectedBytes)
     return;
-  auto span = r.ReadSpan<VertexColor>(data_offset, kVerticesPerChunk);
+  auto span = r.ReadVector<VertexColor>(data_offset, kVerticesPerChunk);
   if (!span)
     return;
   chunk.vertex_colors.assign(span->begin(), span->end());
@@ -308,7 +308,7 @@ void ParseMcrf(const BinaryReader &r, size_t data_offset, uint32_t data_size, Te
   const size_t count = data_size / sizeof(uint32_t);
   if (count == 0)
     return;
-  auto span = r.ReadSpan<uint32_t>(data_offset, count);
+  auto span = r.ReadVector<uint32_t>(data_offset, count);
   if (!span)
     return;
   chunk.doodad_wmo_refs.assign(span->begin(), span->end());
@@ -320,7 +320,7 @@ void ParseMcse(const BinaryReader &r, const size_t data_offset, const uint32_t d
   if (count == 0u || count > data_size / sizeof(SoundEmitterEntry)) {
     return;
   }
-  const auto span = r.ReadSpan<SoundEmitterEntry>(data_offset, count);
+  const auto span = r.ReadVector<SoundEmitterEntry>(data_offset, count);
   if (!span) {
     return;
   }
@@ -478,7 +478,7 @@ bool ParseMh2o(const BinaryReader &r, size_t data_offset, uint32_t data_size, Ad
         const size_t vd_offset = data_offset + inst.offset_vertex_data;
         switch (inst.liquid_object) {
         case static_cast<std::uint16_t>(AdtWaterLayerObjectKind::HeightAndBytePayload): {
-          auto height_span = r.ReadSpan<float>(vd_offset, vert_count);
+          auto height_span = r.ReadVector<float>(vd_offset, vert_count);
           if (height_span) {
             wl.heights.assign(height_span->begin(), height_span->end());
           }
@@ -491,12 +491,12 @@ bool ParseMh2o(const BinaryReader &r, size_t data_offset, uint32_t data_size, Ad
           break;
         }
         case static_cast<std::uint16_t>(AdtWaterLayerObjectKind::HeightAndWordPayload): {
-          auto height_span = r.ReadSpan<float>(vd_offset, vert_count);
+          auto height_span = r.ReadVector<float>(vd_offset, vert_count);
           if (height_span) {
             wl.heights.assign(height_span->begin(), height_span->end());
           }
 
-          auto word_span = r.ReadSpan<std::uint32_t>(
+          auto word_span = r.ReadVector<std::uint32_t>(
               vd_offset + static_cast<size_t>(vert_count) * sizeof(float), tile_count);
           if (word_span) {
             wl.aux_word_payload.assign(word_span->begin(), word_span->end());
@@ -679,7 +679,7 @@ AdtLoadResult LoadAdt(const uint8_t *data, size_t size) {
     } else if (hdr.magic == kMMID) {
       const size_t count = hdr.size / sizeof(uint32_t);
       if (count != 0) {
-        auto span = r.ReadSpan<uint32_t>(data_offset, count);
+        auto span = r.ReadVector<uint32_t>(data_offset, count);
         if (span) {
           mmid_offsets.assign(span->begin(), span->end());
         }
@@ -688,7 +688,7 @@ AdtLoadResult LoadAdt(const uint8_t *data, size_t size) {
 
       constexpr size_t kMfboFloats = 162;
       if (hdr.size >= kMfboFloats * sizeof(float)) {
-        auto span = r.ReadSpan<float>(data_offset, kMfboFloats);
+        auto span = r.ReadVector<float>(data_offset, kMfboFloats);
         if (span) {
           std::copy(span->begin(), span->end(), result.adt.flight_bounds.begin());
         }
@@ -703,7 +703,7 @@ AdtLoadResult LoadAdt(const uint8_t *data, size_t size) {
     } else if (hdr.magic == kMWID) {
       const size_t count = hdr.size / sizeof(uint32_t);
       if (count != 0) {
-        auto span = r.ReadSpan<uint32_t>(data_offset, count);
+        auto span = r.ReadVector<uint32_t>(data_offset, count);
         if (span) {
           mwid_offsets.assign(span->begin(), span->end());
         }

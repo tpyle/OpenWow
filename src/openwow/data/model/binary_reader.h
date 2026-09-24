@@ -7,6 +7,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 namespace openwow::data::model {
@@ -89,31 +90,43 @@ class BinaryReader {
     return std::string(reinterpret_cast<const char*>(span->data()), span->size());
   }
 
+  /// Returns true when `count` elements of type T starting at `offset` are in
+  /// bounds, without regard to alignment.
+  template <typename T>
+  bool CanReadArray(std::size_t offset, std::size_t count) const {
+    if (count > SIZE_MAX / sizeof(T)) return false;
+    return CanRead(offset, count * sizeof(T));
+  }
+
+  /// Zero-copy view of `count` T elements at `offset`. Returns nullopt when
+  /// the range is out of bounds or when the address is not aligned for T,
+  /// since forming a misaligned T* is undefined behavior. Retail chunked
+  /// files (ADT in particular) routinely place arrays at offsets that are
+  /// not 4-byte aligned, so parsers of file data should use ReadVector,
+  /// which has no alignment requirement.
   template <typename T>
   std::optional<std::span<const T>> ReadSpan(std::size_t offset, std::size_t count) const {
     if (count == 0) {
       return std::span<const T>();
     }
-    const std::size_t bytes = count * sizeof(T);
-    if (!CanRead(offset, bytes)) return std::nullopt;
+    if (!CanReadArray<T>(offset, count)) return std::nullopt;
     const auto* base = data_ + offset;
-    // reinterpret_cast-ing a T* out of an arbitrary byte offset is
-    // undefined behavior when that address isn't correctly aligned for T
-    // (e.g. a 4-byte-aligned type read from an odd offset). Well-formed
-    // WoW chunk files keep every array offset naturally aligned, but a
-    // malformed or adversarially-crafted file is exactly the case this
-    // reader needs to fail safely on rather than invoke UB, so a
-    // misaligned request is rejected the same way an out-of-bounds one is.
     if (reinterpret_cast<std::uintptr_t>(base) % alignof(T) != 0) return std::nullopt;
     const auto* ptr = reinterpret_cast<const T*>(base);
     return std::span<const T>(ptr, count);
   }
 
+  /// Copies `count` trivially-copyable T elements starting at `offset`.
+  /// Works at any byte alignment; returns nullopt only when out of bounds.
   template <typename T>
   std::optional<std::vector<T>> ReadVector(std::size_t offset, std::size_t count) const {
-    const auto span = ReadSpan<T>(offset, count);
-    if (!span.has_value()) return std::nullopt;
-    return std::vector<T>(span->begin(), span->end());
+    static_assert(std::is_trivially_copyable_v<T>);
+    if (!CanReadArray<T>(offset, count)) return std::nullopt;
+    std::vector<T> out(count);
+    if (count != 0) {
+      std::memcpy(out.data(), data_ + offset, count * sizeof(T));
+    }
+    return out;
   }
 
  private:

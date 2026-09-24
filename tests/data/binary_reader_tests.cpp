@@ -127,26 +127,41 @@ TEST_CASE("BinaryReader::ReadSpan<uint32_t>/ReadVector<uint32_t> decode multiple
   CHECK_FALSE(reader.ReadVector<std::uint32_t>(0, 3).has_value()); // 3*4 > 8 bytes available
 }
 
-TEST_CASE("BinaryReader::ReadSpan<T>/ReadVector<T>: FIXED -- a misaligned offset for a "
-          "multi-byte T is now rejected instead of invoking undefined behavior",
+TEST_CASE("BinaryReader::ReadVector<T> copies from a misaligned offset",
           "[data][binary_reader]") {
-  // ReadSpan<T>/ReadVector<T> used to do `reinterpret_cast<const T*>(data_ +
-  // offset)` with no alignment check. For T with alignof(T) > 1, an odd
-  // offset (as used here) produces a pointer that is not correctly aligned
-  // for T -- undefined behavior in the C++ standard, even though it worked
-  // in practice on this platform's compiler/architecture (x86_64 tolerates
-  // unaligned loads). AGENTS.md lists ARM64 as a target architecture, where
-  // strict-alignment faults are a real possibility for some configurations,
-  // and real callers of this reader (adt_file.cpp, m2_model.cpp) read
-  // naturally-aligned structs (TextureLayer, DoodadPlacement, WmoPlacement,
-  // M2Array, M2Vec3, M2Vertex -- all multiples of 4 bytes, containing
-  // uint32_t/float fields) at offsets taken directly from file data. An
-  // alignment check now rejects a misaligned request the same way an
-  // out-of-bounds one is already rejected, rather than reading through it.
+  // Retail ADT files place MCVT/MCNR/MDDF/... payloads at offsets that are
+  // not 4-byte aligned (string chunks such as MMDX have unpadded sizes), so
+  // ReadVector must not depend on alignment.
+  const std::vector<std::uint8_t> bytes = {0xAA, 0x01, 0x00, 0x00, 0x00,
+                                           0x00, 0x00, 0x80, 0x3F};
+  BinaryReader reader(bytes.data(), bytes.size());
+  const auto words = reader.ReadVector<std::uint32_t>(1, 1);
+  REQUIRE(words.has_value());
+  CHECK((*words)[0] == 1u);
+
+  const auto floats = reader.ReadVector<float>(5, 1);
+  REQUIRE(floats.has_value());
+  CHECK((*floats)[0] == 1.0F);
+}
+
+TEST_CASE("BinaryReader::ReadSpan<T> rejects a misaligned offset instead of forming a "
+          "misaligned pointer",
+          "[data][binary_reader]") {
   const std::vector<std::uint8_t> bytes = {0xAA, 0x01, 0x00, 0x00, 0x00};
   BinaryReader reader(bytes.data(), bytes.size());
-  CHECK_FALSE(reader.ReadVector<std::uint32_t>(1, 1).has_value()); // offset 1 -- misaligned
   CHECK_FALSE(reader.ReadSpan<std::uint32_t>(1, 1).has_value());
+}
+
+TEST_CASE("BinaryReader array reads reject counts whose byte size overflows",
+          "[data][binary_reader]") {
+  const std::vector<std::uint8_t> bytes(16, 0);
+  BinaryReader reader(bytes.data(), bytes.size());
+  const std::size_t huge = (SIZE_MAX / sizeof(std::uint32_t)) + 2;
+  CHECK_FALSE(reader.CanReadArray<std::uint32_t>(0, huge));
+  CHECK_FALSE(reader.ReadVector<std::uint32_t>(0, huge).has_value());
+  CHECK_FALSE(reader.ReadSpan<std::uint32_t>(0, huge).has_value());
+  CHECK(reader.CanReadArray<std::uint32_t>(0, 4));
+  CHECK_FALSE(reader.CanReadArray<std::uint32_t>(1, 4));
 }
 
 TEST_CASE("BinaryReader::ReadSpan<T>/ReadVector<T> still succeed at a properly aligned offset",
