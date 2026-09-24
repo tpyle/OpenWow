@@ -30,6 +30,26 @@ using ScreenRect = WmoVisibilityTraversalFrame;
   return y_over_x ? 1u : 0u;
 }
 
+[[nodiscard]] float DistanceToPortalBounds(const TraversalPoint& point,
+                                           const std::vector<Vec3>& vertices) {
+  if (vertices.empty()) return std::numeric_limits<float>::max();
+  Vec3 lo = vertices.front();
+  Vec3 hi = vertices.front();
+  for (const Vec3& vertex : vertices) {
+    for (std::size_t axis = 0; axis < 3u; ++axis) {
+      lo[axis] = std::min(lo[axis], vertex[axis]);
+      hi[axis] = std::max(hi[axis], vertex[axis]);
+    }
+  }
+  float squared = 0.0f;
+  for (std::size_t axis = 0; axis < 3u; ++axis) {
+    const float outside = std::max({lo[axis] - point[axis], 0.0f,
+                                    point[axis] - hi[axis]});
+    squared += outside * outside;
+  }
+  return std::sqrt(squared);
+}
+
 [[nodiscard]] bool IsPointInsidePortalPolygon(
     const TraversalPoint& point, const std::vector<Vec3>& vertices,
     const std::size_t dominant_axis) {
@@ -384,7 +404,7 @@ void ComputeVisibleWmoGroups(
     WmoSkyVisibility* const out_sky_visibility,
     WmoExteriorPortalFillBatch* const out_portal_fills,
     const WmoTraversalLanes lanes, const WorldOccluderVolumes* const occluders,
-    const bool append) {
+    const bool append, const float near_clip_radius) {
   const auto& groups = visibility.groups();
   if (!append) {
     out_mask.assign(groups.size(), 0);
@@ -629,7 +649,16 @@ void ComputeVisibleWmoGroups(
           portal.plane_[0] * model_camera_position[0] +
           portal.plane_[1] * model_camera_position[1] +
           portal.plane_[2] * model_camera_position[2] + portal.plane_[3];
-      if (camera_portal_dist > 0.0f) {
+      // With the eye this close to the portal, the near plane cuts away the
+      // walls around it and the portal can be seen through from either side,
+      // even though from the eye point it is edge-on or just out of reach
+      // (e.g. a camera pressed into the step below Stormwind's arch mouth).
+      const bool camera_within_near_clip =
+          near_clip_radius > 0.0f &&
+          std::fabs(camera_portal_dist) < near_clip_radius &&
+          DistanceToPortalBounds(model_camera_position, portal.vertices) <
+              near_clip_radius;
+      if (camera_portal_dist > 0.0f && !camera_within_near_clip) {
 
         if (!camera_lane && frame.depth == 0u && out_portal_fills != nullptr) {
           workspace.portal_fill_blockers.push_back(
@@ -638,15 +667,12 @@ void ComputeVisibleWmoGroups(
         continue;
       }
 
-      const float model_camera_plane_distance =
-          portal.plane_[0] * model_camera_position[0] +
-          portal.plane_[1] * model_camera_position[1] +
-          portal.plane_[2] * model_camera_position[2] + portal.plane_[3];
       const bool camera_occupies_portal =
-          model_camera_plane_distance > -kRetailPortalCameraOnPlaneEpsilon &&
-          model_camera_plane_distance < kRetailPortalCameraOnPlaneEpsilon &&
-          IsPointInsidePortalPolygon(model_camera_position, portal.vertices,
-                                     DominantAxisIndex(portal.plane_));
+          camera_within_near_clip ||
+          (camera_portal_dist > -kRetailPortalCameraOnPlaneEpsilon &&
+           camera_portal_dist < kRetailPortalCameraOnPlaneEpsilon &&
+           IsPointInsidePortalPolygon(model_camera_position, portal.vertices,
+                                      DominantAxisIndex(portal.plane_)));
 
       ScreenRect portal_rect;
       bool portal_rect_projected = false;
@@ -778,6 +804,16 @@ void ComputeVisibleWmoGroups(
       visit_group(static_cast<std::uint16_t>(group_index), {});
     }
   }
+}
+
+float NearClipCornerRadius(const Matrix4& projection, const float near_clip) {
+  if (!(near_clip > 0.0f) || projection[0] == 0.0f || projection[5] == 0.0f) {
+    return 0.0f;
+  }
+  const float tan_half_x = 1.0f / projection[0];
+  const float tan_half_y = 1.0f / projection[5];
+  return near_clip *
+         std::sqrt(1.0f + tan_half_x * tan_half_x + tan_half_y * tan_half_y);
 }
 
 bool IsWmoBoundsVisibleInPortalClip(

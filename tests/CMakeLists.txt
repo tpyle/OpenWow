@@ -34,6 +34,7 @@ add_executable(openwow_tests
   net/realm_type_tests.cpp
   world/move_spline_update_tests.cpp
   render/shadow_texel_snap_tests.cpp
+  world/wmo_portal_visibility_tests.cpp
   runtime/frame_scheduler_tests.cpp
   data/dbc_file_tests.cpp
   data/faction_reaction_tests.cpp
@@ -58,6 +59,8 @@ add_executable(openwow_tests
   ${PROJECT_SOURCE_DIR}/src/openwow/data/wdb_cache.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/net/wotlk/realm_list.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/world/movement/movement_spline.cpp
+  ${PROJECT_SOURCE_DIR}/src/openwow/world/wmo/wmo_visibility.cpp
+  ${PROJECT_SOURCE_DIR}/src/openwow/world/occlusion/world_occluder_volumes.cpp
 )
 
 target_include_directories(openwow_tests PRIVATE

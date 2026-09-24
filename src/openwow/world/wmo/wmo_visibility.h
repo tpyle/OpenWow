@@ -157,7 +157,16 @@ void ComputeVisibleWmoGroups(
     WmoSkyVisibility* out_sky_visibility = nullptr,
     WmoExteriorPortalFillBatch* out_portal_fills = nullptr,
     WmoTraversalLanes lanes = WmoTraversalLanes::kCamera,
-    const WorldOccluderVolumes* occluders = nullptr, bool append = false);
+    const WorldOccluderVolumes* occluders = nullptr, bool append = false,
+    float near_clip_radius = 0.0f);
+
+/// Distance from the eye to the corners of the near clip rectangle, for a
+/// perspective projection with the given near distance. Geometry closer than
+/// this can be cut away by the near plane, so a portal within this distance
+/// of the eye may be seen through even when it projects to nothing.
+/// `projection` is a bx-style perspective matrix (x and y scale at [0], [5]).
+[[nodiscard]] float NearClipCornerRadius(const Matrix4& projection,
+                                         float near_clip);
 
 [[nodiscard]] bool IsWmoBoundsVisibleInPortalClip(
     std::span<const float, 3> bounds_min,

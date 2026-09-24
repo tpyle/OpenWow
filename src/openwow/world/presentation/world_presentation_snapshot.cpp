@@ -40,6 +40,8 @@ WorldPresentationSnapshot WorldMap::BuildPresentationSnapshot(
                 frustum.planes[plane].begin());
   }
   const Matrix4 view_projection = Multiply(camera.view, camera.projection);
+  const float near_clip_radius =
+      NearClipCornerRadius(camera.projection, camera.near_clip);
 
   snapshot.world_models.reserve(wmo_instances_.size());
   std::vector<std::uint8_t> camera_lane_walked;
@@ -107,7 +109,7 @@ WorldPresentationSnapshot WorldMap::BuildPresentationSnapshot(
             instance.visibility_workspace, item.visible_subresources,
             &item.wmo_visible_group_paths, &item.wmo_sky_visibility,
             &item.wmo_portal_fills, WmoTraversalLanes::kCamera,
-            nullptr, false);
+            nullptr, false, near_clip_radius);
         walked = true;
       }
     }
@@ -149,7 +151,7 @@ WorldPresentationSnapshot WorldMap::BuildPresentationSnapshot(
           instance.visibility_workspace, item.visible_subresources,
           &item.wmo_visible_group_paths, &item.wmo_sky_visibility,
           &item.wmo_portal_fills, WmoTraversalLanes::kExterior, &occluders,
-          camera_lane_walked[item_index] != 0u);
+          camera_lane_walked[item_index] != 0u, near_clip_radius);
     }
     ++item_index;
   }
