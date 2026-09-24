@@ -1,19 +1,20 @@
 The pinned bgfx allocates every Vulkan descriptor set from one shared
-pool of 1024 * BGFX_CONFIG_MAX_FRAME_LATENCY sets and frees each set a
-few frames later. In release builds VK_CHECK does not check anything,
-so when the pool is exhausted or fragmented (busy scenes: a crowded city
-plus UI can issue well over 1024 draws with distinct bindings per frame)
-vkAllocateDescriptorSets fails silently, getDescriptorSet writes and
-binds a VK_NULL_HANDLE set, and the driver faults (on RADV: SIGSEGV at
-address 0x40 inside vkUpdateDescriptorSets, on bgfx's render thread).
+pool of 1024 * BGFX_CONFIG_MAX_FRAME_LATENCY sets and frees each set
+individually a few frames later. In release builds VK_CHECK does not
+check anything, so when a busy frame exhausts or fragments the pool
+(a crowded city plus several shadow-map passes can need thousands of
+sets per frame), vkAllocateDescriptorSets fails silently and a
+VK_NULL_HANDLE set reaches the driver (on RADV: SIGSEGV at address 0x40
+inside vkUpdateDescriptorSets, on bgfx's render thread).
 
-This raises the pool to 4096 sets per frame in flight and checks the
-allocation: on failure getDescriptorSet returns VK_NULL_HANDLE (logging
-once) and the draw/dispatch submit loops skip that item and retry the
-allocation on the next one, instead of crashing. Upstream bgfx later
-replaced the shared pool with per-frame chunked pools that are reset
-each frame and grow on demand; that restructuring is not backported
-here.
+This backports the approach upstream bgfx later adopted, adapted to the
+pinned command queue: each command-buffer slot owns a list of descriptor
+pools, allocated in chunks of 1024 sets and grown on demand (up to 64
+chunks). Sets are no longer freed individually; a slot's pools are reset
+in CommandQueueVK::alloc right after the wait on that slot's fence,
+when none of its sets can still be in use. If every chunk is exhausted,
+the allocation returns VK_NULL_HANDLE (logged once) and the draw or
+dispatch is skipped instead of binding a null set.
 --- a/bgfx/src/renderer_vk.cpp
 +++ b/bgfx/src/renderer_vk.cpp
 @@ -1130,7 +1130,7 @@
@@ -21,44 +22,226 @@ here.
  	}
  
 -#define MAX_DESCRIPTOR_SETS (1024 * BGFX_CONFIG_MAX_FRAME_LATENCY)
-+#define MAX_DESCRIPTOR_SETS (4096 * BGFX_CONFIG_MAX_FRAME_LATENCY)
++#define MAX_DESCRIPTOR_SETS 1024 // sets per descriptor pool chunk
  
  	struct RendererContextVK : public RendererContextI
  	{
-@@ -3832,7 +3832,7 @@
+@@ -1967,24 +1967,21 @@
+ 			errorState = ErrorState::SwapChainCreated;
  
- 		VkDescriptorSet getDescriptorSet(const ProgramVK& program, const RenderBind& renderBind, const ScratchBufferVK& scratchBuffer, const float _palette[][4])
+ 			{
+-				VkDescriptorPoolSize dps[] =
++				for (uint32_t ii = 0; ii < BGFX_CONFIG_MAX_FRAME_LATENCY; ++ii)
+ 				{
+-					{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          MAX_DESCRIPTOR_SETS * BGFX_CONFIG_MAX_TEXTURE_SAMPLERS },
+-					{ VK_DESCRIPTOR_TYPE_SAMPLER,                MAX_DESCRIPTOR_SETS * BGFX_CONFIG_MAX_TEXTURE_SAMPLERS },
+-					{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_DESCRIPTOR_SETS * 2                                },
+-					{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         MAX_DESCRIPTOR_SETS * BGFX_CONFIG_MAX_TEXTURE_SAMPLERS },
+-					{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          MAX_DESCRIPTOR_SETS * BGFX_CONFIG_MAX_TEXTURE_SAMPLERS },
+-				};
+-
+-				VkDescriptorPoolCreateInfo dpci;
+-				dpci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+-				dpci.pNext = NULL;
+-				dpci.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+-				dpci.maxSets       = MAX_DESCRIPTOR_SETS;
+-				dpci.poolSizeCount = BX_COUNTOF(dps);
+-				dpci.pPoolSizes    = dps;
++					m_numDescriptorPools[ii] = 0;
++					m_descriptorPoolIdx[ii]  = 0;
++				}
+ 
+-				result = vkCreateDescriptorPool(m_device, &dpci, m_allocatorCb, &m_descriptorPool);
++				for (uint32_t ii = 0; ii < BGFX_CONFIG_MAX_FRAME_LATENCY; ++ii)
++				{
++					result = createDescriptorPool(m_descriptorPool[ii][0]);
++					if (VK_SUCCESS != result)
++					{
++						break;
++					}
++					m_numDescriptorPools[ii] = 1;
++				}
+ 
+ 				if (VK_SUCCESS != result)
+ 				{
+@@ -2091,7 +2088,7 @@
+ 					m_scratchStagingBuffer[ii].destroy();
+ 				}
+ 				vkDestroy(m_pipelineCache);
+-				vkDestroy(m_descriptorPool);
++				destroyDescriptorPools();
+ 				[[fallthrough]];
+ 
+ 			case ErrorState::SwapChainCreated:
+@@ -2190,7 +2187,7 @@
+ 			m_cmd.shutdown();
+ 
+ 			vkDestroy(m_pipelineCache);
+-			vkDestroy(m_descriptorPool);
++			destroyDescriptorPools();
+ 
+ 			vkDestroyDevice(m_device, m_allocatorCb);
+ 
+@@ -3830,18 +3827,110 @@
+ 			return pipeline;
+ 		}
+ 
+-		VkDescriptorSet getDescriptorSet(const ProgramVK& program, const RenderBind& renderBind, const ScratchBufferVK& scratchBuffer, const float _palette[][4])
++		VkResult createDescriptorPool(VkDescriptorPool& _pool)
++		{
++			const VkDescriptorPoolSize dps[] =
++			{
++				{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          MAX_DESCRIPTOR_SETS * BGFX_CONFIG_MAX_TEXTURE_SAMPLERS },
++				{ VK_DESCRIPTOR_TYPE_SAMPLER,                MAX_DESCRIPTOR_SETS * BGFX_CONFIG_MAX_TEXTURE_SAMPLERS },
++				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_DESCRIPTOR_SETS * 2                                },
++				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         MAX_DESCRIPTOR_SETS * BGFX_CONFIG_MAX_TEXTURE_SAMPLERS },
++				{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          MAX_DESCRIPTOR_SETS * BGFX_CONFIG_MAX_TEXTURE_SAMPLERS },
++			};
++
++			VkDescriptorPoolCreateInfo dpci;
++			dpci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
++			dpci.pNext = NULL;
++			dpci.flags = 0;
++			dpci.maxSets       = MAX_DESCRIPTOR_SETS;
++			dpci.poolSizeCount = BX_COUNTOF(dps);
++			dpci.pPoolSizes    = dps;
++
++			return vkCreateDescriptorPool(m_device, &dpci, m_allocatorCb, &_pool);
++		}
++
++		void destroyDescriptorPools()
  		{
 -			VkDescriptorSet descriptorSet;
-+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
++			for (uint32_t ii = 0; ii < BGFX_CONFIG_MAX_FRAME_LATENCY; ++ii)
++			{
++				for (uint32_t jj = 0; jj < m_numDescriptorPools[ii]; ++jj)
++				{
++					vkDestroy(m_descriptorPool[ii][jj]);
++				}
++				m_numDescriptorPools[ii] = 0;
++				m_descriptorPoolIdx[ii]  = 0;
++			}
++		}
++
++		// Called once the command buffer slot has retired (its fence was
++		// waited), so none of its descriptor sets can still be in use.
++		void resetDescriptorPools(uint32_t _frame)
++		{
++			for (uint32_t jj = 0; jj < m_numDescriptorPools[_frame]; ++jj)
++			{
++				vkResetDescriptorPool(m_device, m_descriptorPool[_frame][jj], 0);
++			}
++			m_descriptorPoolIdx[_frame] = 0;
++		}
++
++		// Allocates from the current command buffer slot's pools, adding a
++		// new pool chunk when the current one is full. Returns
++		// VK_NULL_HANDLE (logged once) only if every chunk is exhausted, in
++		// which case callers skip the draw rather than binding a null set.
++		VkDescriptorSet allocDescriptorSet(const VkDescriptorSetLayout& _layout)
++		{
++			const uint32_t frame = m_cmd.m_currentFrameInFlight;
  
  			VkDescriptorSetAllocateInfo dsai;
  			dsai.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-@@ -3841,7 +3841,22 @@
+ 			dsai.pNext              = NULL;
+-			dsai.descriptorPool     = m_descriptorPool;
  			dsai.descriptorSetCount = 1;
- 			dsai.pSetLayouts        = &program.m_descriptorSetLayout;
+-			dsai.pSetLayouts        = &program.m_descriptorSetLayout;
++			dsai.pSetLayouts        = &_layout;
  
 -			VK_CHECK(vkAllocateDescriptorSets(m_device, &dsai, &descriptorSet) );
-+			const VkResult allocResult = vkAllocateDescriptorSets(m_device, &dsai, &descriptorSet);
-+			if (VK_SUCCESS != allocResult)
++			VkResult result = VK_ERROR_OUT_OF_POOL_MEMORY;
++			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
++			while (m_descriptorPoolIdx[frame] < kMaxDescriptorPoolChunks)
 +			{
-+				// The shared pool is exhausted or fragmented. Callers skip the
-+				// draw/dispatch/blit instead of handing a null set to the driver.
-+				static bool s_reported = false;
-+				if (!s_reported)
++				const uint16_t idx = m_descriptorPoolIdx[frame];
++				if (idx >= m_numDescriptorPools[frame])
 +				{
-+					s_reported = true;
-+					bx::debugPrintf("bgfx vk: vkAllocateDescriptorSets failed (%d: %s); skipping draws until sets free up.\n"
-+						, allocResult
-+						, getName(allocResult)
-+						);
++					result = createDescriptorPool(m_descriptorPool[frame][idx]);
++					if (VK_SUCCESS != result)
++					{
++						break;
++					}
++					m_numDescriptorPools[frame] = uint16_t(idx + 1);
 +				}
++
++				dsai.descriptorPool = m_descriptorPool[frame][idx];
++				result = vkAllocateDescriptorSets(m_device, &dsai, &descriptorSet);
++				if (VK_SUCCESS == result)
++				{
++					return descriptorSet;
++				}
++
++				++m_descriptorPoolIdx[frame];
++			}
++
++			static bool s_reported = false;
++			if (!s_reported)
++			{
++				s_reported = true;
++				bx::debugPrintf("bgfx vk: vkAllocateDescriptorSets failed (%d: %s); skipping draws.\n"
++					, result
++					, getName(result)
++					);
++			}
++			return VK_NULL_HANDLE;
++		}
++
++		VkDescriptorSet getDescriptorSet(const ProgramVK& program, const RenderBind& renderBind, const ScratchBufferVK& scratchBuffer, const float _palette[][4])
++		{
++			const VkDescriptorSet descriptorSet = allocDescriptorSet(program.m_descriptorSetLayout);
++			if (VK_NULL_HANDLE == descriptorSet)
++			{
 +				return VK_NULL_HANDLE;
 +			}
  
  			VkDescriptorImageInfo  imageInfo[BGFX_CONFIG_MAX_TEXTURE_SAMPLERS];
  			VkDescriptorBufferInfo bufferInfo[BGFX_CONFIG_MAX_TEXTURE_SAMPLERS];
-@@ -8881,6 +8896,12 @@
+@@ -4049,9 +4138,8 @@
+ 
+ 			vkUpdateDescriptorSets(m_device, wdsCount, wds, 0, NULL);
+ 
+-			VkDescriptorSet temp = descriptorSet;
+-			release(temp);
+-
++			// Not released individually: the set's pool is reset as a whole
++			// once the command buffer slot it was recorded for has retired.
+ 			return descriptorSet;
+ 		}
+ 
+@@ -4573,7 +4661,10 @@
+ 		VkDevice m_device;
+ 		uint32_t m_globalQueueFamily;
+ 		VkQueue  m_globalQueue;
+-		VkDescriptorPool m_descriptorPool;
++		static constexpr uint32_t kMaxDescriptorPoolChunks = 64;
++		VkDescriptorPool m_descriptorPool[BGFX_CONFIG_MAX_FRAME_LATENCY][kMaxDescriptorPoolChunks] = {};
++		uint16_t m_numDescriptorPools[BGFX_CONFIG_MAX_FRAME_LATENCY] = {};
++		uint16_t m_descriptorPoolIdx[BGFX_CONFIG_MAX_FRAME_LATENCY] = {};
+ 		VkPipelineCache  m_pipelineCache;
+ 
+ 		TimerQueryVK m_gpuTimer;
+@@ -4679,8 +4770,7 @@
+ 	{
+ 		if (VK_NULL_HANDLE != _obj)
+ 		{
+-			BGFX_PROFILER_SCOPE("vkFreeDescriptorSets", kColorResource);
+-			vkFreeDescriptorSets(s_renderVK->m_device, s_renderVK->m_descriptorPool, 1, &_obj);
++			// Descriptor sets are reclaimed by resetting their pool.
+ 			_obj = VK_NULL_HANDLE;
+ 		}
+ 	}
+@@ -8264,6 +8354,8 @@
+ 
+ 			result = vkResetCommandPool(device, commandList.m_commandPool, 0);
+ 
++			s_renderVK->resetDescriptorPools(m_currentFrameInFlight);
++
+ 			if (VK_SUCCESS != result)
+ 			{
+ 				BX_TRACE("Allocate command buffer error: vkResetCommandPool failed %d: %s.", result, getName(result) );
+@@ -8881,6 +8973,12 @@
  								, _render->m_colorPalette
  							);
  
@@ -71,7 +254,7 @@ here.
  							descriptorSetCount++;
  						}
  
-@@ -9192,6 +9213,12 @@
+@@ -9192,6 +9290,12 @@
  								, _render->m_colorPalette
  							);
  

@@ -14,7 +14,7 @@ each frame, so drawing resumes on the next one. Upstream bgfx later
 replaced this with a chunked scratch buffer that grows on demand.
 --- a/bgfx/src/renderer_vk.cpp
 +++ b/bgfx/src/renderer_vk.cpp
-@@ -2008,7 +2008,7 @@
+@@ -2005,7 +2005,7 @@
  			}
  
  			{
@@ -23,7 +23,7 @@ replaced this with a chunked scratch buffer that grows on demand.
  				const uint32_t count = BGFX_CONFIG_MAX_DRAW_CALLS;
  
  				for (uint32_t ii = 0; ii < m_numFramesInFlight; ++ii)
-@@ -4899,6 +4899,19 @@
+@@ -4974,6 +4974,19 @@
  		uint32_t dstOffset = alloc(_size, _minAlign);
  		BX_ASSERT(dstOffset != UINT32_MAX, "Not enough space on ScratchBuffer left to allocate %u bytes with alignment %u.", _size, _minAlign);
  
@@ -43,7 +43,7 @@ replaced this with a chunked scratch buffer that grows on demand.
  		if (_size > 0)
  		{
  			bx::memCopy(&m_data[dstOffset], _data, _size);
-@@ -8877,6 +8890,11 @@
+@@ -8954,6 +8967,11 @@
  							}
  						}
  
@@ -55,7 +55,7 @@ replaced this with a chunked scratch buffer that grows on demand.
  						bx::HashMurmur2A hash;
  						hash.begin();
  						hash.add(program.m_descriptorSetLayout);
-@@ -9194,6 +9212,12 @@
+@@ -9271,6 +9289,12 @@
  							}
  						}
  
