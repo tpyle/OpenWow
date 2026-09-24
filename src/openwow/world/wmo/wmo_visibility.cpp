@@ -30,6 +30,13 @@ using ScreenRect = WmoVisibilityTraversalFrame;
   return y_over_x ? 1u : 0u;
 }
 
+[[nodiscard]] bool IsPointInsideBounds(const TraversalPoint& point,
+                                       const std::array<float, 6>& bounds) {
+  return point[0] >= bounds[0] && point[0] <= bounds[3] &&
+         point[1] >= bounds[1] && point[1] <= bounds[4] &&
+         point[2] >= bounds[2] && point[2] <= bounds[5];
+}
+
 [[nodiscard]] bool IsPointInsidePortalPolygon(
     const TraversalPoint& point, const std::vector<Vec3>& vertices,
     const std::size_t dominant_axis) {
@@ -629,7 +636,16 @@ void ComputeVisibleWmoGroups(
           portal.plane_[0] * model_camera_position[0] +
           portal.plane_[1] * model_camera_position[1] +
           portal.plane_[2] * model_camera_position[2] + portal.plane_[3];
-      if (camera_portal_dist > 0.0f) {
+      // The camera room comes from a floor probe, and floor seams between
+      // groups don't always line up with the portal planes. A camera just
+      // past a portal can still be assigned to the room it came from; it is
+      // physically inside the connected group, so treat it as standing in
+      // the portal rather than dropping that group (and its ceiling).
+      const bool camera_inside_connected_group =
+          camera_lane && frame.depth == 0u && camera_portal_dist > 0.0f &&
+          IsPointInsideBounds(model_camera_position,
+                              groups[portal.connected_group].bounds);
+      if (camera_portal_dist > 0.0f && !camera_inside_connected_group) {
 
         if (!camera_lane && frame.depth == 0u && out_portal_fills != nullptr) {
           workspace.portal_fill_blockers.push_back(
@@ -638,15 +654,12 @@ void ComputeVisibleWmoGroups(
         continue;
       }
 
-      const float model_camera_plane_distance =
-          portal.plane_[0] * model_camera_position[0] +
-          portal.plane_[1] * model_camera_position[1] +
-          portal.plane_[2] * model_camera_position[2] + portal.plane_[3];
       const bool camera_occupies_portal =
-          model_camera_plane_distance > -kRetailPortalCameraOnPlaneEpsilon &&
-          model_camera_plane_distance < kRetailPortalCameraOnPlaneEpsilon &&
-          IsPointInsidePortalPolygon(model_camera_position, portal.vertices,
-                                     DominantAxisIndex(portal.plane_));
+          camera_inside_connected_group ||
+          (camera_portal_dist > -kRetailPortalCameraOnPlaneEpsilon &&
+           camera_portal_dist < kRetailPortalCameraOnPlaneEpsilon &&
+           IsPointInsidePortalPolygon(model_camera_position, portal.vertices,
+                                      DominantAxisIndex(portal.plane_)));
 
       ScreenRect portal_rect;
       bool portal_rect_projected = false;
