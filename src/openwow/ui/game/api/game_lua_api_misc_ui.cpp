@@ -2191,12 +2191,31 @@ int LuaShowingCloak(lua_State *L) {
   return 1;
 }
 
+// Era servers treat CMSG_SHOWING_HELM/CLOAK as a toggle of the hide flag
+// and ignore the payload byte, so the request is only sent when the wanted
+// state differs from the current one; otherwise re-applying an unchanged
+// option would flip it.
+bool LocalPlayerShownFlagDiffers(lua_State *L, std::uint32_t hidden_flag, bool show) {
+  auto *session = GetWorldSession(L);
+  if (session == nullptr) {
+    return false;
+  }
+  const auto *player = session->objects().GetLocalPlayerTyped();
+  if (player == nullptr) {
+    return true;
+  }
+  const bool shown = (player->GetPlayerFlags() & hidden_flag) == 0;
+  return shown != show;
+}
+
 int LuaShowHelm(lua_State *L) {
   auto *session = GetWorldSession(L);
   if (!session)
     return 0;
   const bool show = ScriptReadBoolArgOrDefault(L, 1, true);
-  session->interaction().SendShowingHelm(show);
+  if (LocalPlayerShownFlagDiffers(L, kPlayerFlagsHideHelm, show)) {
+    session->interaction().SendShowingHelm(show);
+  }
   return 0;
 }
 
@@ -2205,7 +2224,9 @@ int LuaShowCloak(lua_State *L) {
   if (!session)
     return 0;
   const bool show = ScriptReadBoolArgOrDefault(L, 1, true);
-  session->interaction().SendShowingCloak(show);
+  if (LocalPlayerShownFlagDiffers(L, kPlayerFlagsHideCloak, show)) {
+    session->interaction().SendShowingCloak(show);
+  }
   return 0;
 }
 
