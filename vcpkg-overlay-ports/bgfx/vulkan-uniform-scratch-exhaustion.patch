@@ -1,0 +1,70 @@
+The pinned bgfx gives each frame in flight a fixed uniform scratch
+buffer of 128 bytes * BGFX_CONFIG_MAX_DRAW_CALLS (8 MiB). When a frame's
+per-draw uniform data exceeds that (many draws with large uniform blocks,
+e.g. skinned models re-drawn into several shadow-map passes after raising
+shadow quality), ScratchBufferVK::alloc returns UINT32_MAX; in release
+builds the BX_ASSERT is compiled out, so write() copies to
+m_data + 0xFFFFFFFF and the render thread faults inside memcpy.
+
+This raises the buffer to 512 bytes per draw call (32 MiB per frame in
+flight) and makes the overflow non-fatal: write() returns UINT32_MAX
+(logging once), and the draw and compute submit paths skip the item
+instead of binding an out-of-range dynamic offset. The buffer is reset
+each frame, so drawing resumes on the next one. Upstream bgfx later
+replaced this with a chunked scratch buffer that grows on demand.
+--- a/bgfx/src/renderer_vk.cpp
++++ b/bgfx/src/renderer_vk.cpp
+@@ -2008,7 +2008,7 @@
+ 			}
+ 
+ 			{
+-				const uint32_t size = 128;
++				const uint32_t size = 512;
+ 				const uint32_t count = BGFX_CONFIG_MAX_DRAW_CALLS;
+ 
+ 				for (uint32_t ii = 0; ii < m_numFramesInFlight; ++ii)
+@@ -4899,6 +4899,19 @@
+ 		uint32_t dstOffset = alloc(_size, _minAlign);
+ 		BX_ASSERT(dstOffset != UINT32_MAX, "Not enough space on ScratchBuffer left to allocate %u bytes with alignment %u.", _size, _minAlign);
+ 
++		if (UINT32_MAX == dstOffset)
++		{
++			// Full for this frame: callers skip the draw rather than copying
++			// to m_data + 4 GiB.
++			static bool s_reported = false;
++			if (!s_reported)
++			{
++				s_reported = true;
++				bx::debugPrintf("bgfx vk: scratch buffer full (%u bytes); skipping draws for the rest of the frame.\n", m_size);
++			}
++			return UINT32_MAX;
++		}
++
+ 		if (_size > 0)
+ 		{
+ 			bx::memCopy(&m_data[dstOffset], _data, _size);
+@@ -8877,6 +8890,11 @@
+ 							}
+ 						}
+ 
++						if (UINT32_MAX == offset)
++						{
++							continue;
++						}
++
+ 						bx::HashMurmur2A hash;
+ 						hash.begin();
+ 						hash.add(program.m_descriptorSetLayout);
+@@ -9194,6 +9212,12 @@
+ 							}
+ 						}
+ 
++						if (UINT32_MAX == offsets[0]
++						||  UINT32_MAX == offsets[1])
++						{
++							continue;
++						}
++
+ 						bx::HashMurmur2A hash;
+ 						hash.begin();
+ 						hash.add(program.m_descriptorSetLayout);
