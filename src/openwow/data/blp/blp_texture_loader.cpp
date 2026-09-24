@@ -172,7 +172,7 @@ std::vector<uint8_t> BLPTextureLoader::DecompressDXTMip(const BLPTextureData& te
     uint32_t bw = (w + 3) / 4;
     uint32_t bh = (h + 3) / 4;
 
-    std::vector<uint8_t> rgba(w * h * 4, 0);
+    std::vector<uint8_t> rgba(static_cast<size_t>(w) * h * 4, 0);
     auto* pixels = reinterpret_cast<uint32_t*>(rgba.data());
 
     uint8_t alphaEnc = tex.header.alphaEncoding;
@@ -183,7 +183,7 @@ std::vector<uint8_t> BLPTextureLoader::DecompressDXTMip(const BLPTextureData& te
 
     for (uint32_t by = 0; by < bh; ++by) {
         for (uint32_t bx = 0; bx < bw; ++bx) {
-            size_t blockIdx = by * bw + bx;
+            size_t blockIdx = static_cast<size_t>(by) * bw + bx;
             size_t offset = blockIdx * blockSize;
             if (offset + blockSize > srcSize) break;
 
@@ -198,7 +198,8 @@ std::vector<uint8_t> BLPTextureLoader::DecompressDXTMip(const BLPTextureData& te
 
             for (uint32_t py = 0; py < 4 && (by * 4 + py) < h; ++py) {
                 for (uint32_t px = 0; px < 4 && (bx * 4 + px) < w; ++px) {
-                    pixels[(by * 4 + py) * w + (bx * 4 + px)] = tmp[py * 4 + px];
+                    pixels[static_cast<size_t>(by * 4 + py) * w + (bx * 4 + px)] =
+                        tmp[py * 4 + px];
                 }
             }
         }
@@ -213,7 +214,7 @@ std::vector<uint8_t> BLPTextureLoader::DecodePaletteMip(const BLPTextureData& te
     const auto& mip = tex.mips[mipLevel];
     uint32_t w = mip.width;
     uint32_t h = mip.height;
-    uint32_t pixelCount = w * h;
+    const size_t pixelCount = static_cast<size_t>(w) * h;
 
     std::vector<uint8_t> rgba(pixelCount * 4, 255);
 
@@ -352,13 +353,18 @@ BLPTextureData BLPTextureLoader::Load(const std::vector<uint8_t>& fileData) {
 
     uint32_t w = result.header.width;
     uint32_t h = result.header.height;
+    if (w == 0 || h == 0 || w > kBlpMaxDimension || h > kBlpMaxDimension) {
+        result.errorMsg = "Invalid BLP dimensions";
+        return result;
+    }
 
     uint32_t maxMips = (result.header.hasMips & 0x0Fu) != 0u ? GetMipCount(w, h) : 1u;
     uint32_t mipCount = 0;
     for (uint32_t i = 0; i < maxMips && i < 16; ++i) {
         if (result.header.mipOffsets[i] == 0 && result.header.mipSizes[i] == 0 && i > 0)
             break;
-        if (result.header.mipOffsets[i] + result.header.mipSizes[i] > fileData.size())
+        if (static_cast<size_t>(result.header.mipOffsets[i]) + result.header.mipSizes[i] >
+            fileData.size())
             break;
         mipCount++;
     }
@@ -387,7 +393,7 @@ BLPTextureData BLPTextureLoader::Load(const std::vector<uint8_t>& fileData) {
 
         uint32_t off  = result.header.mipOffsets[i];
         uint32_t size = result.header.mipSizes[i];
-        if (off + size <= fileData.size()) {
+        if (static_cast<size_t>(off) + size <= fileData.size()) {
             result.mips[i].data.assign(fileData.begin() + off, fileData.begin() + off + size);
         }
     }

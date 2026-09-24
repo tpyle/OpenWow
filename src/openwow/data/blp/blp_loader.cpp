@@ -1,4 +1,5 @@
 #include "openwow/data/blp/blp_loader.h"
+#include "openwow/data/blp/blp_mip.h"
 #include "openwow/data/blp/dxt_block_codec.h"
 
 #include "openwow/vfs/virtual_file_system.h"
@@ -328,6 +329,7 @@ std::optional<DecodedTexture> BLPLoader::Load(const uint8_t* data, size_t size) 
     if (header.type != 1) return std::nullopt;
 
     if (header.width == 0 || header.height == 0) return std::nullopt;
+    if (header.width > kBlpMaxDimension || header.height > kBlpMaxDimension) return std::nullopt;
 
     DecodedTexture out;
     out.width = header.width;

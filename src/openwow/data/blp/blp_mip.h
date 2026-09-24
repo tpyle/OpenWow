@@ -78,6 +78,11 @@ void BlpDxt_BlitArgb8888ToRgb565(const int* dims, const void* src,
                                   int src_stride, void* dst,
                                   int dst_stride);
 
+/// Largest width or height accepted from a BLP header. Retail 3.3.5a
+/// textures top out at 2048; the cap only exists so a malformed header
+/// cannot drive multi-gigabyte decode allocations or 32-bit size overflow.
+inline constexpr std::uint32_t kBlpMaxDimension = 8192;
+
 inline constexpr std::size_t kBlpImageStorageDwords = 301;
 inline constexpr std::size_t kBlpImageStorageBytes =
     kBlpImageStorageDwords * sizeof(std::uint32_t);
