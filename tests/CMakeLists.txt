@@ -31,6 +31,7 @@ add_executable(openwow_tests
   network/byte_buffer_tests.cpp
   network/zlib_compression_tests.cpp
   net/inline_download_file_name_tests.cpp
+  net/realm_type_tests.cpp
   runtime/frame_scheduler_tests.cpp
   data/dbc_file_tests.cpp
   data/faction_reaction_tests.cpp
@@ -53,6 +54,7 @@ add_executable(openwow_tests
   ${PROJECT_SOURCE_DIR}/src/openwow/runtime/scheduling/frame_scheduler.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/data/wdb_persistence.cpp
   ${PROJECT_SOURCE_DIR}/src/openwow/data/wdb_cache.cpp
+  ${PROJECT_SOURCE_DIR}/src/openwow/net/wotlk/realm_list.cpp
 )
 
 target_include_directories(openwow_tests PRIVATE

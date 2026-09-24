@@ -19,7 +19,7 @@
 #include "openwow/game/game_misc_utils.h"
 #include "openwow/game/lfg_system.h"
 #include "openwow/game/objects/cgcorpse.h"
-#include "openwow/game/realm_list.h"
+#include "openwow/net/client_services.h"
 #include "openwow/net/realm_config_tables.h"
 #include "openwow/ui/game/cvar_system.h"
 #include "openwow/foundation/diagnostics/logging.h"
@@ -617,10 +617,16 @@ bool EnterWorldInit(const EnterWorldInitParams &params,
   const openwow::diagnostics::ScopedPerformanceLog performance(
       performance_site, "world.core_init", {}, 0.0);
 
-  if (const auto selected_realm = openwow::game::RealmList::Get().GetSelectedRealm()) {
-    (void)openwow::net::RealmConfigTables::Get()
-        .UpdateSelectedRealmPlayerKillingAllowed(
-            static_cast<std::uint32_t>(selected_realm->type));
+  if (const auto selected_realm =
+          openwow::net::ClientServices::Instance().GetSelectedRealmScriptMetadata()) {
+    auto &realm_config = openwow::net::RealmConfigTables::Get();
+    const bool known_type =
+        realm_config.UpdateSelectedRealmPlayerKillingAllowed(selected_realm->realm_type);
+    openwow::diagnostics::Log(
+        openwow::diagnostics::LogLevel::kInfo,
+        "Entering world: realm type " + std::to_string(selected_realm->realm_type) +
+            (known_type ? "" : " (not in Cfg_Configs)") + ", player killing allowed: " +
+            (realm_config.GetSelectedRealmPlayerKillingAllowed() ? "yes" : "no"));
   }
 
   MoveLogFile_ref();

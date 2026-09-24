@@ -244,7 +244,6 @@ openwow_add_component(openwow_game
   title_system.cpp
   nameplate_damage_flash.cpp
   world_environment_state.cpp
-  realm_list.cpp
   queue_position.cpp
   chat_link.cpp
   quest_poi.cpp

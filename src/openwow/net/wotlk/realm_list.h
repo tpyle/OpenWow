@@ -12,8 +12,8 @@ namespace openwow::net::wotlk {
 enum class RealmType : std::uint32_t {
   kNormal = 0,
   kPvP    = 1,
-  kRP     = 4,
-  kRPPvP  = 5,
+  kRP     = 6,
+  kRPPvP  = 8,
 };
 
 struct RealmInfo {
