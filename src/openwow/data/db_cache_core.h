@@ -6,10 +6,6 @@ namespace openwow::data {
 
 void DBCache_GetCacheDirectory(char *out);
 
-void DBCache_UpdateEntry_NameCache(void *dest, const void *source);
-
-void DBCache_UpdateEntry_CreatureCache(void *dest, const void *source);
-
 void DBCache_Load_NameCache(void *dest, const void *source);
 
 void TSExplicitList_LightArrayRoot_ResizeCapacity(void *list, unsigned int new_size);

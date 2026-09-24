@@ -42,14 +42,6 @@ OPENWOW_PRINTF_FORMAT(3, 4) static void SStrPrintf(char *dest, unsigned int max_
   va_end(args);
 }
 
-static constexpr const char *kNameCacheSource =
-    "d:\\BuildServer\\WoW\\1\\work\\WoW-code\\branches\\"
-    "wow-patch-3_3_5_A-BNet\\WoW\\Source\\Game/GameClient/NameCache.h";
-
-static constexpr const char *kPetNameCacheSource =
-    "d:\\BuildServer\\WoW\\1\\work\\WoW-code\\branches\\"
-    "wow-patch-3_3_5_A-BNet\\WoW\\Source\\Game/GameClient/PetNameCache.h";
-
 static constexpr const char *kCreatureStatsSource =
     "d:\\BuildServer\\WoW\\1\\work\\WoW-code\\branches\\"
     "wow-patch-3_3_5_A-BNet\\WoW\\Source\\Object/CreatureStats.h";
@@ -651,61 +643,6 @@ void DBCache_GetCacheDirectory(char *out) {
     SStrCopy(out, "WDB", 260);
   }
   (void)openwow::vfs::FileSystem_CreateDirectory(out, true);
-}
-
-void DBCache_UpdateEntry_NameCache(void *dest, const void *source) {
-  auto *d = static_cast<char *>(dest);
-  const auto *s = static_cast<const char *>(source);
-
-  std::memcpy(d + 312, s + 312, 4);
-  std::memcpy(d + 316, s + 316, 4);
-
-  SStrCopy(d, s, 48);
-
-  auto src_declined = *reinterpret_cast<const std::uint32_t *>(s + 48);
-  if (src_declined) {
-    auto *dest_declined_ptr = reinterpret_cast<std::uint32_t *>(d + 48);
-    if (!*dest_declined_ptr) {
-      *dest_declined_ptr =
-          static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(SMemAlloc(320, kNameCacheSource, 0x2D, 0)));
-    }
-    auto dest_declined = *dest_declined_ptr;
-    for (unsigned int i = 0; i < 320; i += 64) {
-      SStrCopy(reinterpret_cast<void *>(dest_declined + i),
-               reinterpret_cast<const char *>(src_declined + i), 64);
-    }
-  }
-
-  SStrCopy(d + 52, s + 52, 256);
-
-  std::memcpy(d + 320, s + 320, 4);
-  std::memcpy(d + 324, s + 324, 4);
-  std::memcpy(d + 328, s + 328, 4);
-}
-
-void DBCache_UpdateEntry_CreatureCache(void *dest, const void *source) {
-  auto *d = static_cast<char *>(dest);
-  const auto *s = static_cast<const char *>(source);
-
-  std::memcpy(d + 84, s + 84, 4);
-
-  SStrCopy(d, s, 80);
-
-  auto src_extended = *reinterpret_cast<const std::uint32_t *>(s + 80);
-  if (src_extended) {
-    auto *dest_extended_ptr = reinterpret_cast<std::uint32_t *>(d + 80);
-    if (!*dest_extended_ptr) {
-      *dest_extended_ptr =
-          static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(SMemAlloc(480, kPetNameCacheSource, 0x28, 0)));
-    }
-    auto dest_extended = *dest_extended_ptr;
-    for (unsigned int i = 0; i < 480; i += 96) {
-      SStrCopy(reinterpret_cast<void *>(dest_extended + i),
-               reinterpret_cast<const char *>(src_extended + i), 96);
-    }
-  }
-
-  std::memcpy(d + 88, s + 88, 4);
 }
 
 void DBCache_Load_NameCache(void *dest, const void *source) {
