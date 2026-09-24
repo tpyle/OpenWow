@@ -46,14 +46,14 @@ inline constexpr char kFramePriorityPointerStormTypeTag[] = "storm.frame_priorit
 inline constexpr char kVehiclePassengerPointerStormTypeTag[] =
     "storm.vehicle_passenger_ptr_array";
 
-inline void* TSGrowableArray_PAVFRAMEPRIORITY_SetCapacityPreservingPrefix(
+inline void* TSGrowableArray_FramePriorityPtr_SetCapacityPreservingPrefix(
     LegacyResizableBufferView buffer, uint32_t new_capacity) {
     return ResizeLegacyArrayStoragePreservingPrefix(
         buffer, new_capacity, sizeof(std::uint32_t),
         kFramePriorityPointerStormTypeTag);
 }
 
-inline void* TSGrowableArray_PAVCVehiclePassenger_C_SetCapacityPreservingPrefix(
+inline void* TSGrowableArray_VehiclePassengerPtr_SetCapacityPreservingPrefix(
     LegacyResizableBufferView buffer, uint32_t new_capacity) {
     return ResizeLegacyArrayStoragePreservingPrefix(
         buffer, new_capacity, sizeof(std::uint32_t),
@@ -64,7 +64,7 @@ inline constexpr char kSkillLineAbilityRecPointerStormTypeTag[] =
     "storm.skill_line_ability_ptr_array";
 
 inline void*
-TSGrowableArray_PBVSkillLineAbilityRec_SetCapacityPreservingPrefix(
+TSGrowableArray_SkillLineAbilityRecPtr_SetCapacityPreservingPrefix(
     LegacyResizableBufferView buffer, uint32_t new_capacity) {
     return ResizeLegacyArrayStoragePreservingPrefix(
         buffer, new_capacity, sizeof(std::uint32_t),

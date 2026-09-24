@@ -37,13 +37,13 @@ bool BuildBotDetectedProbeBytes(uint8_t* probe_byte_0,
     return false;
 }
 
-int GetProbeValues(int* v1, int* v2, int* v3) {
+int GetProbeValues(int* probe_byte_0, int* probe_byte_1, int* probe_byte_2) {
     uint8_t p0 = 0, p1 = 0, p2 = 0;
     BuildBotDetectedProbeBytes(&p0, &p1, &p2);
 
-    if (v1) *v1 = static_cast<int>(p0);
-    if (v2) *v2 = static_cast<int>(p1);
-    if (v3) *v3 = static_cast<int>(p2);
+    if (probe_byte_0) *probe_byte_0 = static_cast<int>(p0);
+    if (probe_byte_1) *probe_byte_1 = static_cast<int>(p1);
+    if (probe_byte_2) *probe_byte_2 = static_cast<int>(p2);
 
     return 1;
 }

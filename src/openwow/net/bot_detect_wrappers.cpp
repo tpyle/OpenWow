@@ -20,8 +20,8 @@ void *ClientServices__GetConnectionObject() {
   return ClientServices::GetConnectionObject();
 }
 
-int GetProbeValues(int *v1, int *v2, int *v3) {
-  return openwow::game::GetProbeValues(v1, v2, v3);
+int GetProbeValues(int *probe_byte_0, int *probe_byte_1, int *probe_byte_2) {
+  return openwow::game::GetProbeValues(probe_byte_0, probe_byte_1, probe_byte_2);
 }
 
 void SHA1_Init(std::uint8_t *ctx) {

@@ -212,15 +212,15 @@ struct EvtImmediateAxisPayload {
 static_assert(sizeof(EvtImmediateAxisPayload) == 32);
 
 struct EvtImmediateImeCompositionPayload {
-  uint32_t word_0 = 0;
-  uint32_t word_1 = 0;
-  uint32_t word_2 = 0;
+  uint32_t event_word_0 = 0;
+  uint32_t event_word_1 = 0;
+  uint32_t event_word_2 = 0;
   uint32_t code_page = 0;
 };
 
 struct EvtImmediateImeCandidatePayload {
-  uint32_t word_0 = 0;
-  uint32_t word_1 = 0;
+  uint32_t event_word_0 = 0;
+  uint32_t event_word_1 = 0;
 };
 
 struct EvtImmediateFocusPayload {
@@ -3347,9 +3347,9 @@ void push_context(void *event_data, int event_type, void *result, int ctx) {
 
     auto *event_words = static_cast<uint32_t *>(event_data);
     EvtImmediateImeCompositionPayload payload{};
-    payload.word_0 = event_words[0];
-    payload.word_1 = event_words[1];
-    payload.word_2 = event_words[2];
+    payload.event_word_0 = event_words[0];
+    payload.event_word_1 = event_words[1];
+    payload.event_word_2 = event_words[2];
     payload.code_page = GetActiveCodePage();
     DispatchImmediateContextEvent(ctx, kImmediateImeCompositionEventType, payload);
     return;
@@ -3358,8 +3358,8 @@ void push_context(void *event_data, int event_type, void *result, int ctx) {
 
     auto *event_words = static_cast<uint32_t *>(event_data);
     EvtImmediateImeCandidatePayload payload{};
-    payload.word_0 = event_words[0];
-    payload.word_1 = event_words[1];
+    payload.event_word_0 = event_words[0];
+    payload.event_word_1 = event_words[1];
     DispatchImmediateContextEvent(ctx, kImmediateImeCandidateEventType, payload);
     return;
   }

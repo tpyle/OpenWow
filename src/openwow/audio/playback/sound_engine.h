@@ -24,7 +24,7 @@ void SoundEngine_InitMemoryConfig(void* engine);
 void SoundCache_EvictToSize(void* cache, std::uint32_t target_size);
 void TSExplicitList_CacheData_Destroy(void* list);
 int CacheData_Destroy(void* cache_entry);
-void TSHashTable_UCacheData_Clear(void* hash_table);
+void TSHashTable_CacheData_Clear(void* hash_table);
 OPENWOW_PRINTF_FORMAT(3, 4)
 void SoundEngine_LogError(SoundEngine& engine, int context, const char* format, ...);
 int SEStreamedSound_PcmSetPosCallback(void* sound_obj_ptr, int new_position);

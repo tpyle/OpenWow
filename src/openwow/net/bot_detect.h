@@ -24,7 +24,7 @@ void* ClientServices__GetConnectionObject();
 
 char* GetSessionKey(void* connection);
 
-int GetProbeValues(int* v1, int* v2, int* v3);
+int GetProbeValues(int* probe_byte_0, int* probe_byte_1, int* probe_byte_2);
 
 inline void CDataStore__PutUInt32(CDataStoreTempPacket* pkt, uint32_t value) {
     CDataStore_PutUInt32(pkt->store, value);

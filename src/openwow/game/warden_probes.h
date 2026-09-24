@@ -33,6 +33,6 @@ bool BuildBotDetectedProbeBytes(uint8_t* probe_byte_0,
                                 uint8_t* probe_byte_1,
                                 uint8_t* probe_byte_2);
 
-int GetProbeValues(int* v1, int* v2, int* v3);
+int GetProbeValues(int* probe_byte_0, int* probe_byte_1, int* probe_byte_2);
 
 }

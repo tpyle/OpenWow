@@ -301,10 +301,6 @@ public:
 
   [[nodiscard]] static std::int32_t GetTimezoneBias();
 
-  [[nodiscard]] static constexpr std::int32_t GetArchitectureId() {
-    return 0x577ACE;
-  }
-
   [[nodiscard]] std::string ApplyLocaleSuffix(const std::string &account, WowLocale locale,
                                               std::int32_t region_id, bool bnet_required) const;
 

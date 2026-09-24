@@ -82,8 +82,8 @@ void Tick_CMSG_BOT_DETECTED() {
 
     s_bot_detect_enabled = 0;
 
-    int v9, v8, v10;
-    if (!GetProbeValues(&v9, &v8, &v10)) {
+    int probe_byte_0, probe_byte_1, probe_byte_2;
+    if (!GetProbeValues(&probe_byte_0, &probe_byte_1, &probe_byte_2)) {
         return;
     }
 
@@ -93,9 +93,9 @@ void Tick_CMSG_BOT_DETECTED() {
     char* session_key = GetSessionKey(connection);
 
     SHA1_Update(sha_ctx, session_key, kSessionKeySize);
-    SHA1_Update(sha_ctx, &v9, 1);
-    SHA1_Update(sha_ctx, &v8, 1);
-    SHA1_Update(sha_ctx, &v10, 1);
+    SHA1_Update(sha_ctx, &probe_byte_0, 1);
+    SHA1_Update(sha_ctx, &probe_byte_1, 1);
+    SHA1_Update(sha_ctx, &probe_byte_2, 1);
     SHA1_Update(sha_ctx, session_key, kSessionKeySize);
 
     uint8_t digest[kSHA1DigestSize];
@@ -107,9 +107,9 @@ void Tick_CMSG_BOT_DETECTED() {
     CDataStore__Ctor_TempPacket_960(&packet);
 
     CDataStore__PutUInt32(&packet, kOpcode_CMSG_BOT_DETECTED);
-    PutUInt8(&packet, static_cast<uint8_t>(v9));
-    PutUInt8(&packet, static_cast<uint8_t>(v8));
-    PutUInt8(&packet, static_cast<uint8_t>(v10));
+    PutUInt8(&packet, static_cast<uint8_t>(probe_byte_0));
+    PutUInt8(&packet, static_cast<uint8_t>(probe_byte_1));
+    PutUInt8(&packet, static_cast<uint8_t>(probe_byte_2));
     PutBytes(&packet, digest, kSHA1DigestSize);
 
     packet.store.read_pos = 0;
