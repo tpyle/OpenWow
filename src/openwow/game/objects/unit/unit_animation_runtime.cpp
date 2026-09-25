@@ -1625,7 +1625,11 @@ bool UnitAnimationRuntime::RequestPlayback(const std::uint16_t animation_id,
   pending_protected_playback_.reset();
 
   bool rider_substituted = false;
+  // SMSG_DISMOUNT clears the mount component's display before the
+  // UNIT_FIELD_MOUNTDISPLAYID update arrives; once dismounted, the rider
+  // must not be put back into the seated mount pose.
   if (owner_.GetUInt32(UNIT_FIELD_MOUNTDISPLAYID) != 0u &&
+      owner_.mount_.CachedDisplayForSpell() != 0u &&
       IsMountModelBehavior(resolved_behavior)) {
     CommitMountPlaybackRequest(resolved_row, looping, restart);
     submit_row = kRiderMountAnimationId;
