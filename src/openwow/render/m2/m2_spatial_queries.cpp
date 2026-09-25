@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <utility>
 #include <limits>
 #include <string>
 
@@ -178,11 +179,11 @@ std::optional<PreparedSegment> PrepareSegment(const RenderVec3& start,
          h.bounding_box_min[2] <= h.bounding_box_max[2];
 }
 
-/// Segment fraction in [0, 1] at which [start, end] enters the model's header
-/// bounding box (0 when start is inside), or nullopt when it misses.
-std::optional<float> SegmentBoundsEntryFraction(const bx::Vec3& start, const bx::Vec3& end,
-                                                const detail::M2ModelResource& resource) {
-  const auto& h = resource.model_data.header;
+/// Segment fraction in [0, 1] at which [start, end] enters the box
+/// [box_min, box_max] (0 when start is inside), or nullopt when it misses.
+std::optional<float> SegmentBoxEntryFraction(const bx::Vec3& start, const bx::Vec3& end,
+                                             const float (&box_min)[3],
+                                             const float (&box_max)[3]) {
   const bx::Vec3 delta = bx::sub(end, start);
   float t_min = 0.0f, t_max = 1.0f;
   const auto test = [&](const float origin, const float direction,
@@ -195,12 +196,39 @@ std::optional<float> SegmentBoundsEntryFraction(const bx::Vec3& start, const bx:
     t_max = std::min(t_max, exit);
     return t_min <= t_max;
   };
-  if (test(start.x, delta.x, h.bounding_box_min[0], h.bounding_box_max[0]) &&
-      test(start.y, delta.y, h.bounding_box_min[1], h.bounding_box_max[1]) &&
-      test(start.z, delta.z, h.bounding_box_min[2], h.bounding_box_max[2])) {
+  if (test(start.x, delta.x, box_min[0], box_max[0]) &&
+      test(start.y, delta.y, box_min[1], box_max[1]) &&
+      test(start.z, delta.z, box_min[2], box_max[2])) {
     return t_min;
   }
   return std::nullopt;
+}
+
+std::optional<float> SegmentBoundsEntryFraction(const bx::Vec3& start, const bx::Vec3& end,
+                                                const detail::M2ModelResource& resource) {
+  const auto& h = resource.model_data.header;
+  return SegmentBoxEntryFraction(start, end, h.bounding_box_min, h.bounding_box_max);
+}
+
+/// The box used for mouse selection: the model's Stand sequence bounds.
+/// Observed in the original client, the selectable box is fixed per model
+/// (it doesn't change with the playing animation) and reaches a little above
+/// the head but only about a third as far out as the header bounding box,
+/// which covers every animation. Stand bounds match that; the header box is
+/// the fallback for models without a Stand sequence.
+std::pair<const float (*)[3], const float (*)[3]> SelectionBox(
+    const detail::M2ModelResource& resource) {
+  constexpr std::uint16_t kStandAnimationId = 0u;
+  for (const auto& sequence : resource.model_data.animation_sequences) {
+    if (sequence.animation_id == kStandAnimationId &&
+        sequence.bounding_box_min[0] <= sequence.bounding_box_max[0] &&
+        sequence.bounding_box_min[1] <= sequence.bounding_box_max[1] &&
+        sequence.bounding_box_min[2] <= sequence.bounding_box_max[2]) {
+      return {&sequence.bounding_box_min, &sequence.bounding_box_max};
+    }
+  }
+  const auto& h = resource.model_data.header;
+  return {&h.bounding_box_min, &h.bounding_box_max};
 }
 
 
@@ -633,14 +661,21 @@ M2SegmentIntersectionQuery M2SpatialQueries::QueryClosestSegmentIntersection(
   const bx::Vec3 local_start = bx::mul(segment->start, inverse.data());
   const bx::Vec3 local_end = bx::mul(segment->end, inverse.data());
   M2SegmentIntersectionQuery result{.status = M2ResultStatus::kReady};
+  // The header box bounds every animation's geometry, so a miss there means
+  // no triangle can be hit either.
+  if (HasValidHeaderBounds(resource) &&
+      !SegmentBoundsEntryFraction(local_start, local_end, resource).has_value()) {
+    return result;
+  }
   if (HasValidHeaderBounds(resource)) {
-    const auto entry = SegmentBoundsEntryFraction(local_start, local_end, resource);
-    if (!entry.has_value()) return result;
-    const float distance = segment->max_distance * *entry;
-    const auto point = bx::add(segment->start, bx::mul(segment->direction, distance));
-    result.has_bounds_intersection = true;
-    result.bounds_intersection = {.fraction = *entry, .distance = distance,
-                                  .point = {point.x, point.y, point.z}};
+    const auto [box_min, box_max] = SelectionBox(resource);
+    if (const auto entry = SegmentBoxEntryFraction(local_start, local_end, *box_min, *box_max)) {
+      const float distance = segment->max_distance * *entry;
+      const auto point = bx::add(segment->start, bx::mul(segment->direction, distance));
+      result.has_bounds_intersection = true;
+      result.bounds_intersection = {.fraction = *entry, .distance = distance,
+                                    .point = {point.x, point.y, point.z}};
+    }
   }
   const auto& geometry = resource.skin_geometry;
   if (geometry.vertices.empty() || geometry.indices.empty()) return {
