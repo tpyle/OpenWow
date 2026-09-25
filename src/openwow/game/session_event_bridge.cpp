@@ -549,6 +549,15 @@ void SessionEventBridge::PollCompanionState() {
     return;
   }
 
+  // Mounting and dismounting fire COMPANION_UPDATE("MOUNT"), which action
+  // bars use to refresh the active mount button's checked state.
+  const auto mount_display_id = player->GetUInt32(UNIT_FIELD_MOUNTDISPLAYID);
+  if (mount_display_id != prev_player_state_.mount_display_id) {
+    prev_player_state_.mount_display_id = mount_display_id;
+    ui_->frame_events().dispatcher().FireEvent(events::COMPANION_UPDATE,
+                                               std::string("MOUNT"));
+  }
+
   const auto critter_guid = player->GetGuidField(UNIT_FIELD_CRITTER);
   const auto current_critter_guid =
       critter_guid.IsEmpty() ? 0ULL : critter_guid.GetRawValue();

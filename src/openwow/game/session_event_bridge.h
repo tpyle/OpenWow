@@ -110,6 +110,7 @@ class SessionEventBridge {
     bool player_flags_seen{false};
     std::uint64_t pet_guid{0};
     std::uint64_t critter_guid{0};
+    std::uint32_t mount_display_id{0};
   };
 
   struct SpellcastSnapshot {
