@@ -1,8 +1,10 @@
 #include "openwow/game/player_combat.h"
 
+#include "openwow/data/formats/dbc/dbc_loader.h"
 #include "openwow/game/objects/cgplayer.h"
 #include "openwow/game/world_session.h"
 
+#include <algorithm>
 #include <cstdint>
 
 namespace openwow::game {
@@ -45,7 +47,25 @@ constexpr std::uint32_t kCastAllowsSheatheToggleFlag = 0x10000000u;
   }
 }
 
+// Stances (warrior stances, stealth...) are shapeshift forms too but keep the
+// character's model and weapons, so sheathing works in them; forms that swap
+// in a creature model (druid forms, Ghost Wolf) have no weapons to sheathe.
+[[nodiscard]] bool FormReplacesModel(const CGPlayer_C& player) {
+  const auto form_id = player.Animation().GetShapeshiftForm();
+  if (form_id == 0u) {
+    return false;
+  }
+  const auto* const dbc = player.dbc_loader();
+  const auto* const form =
+      dbc != nullptr ? dbc->spell_shapeshift_form().LookupEntry(form_id) : nullptr;
+  if (form == nullptr) {
+    return true;
+  }
+  return std::any_of(form->creature_display_id.begin(), form->creature_display_id.end(),
+                     [](const std::uint32_t display) { return display != 0u; });
 }
+
+}  // namespace
 
 void TogglePlayerSheathe(WorldSession& session) {
   auto* player = session.objects().GetActivePlayer();
@@ -55,7 +75,7 @@ void TogglePlayerSheathe(WorldSession& session) {
        (player->State().GetSpellStateFlags() & kCastAllowsSheatheToggleFlag) == 0u) ||
       (player->State().GetUnitFlags() & kDisarmedUnitFlag) != 0u ||
       player->State().GetHealth() == 0u || player->Casts().IsChanneling() ||
-      player->Animation().GetShapeshiftForm() != 0u ||
+      FormReplacesModel(*player) ||
       player->Animation().GetEmoteState() != 0u ||
       IsBlockedAnimation(player->Animation().GetCurrentAnimationGroup()) ||
       player->Vehicle().GetVehiclePassengerComponent() != nullptr) {
