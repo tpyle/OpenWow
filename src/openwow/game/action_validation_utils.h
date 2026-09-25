@@ -193,6 +193,7 @@ inline PlayerStateSnapshot BuildUnitUsabilitySnapshot(
   }
   snapshot.is_mounted = unit.Mount().IsMountedStateActive(unit);
   snapshot.can_act_while_mounted = unit.State().CanActWhileMounted();
+  snapshot.can_change_movement_direction = unit.Movement().CanChangeDirection();
   snapshot.sheathe_state = unit.Animation().GetCachedSheatheState();
   const auto position = unit.GetPosition();
   if (const auto* world_environment = unit.world_environment();
