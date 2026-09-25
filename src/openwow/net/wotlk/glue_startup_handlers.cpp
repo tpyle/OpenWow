@@ -139,7 +139,7 @@ bool HandleAccountDataTimes(const WorldPacket& pkt,
 
   const auto times = BuildAccountDataTimes(parser);
   auto& account_data = openwow::game::AccountData::Get();
-  account_data.SetAccountDataTimes(times);
+  account_data.SetAccountDataTimes(times, parser.account_data().mask);
   account_data.SetNextUploadSequence(parser.account_data().server_time);
 
   if (!context.send_packet) {

@@ -48,7 +48,10 @@ class AccountData {
     std::uint64_t generation = 0;
   };
 
-  void SetAccountDataTimes(const std::array<std::uint32_t, 8>& timestamps);
+  /// Records the server's timestamps for the slots whose bit is set in
+  /// `mask`; other slots keep their last known server timestamp.
+  void SetAccountDataTimes(const std::array<std::uint32_t, 8>& timestamps,
+                           std::uint32_t mask);
 
   void SetNextUploadSequence(std::uint32_t next_sequence);
 
@@ -174,6 +177,10 @@ class AccountData {
                                   AccountDataType type);
   [[nodiscard]] bool ShouldClearConfigCacheOnLoadLocked(AccountDataType type) const;
   void ResetLoadedStateLocked();
+  /// Keeps account-wide server state received before the disk cache was
+  /// loaded when it is newer than the cache (see DiskLoadMerge).
+  void MergeServerStateAfterDiskLoadLocked(
+      const std::array<DataEntry, 8>& server_state);
   void UpdateSynchronizedDigestMismatchLocked(AccountDataType type,
                                               bool file_was_loaded);
   bool LoadScopeSyncMetadataLocked(const std::string& wtf_dir,

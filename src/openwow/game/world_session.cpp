@@ -1328,7 +1328,8 @@ WorldSession::WorldSession(openwow::data::DBCacheRuntime& db_cache_runtime,
                   }
                 }
                 auto& account_data = AccountData::Get();
-                account_data.SetAccountDataTimes(times);
+                account_data.SetAccountDataTimes(times,
+                                                 account_data_times.mask);
                 account_data.SetNextUploadSequence(
                     account_data_times.server_time);
 

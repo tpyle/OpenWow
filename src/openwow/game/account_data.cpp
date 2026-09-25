@@ -1,5 +1,6 @@
 
 #include "openwow/game/account_data.h"
+#include "openwow/game/account_data_sync_rules.h"
 #include "openwow/core/md5.h"
 #include "openwow/game/chat_cache.h"
 #include "openwow/platform/filesystem/filesystem.h"
@@ -49,10 +50,15 @@ AccountData& AccountData::Get() {
 }
 
 void AccountData::SetAccountDataTimes(
-    const std::array<std::uint32_t, 8>& timestamps) {
+    const std::array<std::uint32_t, 8>& timestamps, const std::uint32_t mask) {
   std::lock_guard lock(mutex_);
+  std::array<std::uint32_t, 8> synchronized{};
   for (std::size_t i = 0; i < 8; ++i) {
-    entries_[i].synchronized_timestamp = timestamps[i];
+    synchronized[i] = entries_[i].synchronized_timestamp;
+  }
+  account_data_sync::ApplyServerTimesForMask(synchronized, timestamps, mask);
+  for (std::size_t i = 0; i < 8; ++i) {
+    entries_[i].synchronized_timestamp = synchronized[i];
   }
   if (HasUploadableEntryLocked()) {
     ScheduleUploadLocked();
@@ -835,6 +841,9 @@ void AccountData::LoadFromDisk(const std::string& wtf_dir,
   }
   const auto& identity = *persistence_identity_;
 
+  // The account-wide slots may already hold what the server sent at
+  // character select; the disk cache must not replace a newer server copy.
+  const std::array<DataEntry, 8> server_state = entries_;
   ResetLoadedStateLocked();
   (void)LoadScopeSyncMetadataLocked(
       identity.wtf_dir.string(), identity.account_name, identity.realm_name,
@@ -850,9 +859,44 @@ void AccountData::LoadFromDisk(const std::string& wtf_dir,
                                  identity.character_name,
                                  static_cast<AccountDataType>(i));
   }
+  MergeServerStateAfterDiskLoadLocked(server_state);
 
   if (HasUploadableEntryLocked()) {
     ScheduleUploadLocked();
+  }
+}
+
+void AccountData::MergeServerStateAfterDiskLoadLocked(
+    const std::array<DataEntry, 8>& server_state) {
+  for (std::uint8_t i = 0; i < 8; ++i) {
+    if (IsPerCharacterData(static_cast<AccountDataType>(i))) {
+      continue;
+    }
+    const auto& server = server_state[i];
+    auto& entry = entries_[i];
+    switch (account_data_sync::ChooseDiskLoadMerge(
+        {server.timestamp, server.synchronized_timestamp},
+        {entry.timestamp, entry.synchronized_timestamp})) {
+      case account_data_sync::DiskLoadMerge::kAdoptServerPayload:
+        entry.data = server.data;
+        entry.timestamp = server.timestamp;
+        entry.synchronized_timestamp = server.timestamp;
+        entry.synchronized_digest = ComputeDataDigest(entry.data);
+        entry.synchronized_digest_mismatch = false;
+        entry.dirty = false;
+        entry.disk_dirty = true;
+        ++entry.mutation_generation;
+        Log(LogLevel::kInfo,
+            "AccountData: kept newer server copy of " +
+                std::string(AccountDataTypeName(static_cast<AccountDataType>(i))) +
+                " over the disk cache");
+        break;
+      case account_data_sync::DiskLoadMerge::kAdoptServerTime:
+        entry.synchronized_timestamp = server.synchronized_timestamp;
+        break;
+      case account_data_sync::DiskLoadMerge::kKeepDisk:
+        break;
+    }
   }
 }
 
