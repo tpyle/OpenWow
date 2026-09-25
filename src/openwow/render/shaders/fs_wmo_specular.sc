@@ -20,7 +20,7 @@ void main()
         discard;
     }
 
-    color = openwowApplyWorldShadow(color, v_worldPos);
+    color = openwowApplyWorldShadowFacing(color, v_worldPos, v_normal, u_wmoSunDir.xyz);
 
     if (u_wmoMaterialParams.w < 0.5) {
         float fogFactor = openwowLinearFogVisibility(u_wmoFogParams, v_viewDist);

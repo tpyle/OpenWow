@@ -77,4 +77,19 @@ vec3 openwowApplyWorldShadow(vec3 color, vec3 worldPosition)
     return color * modulation;
 }
 
+// Like openwowApplyWorldShadow, for surfaces with a normal. A surface facing
+// away from the light isn't directly lit, so casters on the far side (e.g.
+// buildings behind a city wall) must not print shadows onto it; the shadow
+// fades out as the surface turns edge-on to the light.
+vec3 openwowApplyWorldShadowFacing(vec3 color, vec3 worldPosition, vec3 normal,
+                                   vec3 surfaceToLight)
+{
+    float facing = dot(normalize(normal), normalize(surfaceToLight));
+    float visibility = mix(1.0, openwowSampleWorldShadow(worldPosition),
+                           smoothstep(0.0, 0.15, facing));
+    vec3 modulation = mix(u_worldShadowParams[2].rgb,
+                          vec3_splat(1.0), visibility);
+    return color * modulation;
+}
+
 #endif
