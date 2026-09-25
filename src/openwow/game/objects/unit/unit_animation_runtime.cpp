@@ -1189,8 +1189,10 @@ openwow::render::m2::M2OperationSummary UnitAnimationRuntime::SetAnimationRecurs
                                          ? static_cast<std::uint32_t>(anim_group)
                                          : anim_id;
     const bool looping = loop != 0 || AnimationSequenceLoops(requested_animation);
+    // blend_in == 0 asks for an immediate switch (e.g. dismount snaps the
+    // rider straight from the riding pose to standing).
     RequestPlayback(static_cast<std::uint16_t>(requested_animation), looping,
-                    !looping);
+                    !looping, false, blend_in == 0);
   } else if (owner_.m2_system() != nullptr) {
     const openwow::render::m2::M2AnimationRequest animation_request{
         .animation_lookup_id = -1,
@@ -1590,7 +1592,8 @@ std::uint16_t UnitAnimationRuntime::GetResolvedPlaybackAnimationId() const {
 bool UnitAnimationRuntime::RequestPlayback(const std::uint16_t animation_id,
                                            bool looping,
                                            const bool restart,
-                                           const bool bypass_alias_resolution) {
+                                           const bool bypass_alias_resolution,
+                                           const bool zero_blend) {
 
   const std::uint32_t requested_behavior =
       ResolveAnimationBehaviorId(owner_, animation_id);
@@ -1662,7 +1665,7 @@ bool UnitAnimationRuntime::RequestPlayback(const std::uint16_t animation_id,
   const bool upper_body_only =
       IsUpperBodyOnlyAnimation(submit_row, playback_request_.base_animation_id);
   CommitPlaybackRequest(submit_row, looping, upper_body_only,
-                        bypass_alias_resolution, false);
+                        bypass_alias_resolution, zero_blend);
 
   ApplySubmitFunnelFlagBits(resolved_behavior);
   return true;

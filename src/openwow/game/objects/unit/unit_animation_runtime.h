@@ -401,7 +401,7 @@ private:
 
   bool RequestPlayback(std::uint16_t animation_id, bool looping,
                        bool restart = false,
-                       bool bypass_alias_resolution = false);
+                       bool bypass_alias_resolution = false, bool zero_blend = false);
 
   void SubmitRawPlayback(std::uint16_t animation_id, bool looping,
                          bool upper_body_only, bool zero_blend);
