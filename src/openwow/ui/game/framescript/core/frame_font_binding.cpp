@@ -1,4 +1,5 @@
 #include "openwow/ui/game/framescript/core/lua_script_object_access.h"
+#include "openwow/ui/font_pixel_height.h"
 #include "openwow/ui/game/framescript/core/frame_color_runtime.h"
 #include "openwow/ui/game/framescript/core/frame_font_runtime.h"
 #include "openwow/render/resources/fonts/font_string_flags.h"
@@ -498,11 +499,7 @@ ResolvedFontBinding ResolveEffectiveFontBinding(lua_State *L, int index) {
     if (resolved.height_pixels <= 0) {
       lua_getfield(L, current, "__ow_font_size");
       if (lua_isnumber(L, -1) != 0) {
-        // The stored size is a float that has been through UI-unit
-        // conversions (14 can come back as 13.999999). Round it the way the
-        // compositor does when drawing, so text is measured at the same
-        // height it is rendered at.
-        resolved.height_pixels = static_cast<int>(std::lround(lua_tonumber(L, -1)));
+        resolved.height_pixels = ResolveFontPixelHeight(lua_tonumber(L, -1));
       }
       lua_pop(L, 1);
     }

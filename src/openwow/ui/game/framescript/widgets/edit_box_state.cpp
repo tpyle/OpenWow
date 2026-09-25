@@ -1,4 +1,5 @@
 #include "openwow/ui/game/framescript/widgets/edit_box_state.h"
+#include "openwow/ui/font_pixel_height.h"
 #include "openwow/ui/game/runtime/frame_store.h"
 #include "openwow/ui/game/runtime/frame_traversal_index.h"
 #include "openwow/ui/game/runtime/retained_layout.h"
@@ -134,7 +135,7 @@ struct FontContext {
 FontContext ReadFontContext(lua_State *state, const int font_string) {
   FontContext context;
   context.path = ReadString(state, font_string, "__ow_font_path");
-  context.height = static_cast<int>(
+  context.height = ResolveFontPixelHeight(
       ReadNumber(state, font_string, "__ow_font_size").value_or(0.0F));
 
   context.scale =
