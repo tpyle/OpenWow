@@ -2748,8 +2748,28 @@ void WorldSession::OpenLocalTradeSkill(const std::uint32_t spell_id) {
   if (!trade_skill_spell) {
     return;
   }
-  const auto skill_line_id = ResolveSpellSkillLineId(
-      objects(), dbc, player->State().GetRace(), player->State().GetClass(), spell_id);
+  // The profession's skill line: the SkillLineAbility row for this spell on
+  // a profession or secondary-skill line. The race/class-filtered lookup used
+  // for learnable spells rejects profession spells (e.g. Jewelcrafting
+  // 25229), which don't matter here since the player already knows it.
+  constexpr std::int32_t kSkillCategoryProfession = 11;
+  constexpr std::int32_t kSkillCategorySecondary = 9;
+  std::optional<std::uint32_t> skill_line_id;
+  for (const auto &ability : dbc->skill_line_ability().entries()) {
+    if (ability.spell_id != spell_id) {
+      continue;
+    }
+    const auto *const line = dbc->skill_line().LookupEntry(ability.skill_id);
+    if (line != nullptr && (line->category_id == kSkillCategoryProfession ||
+                            line->category_id == kSkillCategorySecondary)) {
+      skill_line_id = ability.skill_id;
+      break;
+    }
+  }
+  if (!skill_line_id.has_value()) {
+    skill_line_id = ResolveSpellSkillLineId(objects(), dbc, player->State().GetRace(),
+                                            player->State().GetClass(), spell_id);
+  }
   if (!skill_line_id.has_value()) {
     return;
   }
