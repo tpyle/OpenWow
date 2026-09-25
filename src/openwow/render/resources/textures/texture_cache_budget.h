@@ -34,10 +34,24 @@ inline constexpr std::size_t kTextureCacheUrgentEvictionsPerSweep = 32u;
 
 inline constexpr std::size_t kTextureCacheMaxEntriesVisitedPerSweep = 64u;
 
+/// Cap on cached textures, below bgfx's texture handle pool (4096 by
+/// default). The byte budget alone let thousands of small textures (icons,
+/// NPC skins) use up every handle, after which unrelated texture and render
+/// target creation failed (blank vendor icons, empty portraits).
+inline constexpr std::size_t kTextureCacheMaxEntries = 3072u;
+
+/// True when the cache must evict: over its byte budget or its entry cap.
+[[nodiscard]] constexpr bool TextureCacheOverBudget(
+    const std::uint64_t memory_usage_bytes, const std::uint64_t memory_budget_bytes,
+    const std::size_t entry_count) noexcept {
+  return memory_usage_bytes > memory_budget_bytes ||
+         entry_count > kTextureCacheMaxEntries;
+}
+
 [[nodiscard]] constexpr std::size_t TextureCacheEvictionQuota(
     const std::uint64_t memory_usage_bytes,
     const std::uint64_t memory_budget_bytes) noexcept {
-  return (memory_budget_bytes != 0u &&
+  return (memory_budget_bytes != 0u && memory_usage_bytes > memory_budget_bytes &&
           memory_usage_bytes - memory_budget_bytes > memory_budget_bytes)
              ? kTextureCacheUrgentEvictionsPerSweep
              : kTextureCacheEvictionsPerSweep;

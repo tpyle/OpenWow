@@ -15,6 +15,7 @@
 #include "openwow/foundation/diagnostics/performance_logging.h"
 
 #include <algorithm>
+#include <chrono>
 #include <array>
 #include <cstring>
 #include <exception>
@@ -1200,6 +1201,28 @@ std::size_t TextureManager::PumpPreparedUploads(
   static diagnostics::PerformanceLogSite performance_site;
   const diagnostics::ScopedPerformanceLog performance(
       performance_site, "texture.pump_uploads");
+  // Once a minute, record GPU handle use next to the cache size, to confirm
+  // the entry cap keeps bgfx's texture handle pool from filling up.
+  {
+    using Clock = std::chrono::steady_clock;
+    static Clock::time_point last_handle_report{};
+    const auto now = Clock::now();
+    if (now - last_handle_report >= std::chrono::seconds(60)) {
+      last_handle_report = now;
+      if (const bgfx::Stats* const stats = bgfx::getStats(); stats != nullptr) {
+        std::size_t cached = 0u;
+        {
+          std::lock_guard lock(cache_mutex_);
+          cached = cache_.size();
+        }
+        diagnostics::Log(diagnostics::LogLevel::kInfo,
+                         "TextureManager: handles textures=" +
+                             std::to_string(stats->numTextures) + " framebuffers=" +
+                             std::to_string(stats->numFrameBuffers) + " cached=" +
+                             std::to_string(cached));
+      }
+    }
+  }
   std::shared_ptr<AsyncState> state;
   {
     std::lock_guard lock(cache_mutex_);
@@ -1262,6 +1285,11 @@ std::size_t TextureManager::PumpPreparedUploads(
     }
 
     if (!source_rows_->IsCurrent(identity)) {
+      continue;
+    }
+    if (ready->valid) {
+      // Prepared fine but the commit failed; the commit already marked the
+      // row terminal if the failure was permanent, otherwise it retries.
       continue;
     }
     diagnostics::Log(
@@ -1506,6 +1534,7 @@ bgfx::TextureHandle TextureManager::CommitPreparedTexture(
     created_with_mips = upload.complete_mip_chain &&
                         upload.upload_size >= bgfx_storage_size(true);
     if (upload.upload_size < bgfx_storage_size(false)) {
+      source_rows_->MarkTerminalFailure(identity);
       return BGFX_INVALID_HANDLE;
     }
     const bgfx::Memory* upload_mem =
@@ -1518,7 +1547,9 @@ bgfx::TextureHandle TextureManager::CommitPreparedTexture(
         BGFX_TEXTURE_NONE, upload_mem);
   }
   if (!bgfx::isValid(handle)) {
-    source_rows_->MarkTerminalFailure(identity);
+    // The data decoded fine; the GPU object couldn't be created (typically
+    // the texture handle pool is full). Leave the row retryable so a later
+    // request loads it once handles are free, instead of blank for good.
     diagnostics::Log(diagnostics::LogLevel::kWarn,
               "TextureManager: prepared texture upload failed for " +
                   (upload.row_path.empty() ? upload.path : upload.row_path));
@@ -2017,7 +2048,7 @@ void TextureManager::EvictToBudget() {
 
 void TextureManager::EvictToBudgetLocked(
     const std::uint32_t* preserve_row_hash) {
-  if (memory_usage_ <= memory_budget_) {
+  if (!TextureCacheOverBudget(memory_usage_, memory_budget_, cache_.size())) {
     return;
   }
 
@@ -2056,7 +2087,7 @@ void TextureManager::EvictToBudgetLocked(
     cache_.erase(it);
     ++evicted;
     node = next;
-    if (memory_usage_ <= memory_budget_) {
+    if (!TextureCacheOverBudget(memory_usage_, memory_budget_, cache_.size())) {
       break;
     }
   }

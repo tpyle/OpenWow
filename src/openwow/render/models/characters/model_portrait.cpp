@@ -3,6 +3,7 @@
 #include "openwow/foundation/math/projection_aspect.h"
 #include "openwow/foundation/diagnostics/logging.h"
 
+#include <string>
 #include <bx/math.h>
 
 #include <algorithm>
@@ -55,16 +56,26 @@ ModelPortrait::~ModelPortrait() {
 
 bool ModelPortrait::Initialize(const std::uint16_t width,
                                const std::uint16_t height) {
-  if (initialized_) {
+  if (initialized_ && IsValid()) {
     return true;
   }
 
+  // A failed Resize can leave the portrait initialized but without targets;
+  // start from a clean slate so it can recover once GPU handles free up.
+  DestroyFrameBuffer();
   width_ = std::max(width, static_cast<std::uint16_t>(16));
   height_ = std::max(height, static_cast<std::uint16_t>(16));
   CreateFrameBuffer();
   if (!bgfx::isValid(fb_)) {
-    openwow::diagnostics::Log(openwow::diagnostics::LogLevel::kError,
-                       "ModelPortrait: framebuffer creation failed");
+    initialized_ = false;
+    // Callers retry every frame; log the 1st, 2nd, 4th, 8th... failure.
+    static std::uint64_t failures = 0u;
+    ++failures;
+    if ((failures & (failures - 1u)) == 0u) {
+      openwow::diagnostics::Log(openwow::diagnostics::LogLevel::kError,
+                                "ModelPortrait: framebuffer creation failed (count=" +
+                                    std::to_string(failures) + ")");
+    }
     return false;
   }
 
@@ -378,6 +389,8 @@ void ModelPortrait::Resize(std::uint16_t width, std::uint16_t height) {
     DestroyFrameBuffer();
     CreateFrameBuffer();
     has_presented_content_ = false;
+    // Without targets the portrait must go through Initialize again.
+    initialized_ = IsValid();
   }
 }
 
