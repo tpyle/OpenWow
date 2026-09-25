@@ -441,10 +441,14 @@ bool WaterRenderer::Initialize() {
       bgfx::createUniform("u_particleFlags", bgfx::UniformType::Vec4);
   s_water_ripple_texture_ =
       bgfx::createUniform("s_texColor", bgfx::UniformType::Sampler);
+  // Bucket 1 is used while moving (quad turned to the unit's facing and
+  // stretched with speed): that is the directional bow wake. The other modes
+  // (idle, turning, entering water) use a random rotation, which only suits
+  // the rotationally symmetric ring.
   water_ripple_textures_[0] = texture_manager_.AcquireTextureStrict(
-      "XTextures\\splash\\wake.blp");
-  water_ripple_textures_[1] = texture_manager_.AcquireTextureStrict(
       "XTextures\\splash\\splash.blp");
+  water_ripple_textures_[1] = texture_manager_.AcquireTextureStrict(
+      "XTextures\\splash\\wake.blp");
 
   for (std::uint8_t index = 0u; index < samplers_.size(); ++index) {
     const std::string name = "s_liquid" + std::to_string(index);
@@ -1316,8 +1320,9 @@ void WaterRenderer::RenderWaterRipples(
   constexpr std::uint64_t state =
       BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
       BGFX_STATE_DEPTH_TEST_LEQUAL | BGFX_STATE_MSAA |
-      BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA,
-                            BGFX_STATE_BLEND_INV_SRC_ALPHA);
+      // The ripple textures hold dim grey foam that reads as white only when
+      // added on top of the water; alpha blending drew it as near-black.
+      BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_ONE);
 
   const RenderVec4 particle_flags{1.0f, 1.0f, 0.0f, 1.0f};
 
@@ -1396,7 +1401,11 @@ void WaterRenderer::RenderWaterRipples(
 
     draw.setUniform(u_fog_params_, environment.fog.params.data());
     draw.setUniform(u_fog_color_, environment.fog.color.data());
-    draw.setTexture(0u, s_water_ripple_texture_, texture);
+    // Ripples are drawn over every liquid facet their final size will cover,
+    // so UVs run well outside [0, 1] while they are small; clamp so the
+    // transparent texture border covers that instead of tiling the texture.
+    draw.setTexture(0u, s_water_ripple_texture_, texture,
+                    BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP);
     draw.setState(state);
     draw.submit(view_id, water_ripple_program_);
   }
