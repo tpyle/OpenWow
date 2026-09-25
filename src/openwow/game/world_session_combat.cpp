@@ -2152,6 +2152,15 @@ void WorldSession::HandleEnvironmentalDamageLog(const net::wotlk::WorldPacket& p
   constexpr std::uint32_t kDamageFallingSoundKitId = 3542u;
   if (environmental_damage->type == kEnvironmentalDamageFalling) {
     (void)sound_runtime().PlaySoundKit(kDamageFallingSoundKitId, nullptr);
+    // The character also cries out (CreatureSoundData injury sound), as in
+    // the original client.
+    if (environmental_damage->damage > 0u) {
+      if (auto *const unit = objects().GetMutableUnit(environmental_damage->guid);
+          unit != nullptr) {
+        unit->Sound().PlayCreatureSound(
+            *unit, static_cast<std::uint32_t>(CreatureSoundType::Injury), true);
+      }
+    }
   }
 
   const std::uint32_t school_mask =
