@@ -3629,6 +3629,14 @@ bool UnitAnimationRuntime::ApplyMovementDrivenStandAnimationOverride(
   // the locomotion pose until TryPlayPendingFallAnimation starts the fall
   // after about a second, as in the original client.
   const auto current = GetCurrentAnimationId();
+  // The rider pose only makes sense on a mount: dismounting in mid-air goes
+  // straight to Fall rather than keeping the seated pose until the pending
+  // fall animation takes over.
+  if (current.has_value() && *current == kRiderMountAnimationId &&
+      owner_.mount_.CachedDisplayForSpell() == 0u) {
+    ApplySelectedStandAnimation(static_cast<std::uint16_t>(kFallAnimationId), 0u);
+    return true;
+  }
   if (!current.has_value() ||
       !IsMovementStandPreservingBehaviorId(ResolveAnimationBehaviorId(owner_, *current))) {
     return true;
