@@ -1142,7 +1142,10 @@ void UnitMovementRuntime::UpdateWaterRipples(
       UnitWaterRippleSpawn{
           .position = {position.x, position.y, ground_state.liquid_surface_z},
 
-          .rotation_radians = -rotation,
+          // wake.blp's V points toward texture -v and the ripple UV basis maps
+          // +v to (sin r, cos r), so r = -(facing + pi/2) makes the tip lead the
+          // direction of travel. Splash rings use a random rotation instead.
+          .rotation_radians = -(rotation + 1.5707964f),
           .initial_extent = initial_extent,
           .duration_seconds = duration,
           .opacity_base = opacity_base,

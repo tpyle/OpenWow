@@ -3027,18 +3027,13 @@ void WorldMap::QueueWaterRipplePresentation(
       command.position[2] + 1.0f,
   };
 
-  const float radius_sq = final_extent * final_extent;
+  // Every liquid facet overlapping the ripple's final square: requiring a
+  // facet to lie wholly inside the ripple kept only the one or two liquid
+  // cells under the unit, cutting the effect off at the next cell. Texels
+  // past the texture's transparent border are clamped away when drawn.
   VisitMovementLiquidFacets(
       bounds, 0x20000u,
-      [&command, radius_sq](const CollisionFacetView& facet) {
-        for (const auto& vertex : facet.vertices) {
-          const float dx = vertex[0] - command.position[0];
-          const float dy = vertex[1] - command.position[1];
-          const float dz = vertex[2] - command.position[2];
-          if (dx * dx + dy * dy + dz * dz > radius_sq) {
-            return;
-          }
-        }
+      [&command](const CollisionFacetView& facet) {
         command.control_points.insert(command.control_points.end(),
                                       facet.vertices.begin(),
                                       facet.vertices.end());
