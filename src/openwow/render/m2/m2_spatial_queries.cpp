@@ -171,12 +171,18 @@ std::optional<PreparedSegment> PrepareSegment(const RenderVec3& start,
                          .max_distance = length};
 }
 
-bool SegmentIntersectsBounds(const bx::Vec3& start, const bx::Vec3& end,
-                             const detail::M2ModelResource& resource) {
+[[nodiscard]] bool HasValidHeaderBounds(const detail::M2ModelResource& resource) {
   const auto& h = resource.model_data.header;
-  if (h.bounding_box_min[0] > h.bounding_box_max[0] ||
-      h.bounding_box_min[1] > h.bounding_box_max[1] ||
-      h.bounding_box_min[2] > h.bounding_box_max[2]) return true;
+  return h.bounding_box_min[0] <= h.bounding_box_max[0] &&
+         h.bounding_box_min[1] <= h.bounding_box_max[1] &&
+         h.bounding_box_min[2] <= h.bounding_box_max[2];
+}
+
+/// Segment fraction in [0, 1] at which [start, end] enters the model's header
+/// bounding box (0 when start is inside), or nullopt when it misses.
+std::optional<float> SegmentBoundsEntryFraction(const bx::Vec3& start, const bx::Vec3& end,
+                                                const detail::M2ModelResource& resource) {
+  const auto& h = resource.model_data.header;
   const bx::Vec3 delta = bx::sub(end, start);
   float t_min = 0.0f, t_max = 1.0f;
   const auto test = [&](const float origin, const float direction,
@@ -189,11 +195,14 @@ bool SegmentIntersectsBounds(const bx::Vec3& start, const bx::Vec3& end,
     t_max = std::min(t_max, exit);
     return t_min <= t_max;
   };
-  return test(start.x, delta.x, h.bounding_box_min[0], h.bounding_box_max[0]) &&
-         test(start.y, delta.y, h.bounding_box_min[1], h.bounding_box_max[1]) &&
-         test(start.z, delta.z, h.bounding_box_min[2], h.bounding_box_max[2]) &&
-         t_max >= 0.0f && t_min <= 1.0f;
+  if (test(start.x, delta.x, h.bounding_box_min[0], h.bounding_box_max[0]) &&
+      test(start.y, delta.y, h.bounding_box_min[1], h.bounding_box_max[1]) &&
+      test(start.z, delta.z, h.bounding_box_min[2], h.bounding_box_max[2])) {
+    return t_min;
+  }
+  return std::nullopt;
 }
+
 
 std::optional<float> IntersectTriangle(const bx::Vec3& start,
                                        const bx::Vec3& delta,
@@ -623,7 +632,16 @@ M2SegmentIntersectionQuery M2SpatialQueries::QueryClosestSegmentIntersection(
             .detail = "instance_id=" + std::to_string(instance_id)};
   const bx::Vec3 local_start = bx::mul(segment->start, inverse.data());
   const bx::Vec3 local_end = bx::mul(segment->end, inverse.data());
-  if (!SegmentIntersectsBounds(local_start, local_end, resource)) return {.status = M2ResultStatus::kReady};
+  M2SegmentIntersectionQuery result{.status = M2ResultStatus::kReady};
+  if (HasValidHeaderBounds(resource)) {
+    const auto entry = SegmentBoundsEntryFraction(local_start, local_end, resource);
+    if (!entry.has_value()) return result;
+    const float distance = segment->max_distance * *entry;
+    const auto point = bx::add(segment->start, bx::mul(segment->direction, distance));
+    result.has_bounds_intersection = true;
+    result.bounds_intersection = {.fraction = *entry, .distance = distance,
+                                  .point = {point.x, point.y, point.z}};
+  }
   const auto& geometry = resource.skin_geometry;
   if (geometry.vertices.empty() || geometry.indices.empty()) return {
       .status = M2ResultStatus::kUnsupported, .reason = M2ResultReason::kNoDrawableGeometry,
@@ -647,12 +665,13 @@ M2SegmentIntersectionQuery M2SpatialQueries::QueryClosestSegmentIntersection(
         [&streams](const std::uint16_t index) { return streams.positions[index]; },
         local_start, local_end);
   }
-  if (!best.has_value()) return {.status = M2ResultStatus::kReady};
+  if (!best.has_value()) return result;
   const float distance = segment->max_distance * *best;
   const auto point = bx::add(segment->start, bx::mul(segment->direction, distance));
-  return {.status = M2ResultStatus::kReady, .has_intersection = true,
-          .intersection = {.fraction = *best, .distance = distance,
-                           .point = {point.x, point.y, point.z}}};
+  result.has_intersection = true;
+  result.intersection = {.fraction = *best, .distance = distance,
+                         .point = {point.x, point.y, point.z}};
+  return result;
 }
 
 bool M2SpatialQueries::ModelHasAnimation(const std::uint32_t instance_id,

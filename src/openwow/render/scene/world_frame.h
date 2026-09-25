@@ -94,7 +94,11 @@ public:
 
   [[nodiscard]] RenderScreenProjection WorldToScreen(RenderVec3View world_pos) const;
 
-  [[nodiscard]] PickResult Pick(int screen_x, int screen_y) const;
+  /// Picks the object under the screen point. A hit on a rendered model beats
+  /// a unit's bounding-box-only hit; within a tier the nearest wins. While the
+  /// ray still hits `sticky` (usually the current mouseover), it stays picked.
+  [[nodiscard]] PickResult Pick(int screen_x, int screen_y,
+                                game::ObjectGuid sticky = {}) const;
 
   [[nodiscard]] PickResult PickForInteraction(
       int screen_x, int screen_y, game::ObjectGuid current_target) const;

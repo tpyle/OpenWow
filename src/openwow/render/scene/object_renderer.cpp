@@ -1686,7 +1686,8 @@ bool ObjectRenderer::QueryModelRootBoneWorldMatrix(const game::ObjectGuid guid,
 std::optional<ObjectRayIntersection>
 ObjectRenderer::FindClosestSegmentIntersectionForGuid(const game::ObjectGuid guid,
                                                       const RenderVec3 &segment_start,
-                                                      const RenderVec3 &segment_end) const {
+                                                      const RenderVec3 &segment_end,
+                                                      const bool include_bounds) const {
   const auto *const it = FindInstance(guid);
   if (it == nullptr) {
     return std::nullopt;
@@ -1698,15 +1699,26 @@ ObjectRenderer::FindClosestSegmentIntersectionForGuid(const game::ObjectGuid gui
 
   const auto hit = m2_system_.QueryClosestSegmentIntersection(it->m2_instance_id,
                                                               segment_start, segment_end);
-  if (hit.status != m2::M2ResultStatus::kReady || !hit.has_intersection) {
+  if (hit.status != m2::M2ResultStatus::kReady) {
     return std::nullopt;
   }
-
-  return ObjectRayIntersection{
-      .guid = it->guid,
-      .point = hit.intersection.point,
-      .distance = hit.intersection.distance,
-  };
+  if (hit.has_intersection) {
+    return ObjectRayIntersection{
+        .guid = it->guid,
+        .point = hit.intersection.point,
+        .distance = hit.intersection.distance,
+        .body = true,
+    };
+  }
+  if (include_bounds && hit.has_bounds_intersection) {
+    return ObjectRayIntersection{
+        .guid = it->guid,
+        .point = hit.bounds_intersection.point,
+        .distance = hit.bounds_intersection.distance,
+        .body = false,
+    };
+  }
+  return std::nullopt;
 }
 
 bool ObjectRenderer::HasAnySegmentIntersection(const RenderVec3 &segment_start,

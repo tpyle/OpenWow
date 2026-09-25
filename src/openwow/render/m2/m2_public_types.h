@@ -901,8 +901,14 @@ struct M2SegmentIntersectionQuery {
   M2ResultStatus status = M2ResultStatus::kNotReady;
   M2ResultReason reason = M2ResultReason::kNone;
   std::string detail;
+  /// A hit on the rendered (skinned) triangles.
   bool has_intersection = false;
   M2SegmentIntersection intersection;
+  /// Where the segment enters the model's header bounding box, in world
+  /// space (the box follows the instance's placement, facing and scale).
+  /// Set whenever the box is crossed, with or without a triangle hit.
+  bool has_bounds_intersection = false;
+  M2SegmentIntersection bounds_intersection;
 };
 
 struct M2ChildInstanceLinkInfo {

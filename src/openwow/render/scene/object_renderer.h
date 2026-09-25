@@ -386,6 +386,8 @@ struct ObjectRayIntersection {
   game::ObjectGuid guid;
   RenderVec3 point{0.0f, 0.0f, 0.0f};
   float distance{0.0f};
+  /// True for a hit on the rendered model, false for a bounding-box-only hit.
+  bool body{true};
 };
 
 enum class DynamicObjectPresentationEventKind : std::uint8_t {
@@ -636,9 +638,13 @@ public:
   [[nodiscard]] bool QueryModelSpatialState(game::ObjectGuid guid,
                                             ModelSpatialQueryResult *out) const;
 
+  /// Nearest hit of the segment on the object's rendered model. With
+  /// `include_bounds`, a segment that misses the model but crosses its
+  /// bounding box yields a box hit (`body == false`) at the box entry point.
   [[nodiscard]] std::optional<ObjectRayIntersection>
   FindClosestSegmentIntersectionForGuid(game::ObjectGuid guid, const RenderVec3 &segment_start,
-                                        const RenderVec3 &segment_end) const;
+                                        const RenderVec3 &segment_end,
+                                        bool include_bounds = false) const;
 
   [[nodiscard]] bool HasAnySegmentIntersection(const RenderVec3 &segment_start,
                                                const RenderVec3 &segment_end) const;

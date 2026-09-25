@@ -212,7 +212,7 @@ WorldRay WorldFrame::ScreenToWorldRay(int screen_x, int screen_y) const {
   return ray;
 }
 
-PickResult WorldFrame::Pick(int screen_x, int screen_y) const {
+PickResult WorldFrame::Pick(int screen_x, int screen_y, const game::ObjectGuid sticky) const {
   const WorldRay ray = ScreenToWorldRay(screen_x, screen_y);
   if (std::fabs(ray.dir_x) < 1e-8f && std::fabs(ray.dir_y) < 1e-8f &&
       std::fabs(ray.dir_z) < 1e-8f) {
@@ -235,30 +235,51 @@ PickResult WorldFrame::Pick(int screen_x, int screen_y) const {
     };
     const std::uint32_t flags = BuildCursorIntersectionMask(objects_, cursor_context_);
     int best_priority = 0;
+    bool best_body = false;
+    PickResult sticky_pick{};
     const auto consider = [&](const game::ObjectPresentationRecord &object) {
       if (!PassesModelFilter(object, flags, *objects_)) {
         return;
       }
+      // Units are also selectable anywhere inside their model's bounding box,
+      // which is larger than the body (e.g. the gap between arm and torso).
+      const PickResult::HitType type = ResolveModelPickHitType(object);
       const auto hit = object_renderer_->FindClosestSegmentIntersectionForGuid(
-          object.handle.guid, segment_start, segment_end);
-      if (!hit.has_value()) {
+          object.handle.guid, segment_start, segment_end,
+          type == PickResult::HitType::kUnit);
+      // A box that already contains the camera (zoomed in close to a unit)
+      // can't be aimed at; it would otherwise win every box-only pick.
+      if (!hit.has_value() || (!hit->body && hit->distance <= 0.0f)) {
         return;
+      }
+      const auto to_pick = [&]() {
+        PickResult pick{};
+        pick.hit = true;
+        pick.guid = object.handle.guid;
+        pick.distance = hit->distance;
+        pick.world_x = hit->point[0];
+        pick.world_y = hit->point[1];
+        pick.world_z = hit->point[2];
+        pick.type = type;
+        return pick;
+      };
+      if (!sticky.IsEmpty() && object.handle.guid == sticky) {
+        sticky_pick = to_pick();
       }
       const int priority = ModelHitPriority(object, *objects_);
 
-      if (best.hit &&
+      // A body hit beats a box-only hit; within a tier the nearest wins.
+      if (best.hit && best_body && !hit->body) {
+        return;
+      }
+      if (best.hit && best_body == hit->body &&
           (hit->distance > best.distance + kPickDistanceTieEpsilon ||
            (std::fabs(hit->distance - best.distance) <= kPickDistanceTieEpsilon &&
             priority <= best_priority))) {
         return;
       }
-      best.hit = true;
-      best.guid = object.handle.guid;
-      best.distance = hit->distance;
-      best.world_x = hit->point[0];
-      best.world_y = hit->point[1];
-      best.world_z = hit->point[2];
-      best.type = ResolveModelPickHitType(object);
+      best = to_pick();
+      best_body = hit->body;
       best_priority = priority;
     };
 
@@ -273,6 +294,9 @@ PickResult WorldFrame::Pick(int screen_x, int screen_y) const {
           consider(object);
         }
       }
+    }
+    if (sticky_pick.hit) {
+      best = sticky_pick;
     }
   }
 
@@ -294,7 +318,8 @@ PickResult WorldFrame::PickForInteraction(
       return result;
     }
   }
-  return Pick(screen_x, screen_y);
+  // Clicks select what is highlighted, including a sticky mouseover.
+  return Pick(screen_x, screen_y, hover_pick_.guid);
 }
 
 PickResult WorldFrame::RayTestTerrain(const WorldRay &ray) const {
@@ -483,7 +508,7 @@ void WorldFrame::UpdateNameplateHover(const std::uint64_t target_guid) {
 }
 
 void WorldFrame::Update(float ) {
-  PickResult model_pick = Pick(mouse_x_, mouse_y_);
+  PickResult model_pick = Pick(mouse_x_, mouse_y_, hover_pick_.guid);
   PickResult hover_pick = model_pick;
   const bool uses_terrain_and_liquid =
       cursor_context_.has_active_targeting_spell && cursor_context_.targets_terrain_and_liquid;
