@@ -204,3 +204,24 @@ TEST_CASE("BuildRetailCameraViewMatrix falls back to the identity for near-paral
   CHECK_FALSE(std::isnan(out[0]));
   CHECK_FALSE(std::isinf(out[0]));
 }
+
+TEST_CASE("BuildRetailCameraViewMatrix builds a real basis at the 89 degree pitch limit",
+          "[math][camera]") {
+  // The world camera clamps pitch to about 89 degrees; looking straight up
+  // or down at the limit must still produce a view, not the identity.
+  const float pitch = 1.5533430576324463f;
+  const float eye[3] = {10.0f, 20.0f, 30.0f};
+  for (const float sign : {1.0f, -1.0f}) {
+    const float target[3] = {eye[0] + std::cos(pitch), eye[1],
+                             eye[2] + sign * std::sin(pitch)};
+    const float up[3] = {0.0f, 0.0f, 1.0f};
+    float out[16] = {};
+    BuildRetailCameraViewMatrix(eye, target, up, out);
+    CHECK(out[2] == Approx(std::cos(pitch)).margin(1e-4));
+    CHECK(out[10] == Approx(sign * std::sin(pitch)).margin(1e-4));
+    const float right_length =
+        std::sqrt(out[0] * out[0] + out[4] * out[4] + out[8] * out[8]);
+    CHECK(right_length == Approx(1.0f).margin(1e-4));
+    CHECK(out[12] != 0.0f);
+  }
+}

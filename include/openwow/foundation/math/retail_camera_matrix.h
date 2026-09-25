@@ -38,14 +38,12 @@ inline void BuildRetailCameraViewMatrix(const float eye[3], const float target[3
   };
   const float right_length_squared =
       right[0] * right[0] + right[1] * right[1] + right[2] * right[2];
-  if (right_length_squared < 0.01f) {
-    // forward and up are (near-)parallel -- e.g. a camera looking straight
-    // along the world-up axis with an unrotated up reference -- so no
-    // well-defined right/view_up basis exists. Bail out the same way the
-    // forward/up degenerate-length checks above do, leaving `out` as the
-    // identity that was pre-filled at the top of this function, rather
-    // than dividing by a nearly-zero length and propagating NaN/Inf into
-    // the view matrix.
+  // Only an exactly (or numerically) parallel forward/up has no right
+  // vector; fall back to the identity there rather than divide by ~0.
+  // Anything wider rejects valid views: the world camera pitches to 89
+  // degrees, where |forward x up|^2 is only about 3e-4.
+  constexpr float kParallelRightLengthSquared = 1e-12f;
+  if (right_length_squared < kParallelRightLengthSquared) {
     return;
   }
   const float inverse_right_length = 1.0f / std::sqrt(right_length_squared);
