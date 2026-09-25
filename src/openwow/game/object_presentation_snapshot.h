@@ -71,6 +71,9 @@ struct ObjectPresentationRecord {
   bool mounted{false};
 
   CharacterLocomotionState locomotion{};
+  /// Smoothed ground-contact normal at the unit's displayed position, used to
+  /// tilt models (such as a mount) whose M2 header requests ground tilt.
+  std::optional<std::array<float, 3>> ground_normal;
 };
 
 enum class SpellVisualLifecycleAction : std::uint8_t {

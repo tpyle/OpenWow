@@ -8,6 +8,7 @@
 #include "openwow/render/api/math/render_math_types.h"
 #include "openwow/foundation/diagnostics/logging.h"
 #include "openwow/render/models/characters/character_appearance_geosets.h"
+#include "openwow/render/models/animation/m2_attachment_transform.h"
 #include "openwow/render/models/animation/model_instance_transform.h"
 #include "openwow/render/api/math/render_matrix_math.h"
 
@@ -641,8 +642,23 @@ bool MountRenderer::PrepareMountPose(
   }
   inst.animation_playback_rate =
       ResolveMountAnimationPlaybackRate(m2_system_, inst);
-  const auto model_matrix = BuildM2ModelInstanceTransform(
-      unit.x, unit.y, unit.z, unit.facing, inst.mount_scale);
+  // Mounts tilt to the ground as their own M2 header requests (the same
+  // flags that tilt unmounted creatures); the rider sits on the saddle
+  // attachment and tilts with the mount, while humanoid riders on foot stay
+  // upright because their models don't request tilt.
+  auto orientation_mode = AttachmentOrientationMode::kNone;
+  if (const auto info = m2_system_.QueryModelInfo(inst.m2_model_id);
+      info.status == m2::M2ResultStatus::kReady) {
+    orientation_mode = static_cast<AttachmentOrientationMode>(info.info.global_flags & 0x3u);
+  }
+  const RenderVec3 position{unit.x, unit.y, unit.z};
+  const RenderVec3 up = unit.ground_normal.has_value()
+                            ? RenderVec3{(*unit.ground_normal)[0], (*unit.ground_normal)[1],
+                                         (*unit.ground_normal)[2]}
+                            : RenderVec3{0.0f, 0.0f, 1.0f};
+  const auto model_matrix = BuildM2AttachmentTransformMatrix(
+      RenderVec3View{position}, unit.facing, inst.mount_scale, RenderVec3View{up},
+      orientation_mode);
   inst.mount_world_transform = model_matrix;
 
   auto status = m2_system_.SetWorldTransformMatrix(inst.m2_instance_id,

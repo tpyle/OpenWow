@@ -1029,6 +1029,8 @@ ObjectPresentationSnapshot ObjectManager::PublishPresentationSnapshot(
                                        unit->State().IsDead(),
                                        unit->Animation().GetEmoteInternalFlags())
                 : CharacterLocomotionState{},
+        .ground_normal = unit != nullptr ? unit->Movement().ModelGroundNormal()
+                                         : std::nullopt,
     };
     if (guid == local_player_guid_) {
       snapshot.local_player = record.handle;
