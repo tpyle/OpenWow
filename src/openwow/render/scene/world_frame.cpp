@@ -237,6 +237,7 @@ PickResult WorldFrame::Pick(int screen_x, int screen_y, const game::ObjectGuid s
     int best_priority = 0;
     bool best_body = false;
     PickResult sticky_pick{};
+    bool sticky_body = false;
     const auto consider = [&](const game::ObjectPresentationRecord &object) {
       if (!PassesModelFilter(object, flags, *objects_)) {
         return;
@@ -265,6 +266,7 @@ PickResult WorldFrame::Pick(int screen_x, int screen_y, const game::ObjectGuid s
       };
       if (!sticky.IsEmpty() && object.handle.guid == sticky) {
         sticky_pick = to_pick();
+        sticky_body = hit->body;
       }
       const int priority = ModelHitPriority(object, *objects_);
 
@@ -295,7 +297,10 @@ PickResult WorldFrame::Pick(int screen_x, int screen_y, const game::ObjectGuid s
         }
       }
     }
-    if (sticky_pick.hit) {
+    // The current mouseover stays picked while the cursor is still on it,
+    // unless the cursor is now directly on another unit's body (which beats
+    // mere padding, as in the original client).
+    if (sticky_pick.hit && (sticky_body || !best_body || best.guid == sticky_pick.guid)) {
       best = sticky_pick;
     }
   }

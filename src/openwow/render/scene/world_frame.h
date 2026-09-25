@@ -96,7 +96,8 @@ public:
 
   /// Picks the object under the screen point. A hit on a rendered model beats
   /// a hit within a unit's selection padding; within a tier the nearest wins. While the
-  /// ray still hits `sticky` (usually the current mouseover), it stays picked.
+  /// ray still hits `sticky` (usually the current mouseover), it stays picked
+  /// unless another unit's body is hit directly.
   [[nodiscard]] PickResult Pick(int screen_x, int screen_y,
                                 game::ObjectGuid sticky = {}) const;
 
