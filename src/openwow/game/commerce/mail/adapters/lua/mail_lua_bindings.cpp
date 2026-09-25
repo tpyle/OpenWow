@@ -219,24 +219,32 @@ void MailLuaAdapter::PickupAttachment(
       *cursor, inventory(), items(), dbc(), objects().GetActivePlayerGuid(),
       openwow::game::ObjectGuid(guid));
 }
-MailLuaAdapter* TryGetMailLuaAdapter(lua_State* state) {
-  auto* adapter = static_cast<MailLuaAdapter*>(
-      openwow::ui::lua::detail::ActiveBindingAdapter(state));
-  if (adapter == nullptr) {
-    adapter = static_cast<MailLuaAdapter*>(
-        openwow::ui::lua::detail::GlobalBindingAdapter(state, "CloseMail"));
+namespace {
+
+/// The mail module's adapter. Mail helpers are also called from other
+/// modules' Lua bindings (UseContainerItem attaches items to a mail draft),
+/// where the active binding's adapter belongs to that other module; casting
+/// it to MailLuaAdapter read garbage and crashed. Prefer the adapter bound to
+/// a mail global and use the active one only if that lookup fails.
+MailLuaAdapter* ResolveMailLuaAdapter(lua_State* state) {
+  if (auto* adapter = static_cast<MailLuaAdapter*>(
+          openwow::ui::lua::detail::GlobalBindingAdapter(state, "CloseMail"));
+      adapter != nullptr) {
+    return adapter;
   }
+  return static_cast<MailLuaAdapter*>(
+      openwow::ui::lua::detail::ActiveBindingAdapter(state));
+}
+
+}  // namespace
+
+MailLuaAdapter* TryGetMailLuaAdapter(lua_State* state) {
+  auto* adapter = ResolveMailLuaAdapter(state);
   return (adapter != nullptr && adapter->bound()) ? adapter : nullptr;
 }
 
 MailLuaAdapter& RequireMailLuaAdapter(lua_State* state) {
-  auto* adapter = static_cast<MailLuaAdapter*>(
-      openwow::ui::lua::detail::ActiveBindingAdapter(state));
-  if (adapter == nullptr) {
-
-    adapter = static_cast<MailLuaAdapter*>(
-        openwow::ui::lua::detail::GlobalBindingAdapter(state, "CloseMail"));
-  }
+  auto* adapter = ResolveMailLuaAdapter(state);
   if (!adapter || !adapter->bound()) luaL_error(state, "mail Lua API is not bound");
   return *adapter;
 }
