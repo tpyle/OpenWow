@@ -35,6 +35,7 @@ add_executable(openwow_tests
   world/move_spline_update_tests.cpp
   render/shadow_texel_snap_tests.cpp
   world/wmo_portal_visibility_tests.cpp
+  render/weather_collision_cache_tests.cpp
   runtime/frame_scheduler_tests.cpp
   data/dbc_file_tests.cpp
   data/faction_reaction_tests.cpp

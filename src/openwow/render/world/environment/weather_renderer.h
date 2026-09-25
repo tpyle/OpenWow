@@ -3,6 +3,7 @@
 #include "openwow/render/api/draw_encoder.h"
 #include "openwow/render/api/math/render_math_types.h"
 #include "openwow/render/resources/textures/texture_lease.h"
+#include "openwow/render/world/environment/weather_collision_cache.h"
 #include "openwow/world/environment/weather.h"
 
 #include <bgfx/bgfx.h>
@@ -103,6 +104,9 @@ class WeatherRenderer {
   TextureManager& texture_manager_;
   GroundHeightSampler ground_height_sampler_;
   CollisionSampler collision_sampler_;
+  WeatherCollisionCache collision_cache_;
+  double weather_time_{0.0};
+  double last_collision_prune_{0.0};
   world::WeatherKind kind_{world::WeatherKind::kNone};
   std::uint32_t active_color_abgr_{0xffffffffu};
   bool retiring_{};

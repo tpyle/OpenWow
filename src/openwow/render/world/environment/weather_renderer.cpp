@@ -32,6 +32,11 @@ constexpr float kRainSplashLifetime = 0.25f;
 constexpr float kSnowTerminalFade = 0.25f;
 constexpr float kPlayerVelocitySpawnOffset = 1.75f;
 constexpr float kMaximumParticleDistance = 200.0f;
+// Spawning is proportional to frame time; bounding the step keeps one slow
+// frame from spawning (and colliding) enough particles to slow the next.
+constexpr float kMaximumSpawnStep = 1.0f / 20.0f;
+// New collision rays per frame; other particles reuse cached cell results.
+constexpr std::size_t kMaximumCollisionRaysPerFrame = 256u;
 
 struct PrimaryHalfExtent {
   float x;
@@ -394,8 +399,7 @@ void WeatherRenderer::SpawnPrimary(const float dt, const RenderVec3& camera,
       SpawnRate(weather, particle_density_scale, use_weather_shaders);
   primary_spawn_credit_ =
       rate > 0.0f
-          ? std::min(static_cast<float>(kMaximumPrimaryParticles),
-                     primary_spawn_credit_ + rate * dt)
+          ? std::min(rate * kMaximumSpawnStep, primary_spawn_credit_ + rate * dt)
           : 0.0f;
   const auto count = std::min<std::size_t>(
       static_cast<std::size_t>(primary_spawn_credit_),
@@ -409,6 +413,7 @@ void WeatherRenderer::SpawnPrimary(const float dt, const RenderVec3& camera,
   const float density =
       std::clamp((weather.density - 0.25f) / 0.75f, 0.0f, 1.0f);
   std::uniform_real_distribution<float> unit(0.0f, 1.0f);
+  std::size_t ray_budget = kMaximumCollisionRaysPerFrame;
   primary_particles_.reserve(
       std::min(kMaximumPrimaryParticles, primary_particles_.size() + count));
   for (std::size_t index = 0; index < count; ++index) {
@@ -471,13 +476,27 @@ void WeatherRenderer::SpawnPrimary(const float dt, const RenderVec3& camera,
     const RenderVec3 origin = Add(Add(camera, local), motion_offset);
     const float speed = Length(particle.velocity);
     particle.motion_lifetime = fallback_lifetime;
-    if (collision_sampler_ && speed > 1.0e-6f) {
-      const RenderVec3 direction = Scale(particle.velocity, 1.0f / speed);
-      if (const auto collision = collision_sampler_(
-              origin, direction, kMaximumParticleDistance)) {
-        particle.motion_lifetime = collision->distance / speed;
-        particle.collision_position = collision->position;
-        particle.collision_normal = collision->normal;
+    if (collision_sampler_ && speed > 1.0e-6f && particle.velocity[2] < 0.0f) {
+      auto surface = collision_cache_.Find(origin[0], origin[1], weather_time_);
+      if (!surface.has_value() && ray_budget > 0u) {
+        --ray_budget;
+        const RenderVec3 direction = Scale(particle.velocity, 1.0f / speed);
+        WeatherCollisionCache::Surface sampled{};
+        if (const auto collision = collision_sampler_(
+                origin, direction, kMaximumParticleDistance)) {
+          sampled = {.hit = true, .z = collision->position[2],
+                     .normal = collision->normal};
+        }
+        collision_cache_.Store(origin[0], origin[1], weather_time_, sampled);
+        surface = sampled;
+      }
+      if (surface.has_value() && surface->hit && surface->z < origin[2]) {
+        // Land where this particle's own path reaches the cell's surface.
+        const float time_to_surface = (surface->z - origin[2]) / particle.velocity[2];
+        particle.motion_lifetime = time_to_surface;
+        particle.collision_position =
+            Add(origin, Scale(particle.velocity, time_to_surface));
+        particle.collision_normal = surface->normal;
         particle.has_collision = true;
       }
     }
@@ -770,11 +789,16 @@ void WeatherRenderer::Update(const float dt, const RenderVec3& camera,
       rain_splash_particles_.empty() && mist_particles_.empty()) {
     ActivateWeather(weather);
   }
+  weather_time_ += step;
+  if (weather_time_ - last_collision_prune_ > 1.0) {
+    collision_cache_.Prune(weather_time_);
+    last_collision_prune_ = weather_time_;
+  }
   if (!retiring_) {
-    SpawnPrimary(step, camera, weather, particle_density_scale,
-                 use_weather_shaders);
-    SpawnMist(step, camera, weather, particle_density_scale,
-              use_weather_shaders);
+    SpawnPrimary(std::min(step, kMaximumSpawnStep), camera, weather,
+                 particle_density_scale, use_weather_shaders);
+    SpawnMist(std::min(step, kMaximumSpawnStep), camera, weather,
+              particle_density_scale, use_weather_shaders);
   }
 }
 
