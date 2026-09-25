@@ -48,6 +48,14 @@ std::uint32_t Trainer_ParseFilterString(const char *filter_str);
 
 void Trainer_ResetFrameState();
 bool Trainer_PrepareFrameState(const WorldSession &session);
+
+/// True when trainer entry `trainer_spell_id` is `learned_spell_id` or teaches
+/// it through a learn-spell effect. Trainer entries such as "Apprentice
+/// Jewelcrafter" are teaching spells: SMSG_LEARNED_SPELL names the spell they
+/// teach, not the entry itself.
+bool Trainer_SpellTeaches(const openwow::data::dbc::DbcLoader &dbc,
+                          std::int32_t trainer_spell_id,
+                          std::uint32_t learned_spell_id);
 const std::string &Trainer_GetGreetingText();
 
 std::uint32_t Trainer_GetVisibleServiceCount(const WorldSession &session,

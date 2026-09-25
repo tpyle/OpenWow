@@ -110,6 +110,22 @@ class GossipManager {
   [[nodiscard]] const TrainerList& trainer() const { return trainer_.value(); }
   [[nodiscard]] std::int32_t trainer_type() const { return trainer_type_; }
 
+  /// Marks every trainer entry for which `teaches(entry)` is true as Known.
+  template <typename Teaches>
+  bool MarkTrainerSpellsKnownIf(const Teaches& teaches) {
+    if (!trainer_.has_value()) {
+      return false;
+    }
+    bool changed = false;
+    for (TrainerSpell& spell : trainer_->spells) {
+      if (spell.state != TrainerSpellState::Known && teaches(spell)) {
+        spell.state = TrainerSpellState::Known;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
   bool MarkTrainerSpellKnown(std::int32_t spell_id) {
     if (!trainer_.has_value()) {
       return false;

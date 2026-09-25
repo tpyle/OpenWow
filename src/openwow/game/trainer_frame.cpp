@@ -1359,4 +1359,24 @@ void Trainer_ResetServiceTypeFilters() {
   ApplyTrainerServiceTypeFilterMask(kTrainerAvailabilityMaskAll);
 }
 
+bool Trainer_SpellTeaches(const openwow::data::dbc::DbcLoader &dbc,
+                          const std::int32_t trainer_spell_id,
+                          const std::uint32_t learned_spell_id) {
+  if (trainer_spell_id > 0 &&
+      static_cast<std::uint32_t>(trainer_spell_id) == learned_spell_id) {
+    return true;
+  }
+  const auto *const spell = LookupTrainerSpellEntry(&dbc, trainer_spell_id);
+  if (spell == nullptr) {
+    return false;
+  }
+  for (std::size_t effect_index = 0; effect_index < spell->effect.size(); ++effect_index) {
+    if (spell->effect[effect_index] == kSpellEffectLearnSpell &&
+        spell->effect_trigger_spell[effect_index] == learned_spell_id) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }

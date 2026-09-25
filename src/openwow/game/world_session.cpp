@@ -668,8 +668,16 @@ WorldSession::WorldSession(openwow::data::DBCacheRuntime& db_cache_runtime,
                          const bool notify,
                          const std::uint32_t old_spell_id) {
 
-                    gossip_.MarkTrainerSpellKnown(
-                        static_cast<std::int32_t>(spell_id));
+                    if (const auto *const dbc = GetDbcLoader(); dbc != nullptr) {
+                      gossip_.MarkTrainerSpellsKnownIf(
+                          [dbc, spell_id](const TrainerSpell &entry) {
+                            return Trainer_SpellTeaches(*dbc, entry.spell_id,
+                                                        spell_id);
+                          });
+                    } else {
+                      gossip_.MarkTrainerSpellKnown(
+                          static_cast<std::int32_t>(spell_id));
+                    }
                     SpellBookFrame::LearnSpell(
                         *this, spell_id, notify, old_spell_id);
                   },
