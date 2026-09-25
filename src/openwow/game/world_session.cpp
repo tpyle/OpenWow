@@ -1376,6 +1376,7 @@ WorldSession::WorldSession(openwow::data::DBCacheRuntime& db_cache_runtime,
 WorldSession::~WorldSession() {
   SetOnMovementActivatedCallback(nullptr);
   spell_cast_runtime_.SetSendCastSpell({});
+  spell_cast_runtime_.SetSendCancelMountAura({});
   AuraTracker::Get().Reset();
   lifetime_token_.reset();
 }
@@ -1568,6 +1569,11 @@ void WorldSession::SetSendFn(WorldSendFn send) {
       });
 
   const auto spell_callback_lifetime = lifetime_token();
+  spell_cast_runtime_.SetSendCancelMountAura([this, spell_callback_lifetime] {
+    if (!spell_callback_lifetime.expired()) {
+      interaction_.SendCancelMountAura();
+    }
+  });
   spell_cast_runtime_.SetSendCastSpell(
       [this, send_packet, spell_callback_lifetime](
           const SpellCastCommand& command) {

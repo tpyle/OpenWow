@@ -597,7 +597,10 @@ int LuaDismissCompanion(lua_State *L) {
 
     any_active_companion = true;
     if (type != CompanionCollectionType::kCritter) {
-      session->interaction().SendCastSpell(spell_id, 0, 0);
+      // Dismissing the mount is a dismount; recasting the mount spell is
+      // rejected by the server while mounted.
+      session->interaction().SendCancelMountAura();
+      break;
     }
   }
 

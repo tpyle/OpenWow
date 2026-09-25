@@ -1,5 +1,6 @@
 
 #include "openwow/game/interaction_sender.h"
+#include "openwow/game/spell_cast_execution.h"
 #include "openwow/game/inventory/equipment/adapters/protocol/equipment_set_packet_codec.h"
 #include "openwow/game/actions/held_cursor/held_cursor.h"
 
@@ -1347,6 +1348,14 @@ bool InteractionSender::TrySendCastSpell(std::uint32_t spell_id,
 
   if (session_ == nullptr) {
     return false;
+  }
+
+  if (const auto recast = ClassifyMountRecast(*session_, spell_id);
+      recast != MountRecast::kNotApplicable) {
+    SendCancelMountAura();
+    if (recast == MountRecast::kDismountOnly) {
+      return true;
+    }
   }
 
   auto& spells = session_->spells();

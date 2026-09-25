@@ -59,6 +59,31 @@
 
 namespace openwow::game {
 
+namespace {
+constexpr std::uint32_t kSpellAuraMountedForRecast = 78u;
+}  // namespace
+
+MountRecast ClassifyMountRecast(const WorldSession& session,
+                                const std::uint32_t spell_id) {
+  const auto* const dbc = session.GetDbcLoader();
+  const auto* const player = session.objects().GetLocalPlayerTyped();
+  const auto* const spell =
+      dbc != nullptr ? dbc->spell().LookupEntry(spell_id) : nullptr;
+  if (spell == nullptr || player == nullptr ||
+      spell->effect_apply_aura[0] != kSpellAuraMountedForRecast ||
+      !player->Mount().IsMountedStateActive(*player) ||
+      player->State().IsTaxiFlight()) {
+    return MountRecast::kNotApplicable;
+  }
+  for (const auto& aura : player->Auras().All()) {
+    if (aura.spell_id == spell_id) {
+      return MountRecast::kDismountOnly;
+    }
+  }
+  return MountRecast::kDismountThenCast;
+}
+
+
 int SendCastSpell(WorldSession& session, std::uintptr_t spell_entry,
                   bool skip_visual) {
   if (spell_entry == 0) return 0;
@@ -375,7 +400,11 @@ SpellRequirementValidation ValidateSpellRequirementsDetailed(
     }
   }
 
-  if (caster->Mount().IsMountedStateActive(*caster) &&
+  // Mount spells cast while mounted are turned into a dismount (and, for a
+  // different mount, a follow-up cast) by the cast paths; see
+  // ClassifyMountRecast.
+  if (spell->effect_apply_aura[0] != kSpellAuraMountedForRecast &&
+      caster->Mount().IsMountedStateActive(*caster) &&
       (spell->attributes & kAttr0CastableWhileMounted) == 0) {
     return failure(SpellCastResult::kNotMounted);
   }

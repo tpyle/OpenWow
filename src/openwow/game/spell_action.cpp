@@ -906,6 +906,14 @@ bool SpellAction_ValidateAndInitiateCast(const WorldSession& session,
     return false;
   }
 
+  if (const auto recast = ClassifyMountRecast(session, spell_id);
+      recast != MountRecast::kNotApplicable) {
+    session.spells().RequestDismount();
+    if (recast == MountRecast::kDismountOnly) {
+      return true;
+    }
+  }
+
   const auto preflight = session.spells().ValidatePlayerCastRequest(
       session, spell_id, ObjectGuid(target_guid));
   if (preflight != SpellCastResult::kSuccess) {

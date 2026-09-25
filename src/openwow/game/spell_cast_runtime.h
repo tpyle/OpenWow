@@ -72,6 +72,14 @@ class SpellCastRuntime {
   SpellCastRuntime();
 
   void SetSendCastSpell(PacketSendFunc send);
+  /// Sets the sender for CMSG_CANCEL_MOUNT_AURA.
+  void SetSendCancelMountAura(std::function<void()> send);
+  /// Asks the server to dismount the local player, if a sender is bound.
+  void RequestDismount() const {
+    if (send_cancel_mount_aura_) {
+      send_cancel_mount_aura_();
+    }
+  }
 
   SpellCastResult CastSpell(const WorldSession& session,
                             std::uint32_t spell_id,
@@ -177,6 +185,7 @@ class SpellCastRuntime {
   std::uint32_t auto_attack_spell_id_ = 0;
   std::uint32_t remembered_held_item_pet_target_spell_id_ = 0;
   PacketSendFunc send_cast_spell_;
+  std::function<void()> send_cancel_mount_aura_;
   SpellTargeting targeting_;
 };
 

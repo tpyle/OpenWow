@@ -248,6 +248,10 @@ const char* SpellCastResultToString(const SpellCastResult result) {
 
 SpellCastRuntime::SpellCastRuntime() : targeting_(this) {}
 
+void SpellCastRuntime::SetSendCancelMountAura(std::function<void()> send) {
+  send_cancel_mount_aura_ = std::move(send);
+}
+
 void SpellCastRuntime::SetSendCastSpell(PacketSendFunc send) {
   send_cast_spell_ = std::move(send);
 }
