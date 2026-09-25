@@ -182,6 +182,10 @@ class CursorSurface {
     std::pair<int, int> hotspot{0, 0};
   };
   PublishedBuiltInCursor published_builtin_cursor_;
+  // Set when the hardware cursor's texture couldn't be built yet (it may
+  // still be streaming in at startup); RenderOverlay retries periodically.
+  bool hardware_cursor_retry_pending_ = false;
+  std::uint32_t last_hardware_cursor_retry_ms_ = 0;
   std::unordered_map<std::uint32_t, openwow::render::TextureLease>
       software_cursor_texture_leases_;
   SDL_Cursor* native_cursor_suppression_handle_ = nullptr;

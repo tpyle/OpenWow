@@ -788,6 +788,15 @@ void CursorSurface::PreloadCursorTextures() {
 }
 
 void CursorSurface::RenderOverlay(std::uint8_t view_id, float screen_w, float screen_h) {
+  constexpr std::uint32_t kHardwareCursorRetryIntervalMs = 250u;
+  if (hardware_cursor_retry_pending_ && window_ != nullptr && visible_ &&
+      WantsHardwareCursor()) {
+    const std::uint32_t now = SDL_GetTicks();
+    if (now - last_hardware_cursor_retry_ms_ >= kHardwareCursorRetryIntervalMs) {
+      last_hardware_cursor_retry_ms_ = now;
+      ApplyHardwareCursor();
+    }
+  }
   RefreshPresentationMode();
   if (!ShouldRenderSoftwareCursor() || !window_ || screen_w <= 0.0f || screen_h <= 0.0f) {
     return;
@@ -908,14 +917,17 @@ void CursorSurface::ApplyHardwareCursor() {
   SDL_Cursor* fresh_handle = CreateCursorFromBLP(
       presented_path, presented_hotspot.first, presented_hotspot.second);
   if (fresh_handle == nullptr) {
-
-    std::array<std::uint8_t, detail::kCursor32x32PixelBytes> transparent_rgba{};
-    fresh_handle = CreateCursorFromPixels(
-        transparent_rgba, presented_hotspot.first, presented_hotspot.second);
-  }
-  if (fresh_handle == nullptr) {
+    // The cursor texture isn't readable yet (e.g. still streaming in right
+    // after login). Caching a transparent stand-in here left the cursor
+    // invisible until its type changed; show the system cursor for now and
+    // let RenderOverlay retry.
+    hardware_cursor_retry_pending_ = true;
+    if (SDL_Cursor* const fallback = SDL_GetDefaultCursor()) {
+      SDL_SetCursor(fallback);
+    }
     return;
   }
+  hardware_cursor_retry_pending_ = false;
 
   SDL_SetCursor(fresh_handle);
   FreeCursorHandle(published_builtin_cursor_.handle);
