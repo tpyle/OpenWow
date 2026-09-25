@@ -509,8 +509,11 @@ bool CursorSurface::SetRuntimeCursorTexture(
 
   std::array<std::uint8_t, detail::kCursor32x32PixelBytes> decoded{};
   bool image_loaded = false;
-  const bool converted =
-      DecodeCursorPixels(texture_path, &decoded, &image_loaded);
+  // Held item/spell icon paths are stored without an extension, like other
+  // UI texture names; resolve the file the way the texture manager does.
+  const bool converted = DecodeCursorPixels(
+      openwow::data::MakeRetailTextureCacheBlpPath(texture_path), &decoded,
+      &image_loaded);
   if (!image_loaded) {
 
     runtime_cursor_scratch_rgba_.fill(0);
@@ -876,6 +879,7 @@ void CursorSurface::RenderOverlay(std::uint8_t view_id, float screen_w, float sc
 
 void CursorSurface::ApplyHardwareCursor() {
   if (runtime_cursor_enabled_ && runtime_cursor_pixels_valid_) {
+    hardware_cursor_retry_pending_ = false;
     if (runtime_cursor_handle_ == nullptr) {
       runtime_cursor_handle_ = CreateCursorFromPixels(
           runtime_cursor_rgba_, runtime_visible_hotspot_.first,
