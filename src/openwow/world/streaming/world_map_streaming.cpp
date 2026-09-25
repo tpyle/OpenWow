@@ -1,4 +1,5 @@
 #include "openwow/world/streaming/world_map.h"
+#include "openwow/world/coordinates/bounds_union.h"
 
 #include "openwow/foundation/diagnostics/logging.h"
 #include "openwow/foundation/math/row_major_mat4x4.h"
@@ -190,6 +191,7 @@ void WorldMap::UpdateResidentObjectWmoPresentation(
       stored_bounds = world_bounds;
     }
   }
+  ExpandBoundsToCover(instance.placement_world_bounds, instance.group_world_bounds);
 
   if (index_inputs_changed) {
     wmo_area_spatial_index_.RemovePlacement(key);
@@ -522,6 +524,7 @@ void WorldMap::MaterializeWmoPlacement(const PendingWmoPlacement &placement) {
         world_bounds.data(), local_bounds.data(), instance.model_matrix.data());
     instance.group_world_bounds.push_back(world_bounds);
   }
+  ExpandBoundsToCover(instance.placement_world_bounds, instance.group_world_bounds);
   instance.group_liquid_surfaces.resize(cached->second.groups.size());
   instance.critical_spawn_groups.assign(cached->second.groups.size(), 0u);
   auto [published, inserted] = wmo_instances_.emplace(placement.key, std::move(instance));
