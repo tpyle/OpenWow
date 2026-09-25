@@ -131,6 +131,9 @@ public:
   [[nodiscard]] bool EmoteStateCheck(
       std::uint16_t animation_flags,
       std::uint32_t *out_animation_id = nullptr) const;
+  /// True when a jump/fall animation is playing or has been requested (the
+  /// model may not have switched to a just-requested JumpStart yet).
+  [[nodiscard]] bool IsAirborneAnimationActiveOrRequested() const;
   [[nodiscard]] std::optional<std::uint16_t> GetCurrentAnimationId() const;
   [[nodiscard]] const PlaybackRequest &GetPlaybackRequest() const noexcept {
     return playback_request_;

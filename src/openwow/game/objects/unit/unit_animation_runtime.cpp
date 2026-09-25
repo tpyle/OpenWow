@@ -7,6 +7,7 @@
 #include "openwow/data/formats/dbc/dbc_loader.h"
 #include "openwow/core/display_settings.h"
 #include "openwow/foundation/diagnostics/logging.h"
+#include "openwow/game/movement/retail_fall_kinematics.h"
 #include "openwow/runtime/time/game_clock.h"
 #include "openwow/game/activities/dance/application/unit_dance_state.h"
 #include "openwow/game/barber_shop.h"
@@ -1536,6 +1537,16 @@ bool UnitAnimationRuntime::HasActiveSpellVisualStandAnimationSource() const {
          owner_.Casts().GetChannelCast().spell_id != 0u || HasChannelingActionLock();
 }
 
+bool UnitAnimationRuntime::IsAirborneAnimationActiveOrRequested() const {
+  const auto current = GetCurrentAnimationId();
+  if (current.has_value() &&
+      IsMovementStandPreservingBehaviorId(ResolveAnimationBehaviorId(owner_, *current))) {
+    return true;
+  }
+  return IsMovementStandPreservingBehaviorId(
+      ResolveAnimationBehaviorId(owner_, playback_request_.animation_id));
+}
+
 std::optional<std::uint16_t> UnitAnimationRuntime::GetCurrentAnimationId() const {
   if (current_anim_group_ >= 0 &&
       static_cast<std::uint32_t>(current_anim_group_) <
@@ -1871,12 +1882,7 @@ void UnitAnimationRuntime::HandleMovementAnimation(
   if ((current_flags & (kMoveFlagFalling | kMoveFlagFallingFar)) != 0u) {
     // Keep refresh pending only until a jump/fall preserving anim is active.
     // Continuous pending + ApplySelectedStandAnimation(restart) froze JumpStart.
-    const auto current = GetCurrentAnimationId();
-    const bool preserve =
-        current.has_value() &&
-        IsMovementStandPreservingBehaviorId(
-            ResolveAnimationBehaviorId(owner_, *current));
-    if (!preserve) {
+    if (!IsAirborneAnimationActiveOrRequested()) {
       stand_selector_refresh_pending_ = true;
     }
     return;
@@ -2477,10 +2483,8 @@ void UnitAnimationRuntime::UpdatePendingFallAnimation(
     return;
   }
   if (!was_falling) {
-    if (owner_.GetMovementInfo().HasFallingLaunchVelocity()) {
-      emote_internal_flags_ &= ~kPendingFallAnimation;
-      return;
-    }
+    // Jumps arm it too: jumping off a ledge blends from the jump pose into
+    // the fall once the unit has been airborne long enough.
     emote_internal_flags_ |= kPendingFallAnimation;
   }
   if ((emote_internal_flags_ & kPendingFallAnimation) != 0u) {
@@ -2491,6 +2495,18 @@ void UnitAnimationRuntime::UpdatePendingFallAnimation(
 void UnitAnimationRuntime::TryPlayPendingFallAnimation() {
   constexpr std::uint32_t kPendingFallAnimation = 0x00002000u;
   if ((emote_internal_flags_ & kPendingFallAnimation) == 0u || owner_.State().IsDead()) {
+    return;
+  }
+  // The fall animation starts only once the unit has been airborne longer
+  // than a jump takes to come back down to its takeoff height
+  // (2 * |jump velocity| / gravity, about 0.82 s), whether it walked off an
+  // edge or jumped (fall time counts from takeoff). Observed in the original
+  // client: roughly a second after walking off an edge; never on curbs or a
+  // jump on flat ground, which lands just before this.
+  constexpr float kFallAnimationDelaySeconds =
+      2.0f * -PhysicsConstants::JumpInitialVelocity * PhysicsConstants::InverseGravity;
+  if (static_cast<float>(owner_.GetMovementInfo().fall_time) * 0.001f <=
+      kFallAnimationDelaySeconds) {
     return;
   }
   const auto *const passenger = owner_.Vehicle().GetVehiclePassengerComponent();
@@ -3598,20 +3614,24 @@ bool UnitAnimationRuntime::ResolveIdleStandAnimation(
 bool UnitAnimationRuntime::ApplyMovementDrivenStandAnimationOverride(
     const WorldSession &session) {
   if (!HasMovementDrivenStandAnimationOverride(session)) return false;
+  // While airborne the stand selector keeps the current pose rather than
+  // forcing Fall: a jump owns its pose (even a JumpStart requested at takeoff
+  // that the model hasn't switched to yet), and stepping off an edge keeps
+  // the locomotion pose until TryPlayPendingFallAnimation starts the fall
+  // after about a second, as in the original client.
   const auto current = GetCurrentAnimationId();
-  const bool preserve = current.has_value() && IsMovementStandPreservingBehaviorId(
-                                                  ResolveAnimationBehaviorId(owner_, *current));
-  const std::uint16_t target =
-      preserve ? *current : static_cast<std::uint16_t>(kFallAnimationId);
+  if (!current.has_value() ||
+      !IsMovementStandPreservingBehaviorId(ResolveAnimationBehaviorId(owner_, *current))) {
+    return true;
+  }
   // JumpStart/Jump/JumpEnd/Fall are non-looping or short; ApplySelectedStandAnimation
   // requests playback with restart=!looping. Re-requesting JumpStart every stand-
   // selector tick (refresh_pending while falling) rewound takeoff forever so the
-  // sequence-end follow-up to Jump never ran. Skip when already on the target.
-  if (current.has_value() && *current == target &&
-      playback_request_.animation_id == target) {
+  // sequence-end follow-up to Jump never ran. Skip when already on it.
+  if (playback_request_.animation_id == *current) {
     return true;
   }
-  ApplySelectedStandAnimation(target, 0u);
+  ApplySelectedStandAnimation(*current, 0u);
   return true;
 }
 
