@@ -294,6 +294,10 @@ class CGGameObject_C : public CGObject_C {
 
   [[nodiscard]] float GetInteractDistance() const;
 
+  /// Types that can never be used by the player (signs, campfires,
+  /// transports...). They may still show a tooltip, but get no highlight or
+  /// interact cursor.
+  [[nodiscard]] static bool IsNeverInteractiveType(GameObjectType type);
   [[nodiscard]] bool ShouldHighlight() const;
 
   [[nodiscard]] bool IsHighlightableBaseHandler() const;

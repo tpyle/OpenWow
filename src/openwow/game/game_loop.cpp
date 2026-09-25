@@ -3840,6 +3840,12 @@ void GameLoop::SyncWorldMouseoverCursor() {
   world_frame.SetCursorMode(openwow::render::WorldFrame::CursorMode::kNone);
   if (object->IsGameObject()) {
     const auto *game_object = static_cast<const CGGameObject_C *>(object);
+    // Non-interactive objects such as Stormwind's hanging shop signs show a
+    // tooltip but keep the normal pointer, not the interact cursor.
+    if (CGGameObject_C::IsNeverInteractiveType(game_object->GetGoType())) {
+      cursor_manager_.RestoreBaseCursor();
+      return;
+    }
     cursor_manager_.SetImmediateCursorType(
         static_cast<std::uint32_t>(game_object->GetCursorType(*session)));
     return;

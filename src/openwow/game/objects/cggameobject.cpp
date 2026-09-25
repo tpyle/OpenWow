@@ -1557,9 +1557,8 @@ bool CGGameObject_C::IsSeatedOnThisChair() const {
   return false;
 }
 
-bool CGGameObject_C::ShouldHighlight() const {
-  switch (GetGoType()) {
-
+bool CGGameObject_C::IsNeverInteractiveType(const GameObjectType type) {
+  switch (type) {
   case GameObjectType::Generic:
   case GameObjectType::SpellFocus:
   case GameObjectType::Transport:
@@ -1575,7 +1574,17 @@ bool CGGameObject_C::ShouldHighlight() const {
   case GameObjectType::DoNotUse:
   case GameObjectType::GuardPost:
   case GameObjectType::DoNotUse2:
+    return true;
+  default:
     return false;
+  }
+}
+
+bool CGGameObject_C::ShouldHighlight() const {
+  if (IsNeverInteractiveType(GetGoType())) {
+    return false;
+  }
+  switch (GetGoType()) {
 
   case GameObjectType::FishingNode: {
     const auto *const objects = object_manager();
