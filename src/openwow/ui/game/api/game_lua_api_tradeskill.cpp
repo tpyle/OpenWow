@@ -1972,6 +1972,64 @@ void OpenTradeSkillView(::openwow::game::WorldSession *session,
   }
 }
 
+void RefreshLocalTradeSkillView() {
+  if (!s_trade_skill.open || s_trade_skill.is_linked || s_trade_skill.dbc == nullptr) {
+    return;
+  }
+  const auto &dbc = *s_trade_skill.dbc;
+  auto *const session = s_trade_skill.session;
+  const std::uint32_t skill_line_id = ::openwow::game::ProfessionSystem::Get().GetOpenSkillLine();
+  if (skill_line_id == 0) {
+    return;
+  }
+  if (session != nullptr) {
+    if (const auto *const player = session->objects().GetActivePlayer(); player != nullptr) {
+      const auto skill = static_cast<std::uint16_t>(skill_line_id);
+      s_trade_skill.current_rank = player->GetSkillValue(skill);
+      s_trade_skill.max_rank = player->GetSkillMaxValue(skill);
+    }
+  }
+
+  // Recipes the player knows on this line, in list order.
+  const auto &spellbook = ::openwow::game::SpellbookSystem::Get();
+  std::vector<const ::openwow::data::dbc::SkillLineAbilityEntry *> known;
+  for (const auto *ability : CollectTradeSkillLinkAbilitySpan(dbc, skill_line_id)) {
+    const auto *spell = dbc.spell().LookupEntry(ability->spell_id);
+    if (spell != nullptr && (spell->attributes & 0x20u) != 0 &&
+        spellbook.HasSpell(ability->spell_id)) {
+      known.push_back(ability);
+    }
+  }
+
+  if (known.size() != s_trade_skill.source_recipes.size()) {
+    // A recipe was learned (or unlearned): rebuild the list.
+    BuildLocalTradeSkillRecipes(dbc, session, skill_line_id, s_trade_skill.current_rank);
+  } else {
+    const auto *inventory = session != nullptr ? &session->inventory_replica() : nullptr;
+    const auto refresh = [&](std::vector<TradeSkillRecipe> &recipes) {
+      for (TradeSkillRecipe &recipe : recipes) {
+        if (recipe.is_header) {
+          continue;
+        }
+        for (const auto *ability : known) {
+          if (static_cast<std::int32_t>(ability->spell_id) != recipe.spell_id) {
+            continue;
+          }
+          if (const auto *spell = dbc.spell().LookupEntry(ability->spell_id)) {
+            recipe.num_available = ResolveTradeSkillNumAvailable(inventory, *spell);
+          }
+          recipe.difficulty = ResolveTradeSkillDifficulty(*ability, s_trade_skill.current_rank);
+          break;
+        }
+      }
+    };
+    refresh(s_trade_skill.source_recipes);
+    refresh(s_trade_skill.recipes);
+    MarkTradeSkillListViewDirty();
+  }
+  FireTradeSkillUpdateEvent();
+}
+
 void CloseTradeSkillView(::openwow::game::WorldSession *session) {
   auto &professions = ::openwow::game::ProfessionSystem::Get();
   if (professions.StopTradeSkillRepeat()) {

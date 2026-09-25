@@ -1,4 +1,5 @@
 #include "openwow/game/world_session.h"
+#include "openwow/ui/game/api/game_lua_api_tradeskill_state.h"
 #include "openwow/game/cooldown_tracker.h"
 #include "openwow/game/localization.h"
 #include "openwow/game/inventory/items/item_protocol.h"
@@ -680,6 +681,7 @@ WorldSession::WorldSession(openwow::data::DBCacheRuntime& db_cache_runtime,
                     }
                     SpellBookFrame::LearnSpell(
                         *this, spell_id, notify, old_spell_id);
+                    ui::game::detail::RefreshLocalTradeSkillView();
                   },
               .spell_forgotten =
                   [this](const std::uint32_t spell_id) {

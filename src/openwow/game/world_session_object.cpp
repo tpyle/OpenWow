@@ -2710,6 +2710,7 @@ void WorldSession::OnFieldsChanged(const WorldObject &obj, const FieldUpdateBatc
       } else if (std::strcmp(evt.event_name, "SKILL_LINES_CHANGED") == 0) {
         if (evt.guid_raw == objects().GetLocalPlayerGuid().GetRawValue()) {
           dispatch.FireEvent(ui::game::events::SKILL_LINES_CHANGED);
+          ui::game::detail::RefreshLocalTradeSkillView();
         }
       }
     }

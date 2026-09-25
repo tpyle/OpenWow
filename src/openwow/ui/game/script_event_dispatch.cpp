@@ -1,5 +1,6 @@
 
 #include "openwow/ui/game/script_event_dispatch.h"
+#include "openwow/ui/game/api/game_lua_api_tradeskill_state.h"
 
 #include "openwow/foundation/diagnostics/logging.h"
 #include "openwow/game/vehicle_helpers.h"
@@ -1259,6 +1260,8 @@ void ScriptEventDispatch::FireBagUpdate(const int bag) {
   if (!dispatcher_)
     return;
   dispatcher_->FireEvent(BAG_UPDATE, bag);
+  // Reagent counts in an open profession window follow the bags.
+  detail::RefreshLocalTradeSkillView();
 }
 
 void ScriptEventDispatch::FireBagClosed(std::uint8_t bag) {
