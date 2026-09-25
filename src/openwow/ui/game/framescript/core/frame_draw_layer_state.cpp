@@ -3,6 +3,7 @@
 #include "openwow/ui/game/framescript/core/frame_method_registry.h"
 #include "openwow/ui/game/framescript/core/frame_input_state.h"
 #include "openwow/ui/game/framescript/core/frame_lua_receiver.h"
+#include "openwow/ui/game/framescript/widgets/button_method_support.h"
 #include "openwow/ui/game/runtime/frame_input_router.h"
 #include "openwow/ui/game/runtime/world_ui_runtime_context.h"
 #include "openwow/ui/lua_c_api_convenience.h"
@@ -257,6 +258,7 @@ void SetFrameHighlightLayerShown(lua_State *L, int frame_idx, const bool shown) 
 
   SetFrameDrawLayerEnabled(L, frame_idx, kDrawLayerHighlightName, shown);
   SyncFrameRegionsForDrawLayer(L, frame_idx, kDrawLayerHighlightName);
+  RefreshButtonLabelFont(L, frame_idx);
 }
 
 void SetFrameHighlightLock(lua_State *L, int frame_idx, const bool locked) {

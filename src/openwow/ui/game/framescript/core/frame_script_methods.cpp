@@ -1,5 +1,6 @@
 #include "openwow/ui/game/framescript/core/lua_script_object_access.h"
 #include "openwow/ui/game/framescript/core/frame_anchor_runtime.h"
+#include "openwow/ui/game/framescript/core/frame_draw_layer_state.h"
 #include "openwow/ui/game/framescript/core/frame_font_runtime.h"
 #include "openwow/ui/game/framescript/core/frame_lua_object_tree.h"
 #include "openwow/ui/game/framescript/core/frame_script_dispatch.h"
@@ -435,6 +436,17 @@ static const char *GetButtonFontObjectFieldForState(lua_State *L,
   lua_pop(L, 1);
   if (disabled_state) {
     return "__ow_btn_dis_font";
+  }
+
+  // While hovered or highlight-locked the label uses the HighlightFont, when
+  // one is set.
+  if (IsFrameDrawLayerEnabled(L, button_idx, kDrawLayerHighlightName)) {
+    lua_getfield(L, button_idx, "__ow_btn_hl_font");
+    const bool has_highlight_font = lua_istable(L, -1) != 0;
+    lua_pop(L, 1);
+    if (has_highlight_font) {
+      return "__ow_btn_hl_font";
+    }
   }
 
   return "__ow_btn_normal_font";
