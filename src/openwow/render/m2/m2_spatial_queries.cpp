@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
-#include <utility>
 #include <limits>
 #include <string>
 
@@ -172,6 +171,10 @@ std::optional<PreparedSegment> PrepareSegment(const RenderVec3& start,
                          .max_distance = length};
 }
 
+/// How far outside its rendered body a unit can still be moused over. The
+/// original client's selectable area follows the body shape plus a margin.
+constexpr float kSelectionPaddingWorldUnits = 0.35f;
+
 [[nodiscard]] bool HasValidHeaderBounds(const detail::M2ModelResource& resource) {
   const auto& h = resource.model_data.header;
   return h.bounding_box_min[0] <= h.bounding_box_max[0] &&
@@ -210,26 +213,6 @@ std::optional<float> SegmentBoundsEntryFraction(const bx::Vec3& start, const bx:
   return SegmentBoxEntryFraction(start, end, h.bounding_box_min, h.bounding_box_max);
 }
 
-/// The box used for mouse selection: the model's Stand sequence bounds.
-/// Observed in the original client, the selectable box is fixed per model
-/// (it doesn't change with the playing animation) and reaches a little above
-/// the head but only about a third as far out as the header bounding box,
-/// which covers every animation. Stand bounds match that; the header box is
-/// the fallback for models without a Stand sequence.
-std::pair<const float (*)[3], const float (*)[3]> SelectionBox(
-    const detail::M2ModelResource& resource) {
-  constexpr std::uint16_t kStandAnimationId = 0u;
-  for (const auto& sequence : resource.model_data.animation_sequences) {
-    if (sequence.animation_id == kStandAnimationId &&
-        sequence.bounding_box_min[0] <= sequence.bounding_box_max[0] &&
-        sequence.bounding_box_min[1] <= sequence.bounding_box_max[1] &&
-        sequence.bounding_box_min[2] <= sequence.bounding_box_max[2]) {
-      return {&sequence.bounding_box_min, &sequence.bounding_box_max};
-    }
-  }
-  const auto& h = resource.model_data.header;
-  return {&h.bounding_box_min, &h.bounding_box_max};
-}
 
 
 std::optional<float> IntersectTriangle(const bx::Vec3& start,
@@ -288,6 +271,43 @@ std::optional<float> FindClosestIntersection(
     if (!tested) return std::nullopt;
   }
   return hit ? std::optional<float>{best} : std::nullopt;
+}
+
+/// Segment fraction of the first point where [start, end] passes within
+/// `radius` of a visible vertex, or nullopt when it never does. Used to make
+/// a unit selectable within a padding around its body shape.
+template <typename ResolveVertex>
+std::optional<float> FindFirstVertexWithin(
+    const data::model::M2Skin& skin, const M2SkinGeometry& geometry,
+    const std::vector<std::size_t>* visible_submeshes,
+    const ResolveVertex& resolve_vertex, const bx::Vec3& start,
+    const bx::Vec3& end, const float radius) {
+  const bx::Vec3 delta = bx::sub(end, start);
+  const float length_squared = bx::dot(delta, delta);
+  if (!(length_squared > 0.0f) || !(radius > 0.0f)) return std::nullopt;
+  const float radius_squared = radius * radius;
+  float best = std::numeric_limits<float>::infinity();
+  const auto test_range = [&](const std::size_t start_index, const std::size_t count) {
+    const auto range_end = std::min(start_index + count, geometry.indices.size());
+    for (std::size_t i = start_index; i < range_end; ++i) {
+      const std::size_t index = geometry.indices[i];
+      if (index >= geometry.vertices.size()) continue;
+      const bx::Vec3 offset = bx::sub(resolve_vertex(index), start);
+      const float t = std::clamp(bx::dot(offset, delta) / length_squared, 0.0f, 1.0f);
+      if (t >= best) continue;
+      const bx::Vec3 closest = bx::sub(offset, bx::mul(delta, t));
+      if (bx::dot(closest, closest) <= radius_squared) best = t;
+    }
+  };
+  if (visible_submeshes == nullptr) test_range(0u, geometry.indices.size());
+  else {
+    for (const auto index : *visible_submeshes) {
+      if (index >= skin.submeshes.size()) continue;
+      const auto& submesh = skin.submeshes[index];
+      test_range(submesh.index_start, submesh.index_count);
+    }
+  }
+  return std::isfinite(best) ? std::optional<float>{best} : std::nullopt;
 }
 
 float UniformScale(const RenderMatrix4x4View matrix) noexcept {
@@ -667,28 +687,28 @@ M2SegmentIntersectionQuery M2SpatialQueries::QueryClosestSegmentIntersection(
       !SegmentBoundsEntryFraction(local_start, local_end, resource).has_value()) {
     return result;
   }
-  if (HasValidHeaderBounds(resource)) {
-    const auto [box_min, box_max] = SelectionBox(resource);
-    if (const auto entry = SegmentBoxEntryFraction(local_start, local_end, *box_min, *box_max)) {
-      const float distance = segment->max_distance * *entry;
-      const auto point = bx::add(segment->start, bx::mul(segment->direction, distance));
-      result.has_bounds_intersection = true;
-      result.bounds_intersection = {.fraction = *entry, .distance = distance,
-                                    .point = {point.x, point.y, point.z}};
-    }
-  }
   const auto& geometry = resource.skin_geometry;
   if (geometry.vertices.empty() || geometry.indices.empty()) return {
       .status = M2ResultStatus::kUnsupported, .reason = M2ResultReason::kNoDrawableGeometry,
       .detail = "model_id=" + std::to_string(instance.model_id)};
   const auto* visible = instance.has_visible_submesh_filter ? &instance.visible_submesh_indices : nullptr;
+  // Selection padding around the body, in model units (the instance scale
+  // is folded into the model matrix).
+  const float scale = UniformScale(RenderMatrix4x4View{world});
+  const float padding = scale > 0.0f ? kSelectionPaddingWorldUnits / scale : 0.0f;
   std::optional<float> best;
+  std::optional<float> near_body;
   if (!resource.has_bones) {
-    best = FindClosestIntersection(resource.skin_data, geometry, visible,
-        [&geometry](const std::uint16_t index) {
-          const auto& vertex = geometry.vertices[index];
-          return bx::Vec3{vertex.position[0], vertex.position[1], vertex.position[2]};
-        }, local_start, local_end);
+    const auto resolve = [&geometry](const std::uint16_t index) {
+      const auto& vertex = geometry.vertices[index];
+      return bx::Vec3{vertex.position[0], vertex.position[1], vertex.position[2]};
+    };
+    best = FindClosestIntersection(resource.skin_data, geometry, visible, resolve,
+                                   local_start, local_end);
+    if (!best.has_value()) {
+      near_body = FindFirstVertexWithin(resource.skin_data, geometry, visible, resolve,
+                                        local_start, local_end, padding);
+    }
   } else {
     const auto* const matrices = SampleM2InstanceBoneMatricesCached(instance, resource);
     if (matrices == nullptr) return {.status = M2ResultStatus::kFailed,
@@ -696,9 +716,22 @@ M2SegmentIntersectionQuery M2SpatialQueries::QueryClosestSegmentIntersection(
     const auto streams = ComputeCpuSkinnedVertexStreams(
         std::span<const data::model::M2Vertex>(geometry.query_vertices.data(),
                                                geometry.query_vertices.size()), *matrices);
-    best = FindClosestIntersection(resource.skin_data, geometry, visible,
-        [&streams](const std::uint16_t index) { return streams.positions[index]; },
-        local_start, local_end);
+    const auto resolve = [&streams](const std::uint16_t index) {
+      return streams.positions[index];
+    };
+    best = FindClosestIntersection(resource.skin_data, geometry, visible, resolve,
+                                   local_start, local_end);
+    if (!best.has_value()) {
+      near_body = FindFirstVertexWithin(resource.skin_data, geometry, visible, resolve,
+                                        local_start, local_end, padding);
+    }
+  }
+  if (near_body.has_value()) {
+    const float distance = segment->max_distance * *near_body;
+    const auto point = bx::add(segment->start, bx::mul(segment->direction, distance));
+    result.has_bounds_intersection = true;
+    result.bounds_intersection = {.fraction = *near_body, .distance = distance,
+                                  .point = {point.x, point.y, point.z}};
   }
   if (!best.has_value()) return result;
   const float distance = segment->max_distance * *best;

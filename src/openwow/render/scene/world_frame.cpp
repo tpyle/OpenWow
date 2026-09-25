@@ -241,14 +241,14 @@ PickResult WorldFrame::Pick(int screen_x, int screen_y, const game::ObjectGuid s
       if (!PassesModelFilter(object, flags, *objects_)) {
         return;
       }
-      // Units are also selectable anywhere inside their model's bounding box,
-      // which is larger than the body (e.g. the gap between arm and torso).
+      // Units are also selectable within a padding around their body shape
+      // (e.g. the gap between arm and torso).
       const PickResult::HitType type = ResolveModelPickHitType(object);
       const auto hit = object_renderer_->FindClosestSegmentIntersectionForGuid(
           object.handle.guid, segment_start, segment_end,
           type == PickResult::HitType::kUnit);
-      // A box that already contains the camera (zoomed in close to a unit)
-      // can't be aimed at; it would otherwise win every box-only pick.
+      // Padding that already surrounds the camera (zoomed in close to a
+      // unit) can't be aimed at; it would otherwise win every near pick.
       if (!hit.has_value() || (!hit->body && hit->distance <= 0.0f)) {
         return;
       }
@@ -268,7 +268,7 @@ PickResult WorldFrame::Pick(int screen_x, int screen_y, const game::ObjectGuid s
       }
       const int priority = ModelHitPriority(object, *objects_);
 
-      // A body hit beats a box-only hit; within a tier the nearest wins.
+      // A body hit beats a near-body hit; within a tier the nearest wins.
       if (best.hit && best_body && !hit->body) {
         return;
       }

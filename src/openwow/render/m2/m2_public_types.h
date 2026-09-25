@@ -904,10 +904,8 @@ struct M2SegmentIntersectionQuery {
   /// A hit on the rendered (skinned) triangles.
   bool has_intersection = false;
   M2SegmentIntersection intersection;
-  /// Where the segment enters the model's selection box (its Stand sequence
-  /// bounds, or the header bounding box without one), in world
-  /// space (the box follows the instance's placement, facing and scale).
-  /// Set whenever the box is crossed, with or without a triangle hit.
+  /// Where the segment first passes within the selection padding of the
+  /// model's posed body, in world space. Set only when no triangle is hit.
   bool has_bounds_intersection = false;
   M2SegmentIntersection bounds_intersection;
 };
