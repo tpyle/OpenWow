@@ -1717,11 +1717,11 @@ void UnitAnimationRuntime::CommitPlaybackRequest(
     }
   }
 
-  // Leaving the rider pose (dismount) snaps straight to the new pose, as in
-  // the original client; blending eased the rider visibly out of the seated
-  // pose after the mount had gone.
-  const bool leaving_rider_pose = previous_row == kRiderMountAnimationId &&
-                                  animation_id != kRiderMountAnimationId;
+  // Entering or leaving the rider pose (mount/dismount) snaps straight to the
+  // new pose, as in the original client; blending visibly eased the rider
+  // into or out of the seated pose while the mount appeared or had gone.
+  const bool switching_rider_pose =
+      (previous_row == kRiderMountAnimationId) != (animation_id == kRiderMountAnimationId);
 
   playback_request_.animation_id = animation_id;
   playback_request_.looping = looping;
@@ -1735,7 +1735,7 @@ void UnitAnimationRuntime::CommitPlaybackRequest(
     playback_request_.base_bypass_alias_resolution = bypass_alias_resolution;
   }
   playback_request_.bypass_alias_resolution = bypass_alias_resolution;
-  playback_request_.zero_blend = zero_blend || leaving_rider_pose;
+  playback_request_.zero_blend = zero_blend || switching_rider_pose;
   if (++playback_request_.serial == 0u) {
     playback_request_.serial = 1u;
   }
