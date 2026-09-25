@@ -119,6 +119,38 @@ void InterpolateRetailGroundContactNormal(
   InterpolateRetailGroundContactNormalToward(surface, smoothed_normal, dt);
 }
 
+/// Smooths a player's ground normal toward the walkable surface under its
+/// feet (it tilts the player's mount). Player positions rest exactly on their
+/// support surface, so the probe starts slightly above the feet: from the
+/// feet themselves rounding could put the origin just under the floor, and
+/// the ray then missed it or hit a surface far below. Anything a player can't
+/// stand on, or being airborne or swimming, relaxes the normal back to up
+/// instead of keeping the previous surface's slope.
+void InterpolatePlayerGroundContactNormal(const CGUnit_C &unit,
+                                          std::array<float, 3> &smoothed_normal,
+                                          const float dt) {
+  constexpr std::uint32_t kUnsupportedFlags = kMoveFlagFalling | kMoveFlagFallingFar |
+                                              kMoveFlagSwimming | kMoveFlagFlying |
+                                              kMoveFlagDisableGravity;
+  CalcGroundPosCollisionResult surface{};
+  if (g_calc_ground_pos_callback != nullptr &&
+      (unit.GetMovementInfo().flags & kUnsupportedFlags) == 0u) {
+    const auto position = unit.GetPosition();
+    surface = g_calc_ground_pos_callback(
+        unit, {position.x, position.y, position.z + kRemoteGroundSeedVerticalAllowance},
+        kRemoteGroundSeedVerticalAllowance + unit.Presentation().CollisionHeight() * 2.0f,
+        g_calc_ground_pos_context);
+  }
+  const bool walkable = surface.hit && std::isfinite(surface.normal_x) &&
+                        std::isfinite(surface.normal_y) && std::isfinite(surface.normal_z) &&
+                        surface.normal_z >= kWalkableNormalZ_Player;
+  if (!walkable) {
+    surface = CalcGroundPosCollisionResult{};
+    surface.hit = true;
+  }
+  InterpolateRetailGroundContactNormalToward(surface, smoothed_normal, dt);
+}
+
 [[nodiscard]] render::RenderMatrix4x4 BuildGroundAlignedUnitMatrix(
     const CGUnit_C& unit, const std::array<float, 3>& surface_normal,
     const std::array<float, 3> &world_position) {
@@ -1005,6 +1037,8 @@ void UnitMovementRuntime::InterpolateShadowBlobPosition(float dt) {
   if (projected_surface.has_value()) {
     InterpolateRetailGroundContactNormalToward(
         *projected_surface, ground_contact_normal_, dt);
+  } else if (owner_.IsPlayer() || owner_.IsActiveMover()) {
+    InterpolatePlayerGroundContactNormal(owner_, ground_contact_normal_, dt);
   } else if (!can_project_ground) {
     InterpolateRetailGroundContactNormal(owner_, ground_contact_normal_, dt);
   }
