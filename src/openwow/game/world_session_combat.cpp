@@ -1276,6 +1276,8 @@ void WorldSession::HandleSpellGo(const net::wotlk::WorldPacket& pkt) {
         case ProfessionSystem::TradeSkillCompletionAction::kCompleted:
           break;
       }
+      // Casting a profession spell opens that profession's window.
+      OpenLocalTradeSkill(info->spell_id);
     }
 
   } else {

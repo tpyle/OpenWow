@@ -1178,6 +1178,10 @@ public:
   void BeginTradeSkillLinkOpen(std::uint32_t spell_id, std::uint32_t current_rank,
                                std::uint32_t max_rank, std::uint64_t player_guid,
                                std::string encoded_recipe_bits);
+  /// Opens (or toggles closed) the active player's own trade skill window
+  /// after a successful cast of a profession spell (effect SPELL_EFFECT_
+  /// TRADE_SKILL). Other spells are ignored.
+  void OpenLocalTradeSkill(std::uint32_t spell_id);
 
   void Logout();
 

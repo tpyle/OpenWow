@@ -2733,6 +2733,33 @@ void WorldSession::BeginLevelGrantProposal(const std::uint64_t guid) {
   (void)query_cache_.RequestNameQuery(guid);
 }
 
+void WorldSession::OpenLocalTradeSkill(const std::uint32_t spell_id) {
+  constexpr std::uint32_t kSpellEffectTradeSkill = 47u;
+  const auto *const dbc = GetDbcLoader();
+  const auto *const player = objects().GetActivePlayer();
+  const auto *const spell = dbc != nullptr ? dbc->spell().LookupEntry(spell_id) : nullptr;
+  if (spell == nullptr || player == nullptr) {
+    return;
+  }
+  bool trade_skill_spell = false;
+  for (const auto effect : spell->effect) {
+    trade_skill_spell = trade_skill_spell || effect == kSpellEffectTradeSkill;
+  }
+  if (!trade_skill_spell) {
+    return;
+  }
+  const auto skill_line_id = ResolveSpellSkillLineId(
+      objects(), dbc, player->State().GetRace(), player->State().GetClass(), spell_id);
+  if (!skill_line_id.has_value()) {
+    return;
+  }
+  const auto skill = static_cast<std::uint16_t>(*skill_line_id);
+  ui::game::detail::OpenTradeSkillView(
+      this, dbc, *skill_line_id, ResolveTradeSkillLineName(*this, *skill_line_id),
+      player->GetSkillValue(skill), player->GetSkillMaxValue(skill), std::nullopt,
+      std::nullopt, spell_id);
+}
+
 void WorldSession::BeginTradeSkillLinkOpen(const std::uint32_t spell_id,
                                            const std::uint32_t current_rank,
                                            const std::uint32_t max_rank,

@@ -5,6 +5,7 @@
 #include "openwow/core/storm_string.h"
 #include "openwow/core/storm_utils.h"
 #include "openwow/game/profession_system.h"
+#include "openwow/game/spellbook_system.h"
 #include "openwow/game/skill_line_ability_lookup.h"
 #include "openwow/game/spell_query_bridge.h"
 #include "openwow/game/spell_text_formatter.h"
@@ -820,6 +821,41 @@ void RebuildTradeSkillListOnPendingResultItemCompletion() {
   FireTradeSkillUpdateEvent();
 }
 
+TradeSkillRecipe MakeTradeSkillRecipe(const ::openwow::data::dbc::DbcLoader &dbc,
+                                      ::openwow::game::WorldSession *session,
+                                      const ::openwow::data::dbc::SkillLineAbilityEntry &ability,
+                                      const ::openwow::data::dbc::SpellEntry &spell,
+                                      const std::uint32_t current_rank) {
+  TradeSkillRecipe recipe;
+  recipe.spell_id = static_cast<std::int32_t>(ability.spell_id);
+  recipe.name = ResolveTradeSkillSpellName(dbc, ability.spell_id);
+  recipe.icon_path = ResolveTradeSkillSpellIconPath(dbc, ability.spell_id);
+  recipe.difficulty = ResolveTradeSkillDifficulty(ability, current_rank);
+  recipe.num_available =
+      ResolveTradeSkillNumAvailable(session != nullptr ? &session->inventory_replica() : nullptr,
+                                    spell);
+  recipe.num_skill_ups = ability.num_skill_ups != 0 ? ability.num_skill_ups : 1;
+  recipe.product_link_id = recipe.spell_id;
+  PopulateTradeSkillReagents(spell, &recipe);
+  PopulateTradeSkillToolRequirementsFromSpell(spell, &recipe);
+  if (IsTradeSkillRecipeResultEffect(spell.effect[0]) && spell.effect_item_type[0] != 0) {
+    recipe.item_id = static_cast<std::int32_t>(spell.effect_item_type[0]);
+    recipe.product_link_type = spell.effect[0];
+  }
+  return recipe;
+}
+
+void FinishTradeSkillRecipeList(const ::openwow::data::dbc::DbcLoader &dbc,
+                                ::openwow::game::WorldSession *session) {
+  s_trade_skill.recipes = s_trade_skill.source_recipes;
+  PrimeTradeSkillRecipeResultClassification(session, dbc, &s_trade_skill.source_recipes);
+  if (s_trade_skill.pending_result_item_queries == 0) {
+    FinalizeTradeSkillRecipeListFromResolvedResults(dbc);
+  } else {
+    MarkTradeSkillListViewDirty();
+  }
+}
+
 bool BuildLinkedTradeSkillRecipes(const ::openwow::data::dbc::DbcLoader &dbc,
                                   ::openwow::game::WorldSession *session,
                                   const std::uint32_t skill_line_id,
@@ -854,35 +890,35 @@ bool BuildLinkedTradeSkillRecipes(const ::openwow::data::dbc::DbcLoader &dbc,
     if (spell == nullptr || (spell->attributes & 0x20u) == 0) {
       continue;
     }
-
-    TradeSkillRecipe recipe;
-    recipe.spell_id = static_cast<std::int32_t>(ability->spell_id);
-    recipe.name = ResolveTradeSkillSpellName(dbc, ability->spell_id);
-    recipe.icon_path = ResolveTradeSkillSpellIconPath(dbc, ability->spell_id);
-    recipe.difficulty = ResolveTradeSkillDifficulty(*ability, current_rank);
-    recipe.num_available =
-        ResolveTradeSkillNumAvailable(session != nullptr ? &session->inventory_replica() : nullptr,
-                                      *spell);
-    recipe.num_skill_ups = ability->num_skill_ups != 0 ? ability->num_skill_ups : 1;
-    recipe.product_link_id = recipe.spell_id;
-    PopulateTradeSkillReagents(*spell, &recipe);
-    PopulateTradeSkillToolRequirementsFromSpell(*spell, &recipe);
-    if (IsTradeSkillRecipeResultEffect(spell->effect[0]) && spell->effect_item_type[0] != 0) {
-      recipe.item_id = static_cast<std::int32_t>(spell->effect_item_type[0]);
-      recipe.product_link_type = spell->effect[0];
-    }
-
-    s_trade_skill.source_recipes.push_back(std::move(recipe));
+    s_trade_skill.source_recipes.push_back(
+        MakeTradeSkillRecipe(dbc, session, *ability, *spell, current_rank));
   }
 
-  s_trade_skill.recipes = s_trade_skill.source_recipes;
-  PrimeTradeSkillRecipeResultClassification(session, dbc, &s_trade_skill.source_recipes);
-  if (s_trade_skill.pending_result_item_queries == 0) {
-    FinalizeTradeSkillRecipeListFromResolvedResults(dbc);
-  } else {
-    MarkTradeSkillListViewDirty();
-  }
+  FinishTradeSkillRecipeList(dbc, session);
   return true;
+}
+
+/// Builds the recipe list for the local player's own profession: every
+/// trade-skill recipe (SPELL_ATTR0_TRADESPELL) on the skill line that the
+/// player knows, in the same order a link of it would list them.
+void BuildLocalTradeSkillRecipes(const ::openwow::data::dbc::DbcLoader &dbc,
+                                 ::openwow::game::WorldSession *session,
+                                 const std::uint32_t skill_line_id,
+                                 const std::uint32_t current_rank) {
+  s_trade_skill.source_recipes.clear();
+  const auto &spellbook = ::openwow::game::SpellbookSystem::Get();
+  for (const auto *ability : CollectTradeSkillLinkAbilitySpan(dbc, skill_line_id)) {
+    if (!spellbook.HasSpell(ability->spell_id)) {
+      continue;
+    }
+    const auto *spell = dbc.spell().LookupEntry(ability->spell_id);
+    if (spell == nullptr || (spell->attributes & 0x20u) == 0) {
+      continue;
+    }
+    s_trade_skill.source_recipes.push_back(
+        MakeTradeSkillRecipe(dbc, session, *ability, *spell, current_rank));
+  }
+  FinishTradeSkillRecipeList(dbc, session);
 }
 
 void FireTradeSkillUpdateEvent() {
@@ -1914,6 +1950,9 @@ void OpenTradeSkillView(::openwow::game::WorldSession *session,
       !BuildLinkedTradeSkillRecipes(*dbc, session, skill_line_id, current_rank,
                                     *encoded_recipe_bits)) {
     return;
+  }
+  if (!linked_view && dbc != nullptr) {
+    BuildLocalTradeSkillRecipes(*dbc, session, skill_line_id, current_rank);
   }
 
   professions.OpenTradeSkill(
