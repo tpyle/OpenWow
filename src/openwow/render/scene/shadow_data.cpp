@@ -33,6 +33,10 @@ constexpr std::uint8_t kFirstShadowSamplerStage = 5u;
 constexpr float kCasterDistance = 2000.0f;
 constexpr float kCasterNear = 1.0f;
 constexpr float kCasterFar = 4000.0f;
+// Stored caster depth is (distance - near) / (far - near). Receivers must use
+// the same mapping, or every surface compares against its own depth offset
+// by a distance-dependent amount (about half a unit at the product centre).
+constexpr float kCasterDepthRange = kCasterFar - kCasterNear;
 constexpr float kMaxLightUpAlignment = 0.99f;
 std::atomic<const ShadowRenderData*> g_active_world_shadow_data{nullptr};
 
@@ -255,7 +259,7 @@ bool ShadowRenderData::PrepareProduct(const std::size_t product_index,
 
   RenderMatrix4x4 receiver_projection{};
   bx::mtxOrtho(receiver_projection.data(), -half_extent, half_extent,
-               -half_extent, half_extent, 0.0f, kCasterFar, 0.0f,
+               -half_extent, half_extent, kCasterNear, kCasterFar, 0.0f,
                bgfx::getCaps()->homogeneousDepth);
   RenderMatrix4x4 view_projection{};
   bx::mtxMul(view_projection.data(), view.data(), receiver_projection.data());
@@ -369,10 +373,10 @@ void ShadowRenderData::BindReceiverState(const std::size_t first_product,
       {static_cast<float>(published_product_count_),
        static_cast<float>(first_product), active ? 1.0f : 0.0f,
        resolution_ > 0u ? 1.0f / static_cast<float>(resolution_) : 0.0f},
-      {kRawReceiverBias[0] / kCasterFar,
-       kRawReceiverBias[1] / kCasterFar,
-       kRawReceiverBias[2] / kCasterFar,
-       kRawReceiverBias[3] / kCasterFar},
+      {kRawReceiverBias[0] / kCasterDepthRange,
+       kRawReceiverBias[1] / kCasterDepthRange,
+       kRawReceiverBias[2] / kCasterDepthRange,
+       kRawReceiverBias[3] / kCasterDepthRange},
       {shadow_mod[0], shadow_mod[1], shadow_mod[2], 0.0f},
   }};
   draw.setUniform(backend_->parameters, parameters.data(), 3u);
