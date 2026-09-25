@@ -1,4 +1,5 @@
 #include "openwow/ui/surfaces/game/runtime/system_message_dispatch.h"
+#include "openwow/ui/game/cvar_system.h"
 
 #include "openwow/game/spell_cast_execution.h"
 #include "openwow/game/spell_cast_runtime.h"
@@ -61,6 +62,7 @@ namespace openwow::game {
 
 namespace {
 constexpr std::uint32_t kSpellAuraMountedForRecast = 78u;
+constexpr std::uint32_t kAttr0CastableWhileMounted = 0x01000000u;
 }  // namespace
 
 MountRecast ClassifyMountRecast(const WorldSession& session,
@@ -70,10 +72,21 @@ MountRecast ClassifyMountRecast(const WorldSession& session,
   const auto* const spell =
       dbc != nullptr ? dbc->spell().LookupEntry(spell_id) : nullptr;
   if (spell == nullptr || player == nullptr ||
-      spell->effect_apply_aura[0] != kSpellAuraMountedForRecast ||
       !player->Mount().IsMountedStateActive(*player) ||
       player->State().IsTaxiFlight()) {
     return MountRecast::kNotApplicable;
+  }
+  if (spell->effect_apply_aura[0] != kSpellAuraMountedForRecast) {
+    // Any other spell that can't be cast mounted dismounts first when the
+    // autoDismount option allows it (autoDismountFlying while flying), as the
+    // original client does: e.g. starting a craft on a mount.
+    const auto& cvars = ui::game::CVarSystem::Instance();
+    const bool auto_dismount =
+        cvars.GetCVarBool("autoDismount") &&
+        (!player->Movement().IsFlying() || cvars.GetCVarBool("autoDismountFlying"));
+    return (spell->attributes & kAttr0CastableWhileMounted) == 0 && auto_dismount
+               ? MountRecast::kDismountThenCast
+               : MountRecast::kNotApplicable;
   }
   for (const auto& aura : player->Auras().All()) {
     if (aura.spell_id == spell_id) {
@@ -228,7 +241,6 @@ constexpr std::uint32_t kMapTypeArena        = 4;
 constexpr std::uint32_t kAttr0NextSwing               = 0x00000002u;
 constexpr std::uint32_t kAttr0OnlyDaytime             = 0x00001000u;
 constexpr std::uint32_t kAttr0OnlyNighttime           = 0x00002000u;
-constexpr std::uint32_t kAttr0CastableWhileMounted     = 0x01000000u;
 constexpr std::uint32_t kAttr0Tradespell               = 0x02000000u;
 constexpr std::uint32_t kAttr0IndoorOnly               = 0x00004000u;
 constexpr std::uint32_t kAttr0OutdoorOnly              = 0x00008000u;
@@ -403,9 +415,9 @@ SpellRequirementValidation ValidateSpellRequirementsDetailed(
   // Mount spells cast while mounted are turned into a dismount (and, for a
   // different mount, a follow-up cast) by the cast paths; see
   // ClassifyMountRecast.
-  if (spell->effect_apply_aura[0] != kSpellAuraMountedForRecast &&
-      caster->Mount().IsMountedStateActive(*caster) &&
-      (spell->attributes & kAttr0CastableWhileMounted) == 0) {
+  if (caster->Mount().IsMountedStateActive(*caster) &&
+      (spell->attributes & kAttr0CastableWhileMounted) == 0 &&
+      ClassifyMountRecast(session, spell->id) == MountRecast::kNotApplicable) {
     return failure(SpellCastResult::kNotMounted);
   }
 

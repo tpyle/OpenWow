@@ -36,12 +36,13 @@ class WorldSession;
 int SendCastSpell(WorldSession& session, std::uintptr_t spell_entry,
                   bool skip_visual);
 
-/// How the local player's cast of a mount spell is handled while mounted.
-/// Casting any mount while mounted dismounts; a different mount is then cast.
+/// How the local player's cast is handled while mounted. Casting any mount
+/// while mounted dismounts, and a different mount is then cast; other spells
+/// that can't be cast mounted dismount first when autoDismount allows it.
 enum class MountRecast : std::uint8_t {
-  kNotApplicable,     ///< Not a mount spell, not mounted, or on a taxi.
+  kNotApplicable,     ///< Not mounted, on a taxi, castable mounted, or no auto-dismount.
   kDismountOnly,      ///< That mount is the active one: dismount only.
-  kDismountThenCast,  ///< Another mount is active: dismount, then cast.
+  kDismountThenCast,  ///< Dismount, then cast (another mount, or auto-dismount).
 };
 
 /// Classifies a cast of `spell_id` by the local player; sends nothing.
