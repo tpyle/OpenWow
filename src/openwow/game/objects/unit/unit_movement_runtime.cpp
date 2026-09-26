@@ -726,10 +726,14 @@ bool SendQueuedMovementEvent(WorldSession &session, const CGUnit_C &owner,
          (spell->attributesEx4 & kSpellAttrEx4SuppressBodyFacingTargetTracking) != 0u;
 }
 
+/// World-space facing from `source` toward `target`. Uses world poses: a
+/// passenger's cached movement XY is stale while its transport moves.
 [[nodiscard]] float ComputeFacingAngleToUnit(const CGUnit_C &source, const CGUnit_C &target) {
+  const auto source_world = source.GetPosition();
+  const auto target_world = target.GetPosition();
   return openwow::math::ComputeRetailPlanarFacingAngle(
-      openwow::math::PlanarPoint{source.GetX(), source.GetY()},
-      openwow::math::PlanarPoint{target.GetX(), target.GetY()});
+      openwow::math::PlanarPoint{source_world.x, source_world.y},
+      openwow::math::PlanarPoint{target_world.x, target_world.y});
 }
 
 }

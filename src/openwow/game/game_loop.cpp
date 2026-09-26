@@ -5013,14 +5013,17 @@ void GameLoop::ProcessInput(float dt) {
       if (controlled_mover == nullptr) {
         return;
       }
-      const float dx = x - controlled_mover->GetX();
-      const float dy = y - controlled_mover->GetY();
+      // The world pose, not the cached movement XY: a passenger's cached
+      // position only moves on commit and trails a moving ship by many yards.
+      const auto mover_world = controlled_mover->GetPosition();
+      const float dx = x - mover_world.x;
+      const float dy = y - mover_world.y;
       if (std::fabs(dx) < 1.0e-6f && std::fabs(dy) < 1.0e-6f) {
         return;
       }
       const float facing = std::atan2(dy, dx);
       const float delta =
-          std::remainder(facing - controlled_mover->GetOrientation(), kTwoPi);
+          std::remainder(facing - controlled_mover->GetWorldFacing(), kTwoPi);
       if (std::fabs(delta) < kCtmFacingDeadbandRad) {
 
         if (!instant) {
@@ -5042,7 +5045,7 @@ void GameLoop::ProcessInput(float dt) {
         }
         const float max_step = dt * ctm_facing_turn_rate_rad_per_sec_;
         if (std::fabs(delta) > max_step) {
-          applied_facing = controlled_mover->GetOrientation() +
+          applied_facing = controlled_mover->GetWorldFacing() +
                            (delta > 0.0f ? max_step : -max_step);
           applied_facing = std::remainder(applied_facing, kTwoPi);
         }
@@ -5098,9 +5101,9 @@ void GameLoop::ProcessInput(float dt) {
           click_to_move.GetAction() == CTMAction::Loot) {
         constexpr float kCtmInteractAbandonRangeSq = 6400.0f;
         const auto destination = click_to_move.GetDestination();
-        const float abandon_dx = destination.x - controlled_mover->GetX();
-        const float abandon_dy = destination.y - controlled_mover->GetY();
-        const float abandon_dz = destination.z - controlled_mover->GetZ();
+        const float abandon_dx = destination.x - controlled_mover->GetPosition().x;
+        const float abandon_dy = destination.y - controlled_mover->GetPosition().y;
+        const float abandon_dz = destination.z - controlled_mover->GetPosition().z;
         if (abandon_dx * abandon_dx + abandon_dy * abandon_dy +
                 abandon_dz * abandon_dz >= kCtmInteractAbandonRangeSq) {
           ReleaseClickToMove(world_session());
@@ -5110,8 +5113,8 @@ void GameLoop::ProcessInput(float dt) {
       if (click_to_move.IsActive() && ctm_owns_auto_forward_ &&
           ctm_facing_aligned_once_ && dt > 0.0f) {
         const auto destination = click_to_move.GetDestination();
-        const float to_destination_x = destination.x - controlled_mover->GetX();
-        const float to_destination_y = destination.y - controlled_mover->GetY();
+        const float to_destination_x = destination.x - controlled_mover->GetPosition().x;
+        const float to_destination_y = destination.y - controlled_mover->GetPosition().y;
         if (std::fabs(to_destination_x) >= 1.0e-6f ||
             std::fabs(to_destination_y) >= 1.0e-6f) {
           constexpr float kCtmAbandonLowerRad = 2.7925267f;
@@ -5119,7 +5122,7 @@ void GameLoop::ProcessInput(float dt) {
           const float desired =
               std::atan2(to_destination_y, to_destination_x);
           float behind = std::fmod(
-              desired - controlled_mover->GetOrientation(), kTwoPi);
+              desired - controlled_mover->GetWorldFacing(), kTwoPi);
           if (behind < 0.0f) {
             behind += kTwoPi;
           }
@@ -5144,9 +5147,9 @@ void GameLoop::ProcessInput(float dt) {
         bool grew = false;
         if (counted_action && ctm_has_last_tick_position_) {
           const auto destination = click_to_move.GetDestination();
-          const float cur_dx = destination.x - controlled_mover->GetX();
-          const float cur_dy = destination.y - controlled_mover->GetY();
-          const float cur_dz = destination.z - controlled_mover->GetZ();
+          const float cur_dx = destination.x - controlled_mover->GetPosition().x;
+          const float cur_dy = destination.y - controlled_mover->GetPosition().y;
+          const float cur_dz = destination.z - controlled_mover->GetPosition().z;
           const float last_dx = destination.x - ctm_last_tick_x_;
           const float last_dy = destination.y - ctm_last_tick_y_;
           const float last_dz = destination.z - ctm_last_tick_z_;
@@ -5163,9 +5166,9 @@ void GameLoop::ProcessInput(float dt) {
         }
       }
       if (click_to_move.IsActive()) {
-        ctm_last_tick_x_ = controlled_mover->GetX();
-        ctm_last_tick_y_ = controlled_mover->GetY();
-        ctm_last_tick_z_ = controlled_mover->GetZ();
+        ctm_last_tick_x_ = controlled_mover->GetPosition().x;
+        ctm_last_tick_y_ = controlled_mover->GetPosition().y;
+        ctm_last_tick_z_ = controlled_mover->GetPosition().z;
         ctm_has_last_tick_position_ = true;
       } else {
         ctm_has_last_tick_position_ = false;

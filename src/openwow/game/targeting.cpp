@@ -1620,12 +1620,15 @@ void TargetingSystem::DriveAutoFollowTowards(const WorldObject& target,
     return;
   }
 
-  const float dx = target.GetX() - mover->GetX();
-  const float dy = target.GetY() - mover->GetY();
+  // World poses: a passenger's cached movement XY trails a moving ship.
+  const auto target_world = target.GetPosition();
+  const auto mover_world = mover->GetPosition();
+  const float dx = target_world.x - mover_world.x;
+  const float dy = target_world.y - mover_world.y;
   if (std::fabs(dx) >= 1.0e-6f || std::fabs(dy) >= 1.0e-6f) {
     const float facing = std::atan2(dy, dx);
     const float delta = std::remainder(
-        facing - mover->GetOrientation(), kTwoPi);
+        facing - mover->GetWorldFacing(), kTwoPi);
     if (std::fabs(delta) >= 1.0e-4f) {
       mover->Movement().SendSetFacing(
           *session_, session_->CurrentClientTimeMs(), facing);
