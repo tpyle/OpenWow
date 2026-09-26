@@ -1,4 +1,5 @@
 #include "openwow/world/streaming/world_map.h"
+#include "openwow/world/streaming/spawn_tile_readiness.h"
 
 #include "openwow/data/formats/dbc/area_environment_rules.h"
 #include "openwow/data/formats/dbc/dbc_loader.h"
@@ -799,18 +800,21 @@ bool WorldMap::AreExistingTerrainTilesLoaded(const float min_x,
   return true;
 }
 
+bool WorldMap::IsSpawnTileSettledAt(const TileCoord tile) const {
+  const auto file_tile = ToMapFileTile(tile);
+  return IsSpawnTileSettled(
+      wdt_.has_global_wmo,
+      wdt_.TileExists(static_cast<uint32_t>(file_tile.x),
+                      static_cast<uint32_t>(file_tile.y)),
+      loaded_tiles_.contains(tile));
+}
+
 bool WorldMap::IsAreaResolutionSettledAt(const float x, const float y) const {
   if (map_name_.empty()) {
     return false;
   }
-  if (!wdt_.has_global_wmo) {
-    const TileCoord tile = WorldToTile(x, y);
-    const auto file_tile = ToMapFileTile(tile);
-    if (wdt_.TileExists(static_cast<uint32_t>(file_tile.x),
-                        static_cast<uint32_t>(file_tile.y)) &&
-        !loaded_tiles_.contains(tile)) {
-      return false;
-    }
+  if (!IsSpawnTileSettledAt(WorldToTile(x, y))) {
+    return false;
   }
   return !streaming_ownership_.HasPendingWithin(x, y,
                                                 kCriticalSpawnSurfaceRadius);
@@ -886,8 +890,7 @@ std::string WorldMap::DescribeStreamingProgress() const {
 }
 
 bool WorldMap::IsCriticalSpawnSurfaceReady() const {
-  if (map_name_.empty() ||
-      (!wdt_.has_global_wmo && !loaded_tiles_.contains(player_tile_))) {
+  if (map_name_.empty() || !IsSpawnTileSettledAt(player_tile_)) {
     return false;
   }
   if (streaming_ownership_.HasPendingWithin(

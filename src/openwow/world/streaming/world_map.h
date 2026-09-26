@@ -500,6 +500,9 @@ private:
   std::unordered_set<TileCoord, TileCoordHash> GetRequiredTiles() const;
 
   static TileCoord WorldToTile(float x, float y);
+  /// True once `tile` needs no further loading before a unit can stand on it
+  /// (see IsSpawnTileSettled).
+  [[nodiscard]] bool IsSpawnTileSettledAt(TileCoord tile) const;
 
   void QueueTileLoad(const TileCoord &coord);
 

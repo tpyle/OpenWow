@@ -39,6 +39,7 @@ add_executable(openwow_tests
   render/texture_cache_budget_tests.cpp
   ui/font_pixel_height_tests.cpp
   world/bounds_union_tests.cpp
+  world/spawn_tile_readiness_tests.cpp
   runtime/frame_scheduler_tests.cpp
   data/dbc_file_tests.cpp
   data/faction_reaction_tests.cpp
