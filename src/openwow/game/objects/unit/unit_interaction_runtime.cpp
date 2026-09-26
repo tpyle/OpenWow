@@ -190,12 +190,9 @@ bool DispatchFriendlyUnitInteraction(WorldSession &session, const CGUnit_C &unit
 void StartUnitApproach(WorldSession &session, const CGUnit_C &unit,
                        const CGPlayer_C &active_player) {
   const auto position = unit.GetPosition();
-  const float to_target_x = position.x - active_player.GetX();
-  const float to_target_y = position.y - active_player.GetY();
-  const float to_target_z = position.z - active_player.GetZ();
-  const float distance_squared = to_target_x * to_target_x +
-                                 to_target_y * to_target_y +
-                                 to_target_z * to_target_z;
+  // World poses: a passenger's cached XYZ trails a moving transport.
+  const auto distance_squared = static_cast<float>(
+      active_player.GetSquaredDistanceToPosition(position));
 
   constexpr int kLootInteractionActionType = 6;
   if (interaction_range::ExceedsInteractionWarningDistance(
@@ -229,8 +226,10 @@ void StartUnitApproach(WorldSession &session, const CGUnit_C &unit,
   const double interaction_range_squared =
       ui::game::detail::GetUnitInteractionRangeSquared(active_player, unit);
 
-  const float distance = active_player.GetDistance(unit);
-  if (distance * distance <= interaction_range_squared) {
+  // World poses: on a moving ship the cached position trails by yards, so
+  // an NPC beside the player looked out of range and started a walk to it.
+  if (active_player.GetSquaredDistanceToPosition(unit.GetPosition()) <=
+      interaction_range_squared) {
     return true;
   }
   if (static_cast<std::int32_t>(active_player.State().GetHealth()) <= 0 ||
@@ -516,8 +515,7 @@ void UnitInteractionRuntime::RightClickInteract(
 
     const double loot_range_squared =
         ui::game::detail::GetUnitInteractionRangeSquared(*player_obj, owner_);
-    const float loot_distance = player_obj->GetDistance(owner_);
-    if (static_cast<double>(loot_distance) * loot_distance >
+    if (player_obj->GetSquaredDistanceToPosition(owner_.GetPosition()) >
         loot_range_squared) {
       if (static_cast<std::int32_t>(player_obj->State().GetHealth()) > 0 &&
           player_obj->IsActiveMover() &&
