@@ -190,6 +190,12 @@ class CursorSurface {
       software_cursor_texture_leases_;
   SDL_Cursor* native_cursor_suppression_handle_ = nullptr;
   bool native_cursor_suppression_failure_logged_ = false;
+  // The platform's arrow, used whenever the game cursor can't be built.
+  SDL_Cursor* system_arrow_cursor_ = nullptr;
+  // When the cursor was hidden with no mouse button held (0 = not hidden
+  // that way); used to log a hide that never ends.
+  std::uint32_t hidden_without_button_since_ms_ = 0;
+  bool stale_hide_logged_ = false;
   SDL_Cursor* custom_cursor_handle_ = nullptr;
   bool custom_cursor_texture_dirty_ = true;
   bool runtime_cursor_enabled_ = false;
@@ -219,6 +225,13 @@ class CursorSurface {
   void FreeCursorHandle(SDL_Cursor*& handle);
 
   void SuppressNativeCursor();
+  /// Sets the platform arrow cursor. SDL's default cursor can't serve as the
+  /// fallback: on X11 it is "no cursor", which shows whatever the root
+  /// window has, possibly nothing.
+  void ApplySystemArrowCursor();
+  /// Logs, once per episode, a cursor that stays hidden with no mouse button
+  /// held (mouselook holds a button), to diagnose an invisible cursor.
+  void TrackHiddenCursorWithoutButton();
 
   [[nodiscard]] SDL_Cursor* DetachPublishedBuiltInCursor();
 

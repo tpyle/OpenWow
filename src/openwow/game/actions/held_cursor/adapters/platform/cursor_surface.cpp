@@ -370,6 +370,10 @@ void CursorSurface::Shutdown() {
   runtime_cursor_handle_ = nullptr;
   SDL_Cursor* stale_suppression_handle = native_cursor_suppression_handle_;
   native_cursor_suppression_handle_ = nullptr;
+  SDL_Cursor* stale_system_arrow_cursor = system_arrow_cursor_;
+  system_arrow_cursor_ = nullptr;
+  hidden_without_button_since_ms_ = 0;
+  stale_hide_logged_ = false;
   native_cursor_suppression_failure_logged_ = false;
 
   runtime_cursor_enabled_ = false;
@@ -394,6 +398,7 @@ void CursorSurface::Shutdown() {
   FreeCursorHandle(stale_custom_cursor_handle);
   FreeCursorHandle(stale_runtime_cursor_handle);
   FreeCursorHandle(stale_suppression_handle);
+  FreeCursorHandle(stale_system_arrow_cursor);
   if (GetActiveCursorSurface() == this) {
     SetActiveCursorSurface(nullptr);
   }
@@ -887,6 +892,8 @@ void CursorSurface::ApplyHardwareCursor() {
     }
     if (runtime_cursor_handle_ != nullptr) {
       SDL_SetCursor(runtime_cursor_handle_);
+    } else {
+      ApplySystemArrowCursor();
     }
     return;
   }
@@ -898,6 +905,8 @@ void CursorSurface::ApplyHardwareCursor() {
     }
     if (custom_cursor_handle_) {
       SDL_SetCursor(custom_cursor_handle_);
+    } else {
+      ApplySystemArrowCursor();
     }
     return;
   }
@@ -908,6 +917,7 @@ void CursorSurface::ApplyHardwareCursor() {
   const auto presented_hotspot =
       runtime_cursor_enabled_ ? runtime_visible_hotspot_ : active_hotspot_;
   if (presented_path.empty()) {
+    ApplySystemArrowCursor();
     return;
   }
 
@@ -926,9 +936,7 @@ void CursorSurface::ApplyHardwareCursor() {
     // invisible until its type changed; show the system cursor for now and
     // let RenderOverlay retry.
     hardware_cursor_retry_pending_ = true;
-    if (SDL_Cursor* const fallback = SDL_GetDefaultCursor()) {
-      SDL_SetCursor(fallback);
-    }
+    ApplySystemArrowCursor();
     return;
   }
   hardware_cursor_retry_pending_ = false;
@@ -1100,6 +1108,7 @@ void CursorSurface::RefreshPresentationMode() {
     return;
   }
 
+  TrackHiddenCursorWithoutButton();
   if (!visible_ || ShouldRenderSoftwareCursor()) {
     SuppressNativeCursor();
     return;
@@ -1107,6 +1116,47 @@ void CursorSurface::RefreshPresentationMode() {
 
   ApplyHardwareCursor();
   SDL_ShowCursor(SDL_ENABLE);
+}
+
+void CursorSurface::ApplySystemArrowCursor() {
+  if (system_arrow_cursor_ == nullptr) {
+    system_arrow_cursor_ = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+    if (system_arrow_cursor_ == nullptr) {
+      openwow::diagnostics::Log(
+          openwow::diagnostics::LogLevel::kWarn,
+          std::string("CursorSurface: failed to create the system arrow: ") +
+              SDL_GetError());
+    }
+  }
+  SDL_Cursor* const cursor =
+      system_arrow_cursor_ != nullptr ? system_arrow_cursor_
+                                      : SDL_GetDefaultCursor();
+  if (cursor != nullptr) {
+    SDL_SetCursor(cursor);
+  }
+}
+
+void CursorSurface::TrackHiddenCursorWithoutButton() {
+  constexpr std::uint32_t kStaleHideLogDelayMs = 3000u;
+  if (visible_ || SDL_GetMouseState(nullptr, nullptr) != 0u) {
+    hidden_without_button_since_ms_ = 0;
+    stale_hide_logged_ = false;
+    return;
+  }
+  const std::uint32_t now = std::max<std::uint32_t>(SDL_GetTicks(), 1u);
+  if (hidden_without_button_since_ms_ == 0) {
+    hidden_without_button_since_ms_ = now;
+    return;
+  }
+  if (!stale_hide_logged_ &&
+      now - hidden_without_button_since_ms_ >= kStaleHideLogDelayMs) {
+    stale_hide_logged_ = true;
+    openwow::diagnostics::Log(
+        openwow::diagnostics::LogLevel::kWarn,
+        std::string("CursorSurface: cursor hidden for 3 s with no mouse "
+                    "button held; relative_mode=") +
+            (SDL_GetRelativeMouseMode() == SDL_TRUE ? "1" : "0"));
+  }
 }
 
 void CursorSurface::ReassertPresentation() {
