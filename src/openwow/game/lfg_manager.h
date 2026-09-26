@@ -12,7 +12,6 @@
 #include <utility>
 #include <vector>
 
-#include "openwow/network/protocol/wotlk/world_packet.h"
 
 namespace openwow::data::dbc {
 class DbcLoader;
@@ -240,16 +239,6 @@ public:
   bool HandleOpenLfgDungeonFinder(const std::uint8_t *data, std::size_t len);
   bool HandleUpdateLfgList(const std::uint8_t *data, std::size_t len);
 
-  static net::wotlk::WorldPacket BuildLfgJoin(std::uint32_t roles, bool no_partial,
-                                              bool achievements,
-                                              const std::vector<std::uint32_t> &dungeons,
-                                              const std::string &comment);
-  static net::wotlk::WorldPacket BuildLfgLeave();
-  static net::wotlk::WorldPacket BuildLfgProposalResult(std::uint32_t proposal_id, bool accept);
-  static net::wotlk::WorldPacket BuildLfgSetRoles(std::uint8_t roles);
-  static net::wotlk::WorldPacket BuildLfgSetComment(const std::string &comment);
-  static net::wotlk::WorldPacket BuildLfgSetBootVote(bool agree);
-  static net::wotlk::WorldPacket BuildLfgTeleport(bool out);
 
   [[nodiscard]] const std::optional<LfgJoinResult> &join_result() const {
     return join_result_;

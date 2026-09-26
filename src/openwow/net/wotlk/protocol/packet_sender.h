@@ -582,19 +582,6 @@ public:
                                               std::uint64_t target_invite_id,
                                               std::uint64_t self_invite_id, std::uint32_t status);
 
-  static WorldPacket BuildLfgSetRoles(std::uint8_t roles);
-
-  static WorldPacket BuildLfgSetNeeds();
-
-  static WorldPacket BuildLfgJoin(std::uint32_t roles, const std::vector<std::uint32_t> &dungeons,
-                                  std::string_view comment);
-
-  static WorldPacket BuildLfgLeave();
-
-  static WorldPacket BuildLfgProposalResult(std::uint32_t proposal_id, bool accept);
-
-  static WorldPacket BuildLfgSetBootVote(bool agree);
-
   static WorldPacket BuildPetAction(std::uint64_t pet_guid, std::uint32_t action_data,
                                     std::uint64_t target_guid);
 

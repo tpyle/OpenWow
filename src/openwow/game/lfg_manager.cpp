@@ -8,7 +8,6 @@
 #include "openwow/data/formats/dbc/dbc_table_registry.h"
 #include "openwow/game/packet_reader.h"
 #include "openwow/game/unit_query_bridge.h"
-#include "openwow/network/protocol/wotlk/opcodes.h"
 
 #include <algorithm>
 #include <array>
@@ -18,8 +17,6 @@
 
 namespace openwow::game {
 
-using net::wotlk::Opcode;
-using net::wotlk::WorldPacket;
 
 namespace {
 
@@ -746,60 +743,6 @@ bool LfgManager::HandleLfgTeleportDenied(const std::uint8_t *data, std::size_t l
 bool LfgManager::HandleLfgOfferContinue(const std::uint8_t *data, std::size_t len) {
   PacketReader r(data, len);
   return r.ReadU32(offer_continue_dungeon_);
-}
-
-WorldPacket LfgManager::BuildLfgJoin(std::uint32_t roles, bool no_partial, bool achievements,
-                                     const std::vector<std::uint32_t> &dungeons,
-                                     const std::string &comment) {
-  WorldPacket pkt(Opcode::CMSG_LFG_JOIN);
-  pkt.AppendU32(roles);
-  pkt.AppendU8(no_partial ? 1 : 0);
-  pkt.AppendU8(achievements ? 1 : 0);
-  pkt.AppendU8(static_cast<std::uint8_t>(dungeons.size()));
-  for (auto d : dungeons)
-    pkt.AppendU32(d);
-
-  pkt.AppendU8(3);
-  pkt.AppendU8(0);
-  pkt.AppendU8(0);
-  pkt.AppendU8(0);
-  pkt.AppendString(comment.c_str());
-  return pkt;
-}
-
-WorldPacket LfgManager::BuildLfgLeave() {
-  return WorldPacket(Opcode::CMSG_LFG_LEAVE);
-}
-
-WorldPacket LfgManager::BuildLfgProposalResult(std::uint32_t proposal_id, bool accept) {
-  WorldPacket pkt(Opcode::CMSG_LFG_PROPOSAL_RESULT);
-  pkt.AppendU32(proposal_id);
-  pkt.AppendU8(accept ? 1 : 0);
-  return pkt;
-}
-
-WorldPacket LfgManager::BuildLfgSetRoles(std::uint8_t roles) {
-  WorldPacket pkt(Opcode::CMSG_LFG_SET_ROLES);
-  pkt.AppendU8(roles);
-  return pkt;
-}
-
-WorldPacket LfgManager::BuildLfgSetComment(const std::string &comment) {
-  WorldPacket pkt(Opcode::CMSG_SET_LFG_COMMENT);
-  pkt.AppendString(comment.c_str());
-  return pkt;
-}
-
-WorldPacket LfgManager::BuildLfgSetBootVote(bool agree) {
-  WorldPacket pkt(Opcode::CMSG_LFG_SET_BOOT_VOTE);
-  pkt.AppendU8(agree ? 1 : 0);
-  return pkt;
-}
-
-WorldPacket LfgManager::BuildLfgTeleport(bool out) {
-  WorldPacket pkt(Opcode::CMSG_LFG_TELEPORT);
-  pkt.AppendU8(out ? 1 : 0);
-  return pkt;
 }
 
 void LfgManager::ApplyProposalResponse(bool accept) {

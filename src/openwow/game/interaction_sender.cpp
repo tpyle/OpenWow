@@ -25,6 +25,7 @@
 #include "openwow/game/inventory/items/item_definitions.h"
 #include "openwow/game/inventory/items/item_on_use_spell.h"
 #include "openwow/game/inventory/search/action_item_inventory_search.h"
+#include "openwow/game/activities/lfg/adapters/protocol/lfg_client_packets.h"
 #include "openwow/game/activities/lfg/application/lfg_system.h"
 #include "openwow/game/localization.h"
 #include "openwow/game/pet_manager.h"
@@ -3109,22 +3110,19 @@ void InteractionSender::SendReportPvpAfk(std::uint64_t target_guid) {
 
 void InteractionSender::SendLfgJoin(std::uint32_t roles, const std::vector<std::uint32_t> &dungeons,
                                     const std::string &comment) {
-  Send(PacketSender::BuildLfgJoin(roles, dungeons, comment));
+  Send(lfg::BuildJoinPacket(roles, dungeons, comment));
 }
 
 void InteractionSender::SendLfgLeave() {
-  auto pkt = PacketSender::BuildLfgLeave();
-  Send(pkt);
+  Send(lfg::BuildLeavePacket());
 }
 
 void InteractionSender::SendLfgSetRoles(std::uint8_t roles) {
-  Send(PacketSender::BuildLfgSetRoles(roles));
+  Send(lfg::BuildSetRolesPacket(roles));
 }
 
 void InteractionSender::SendLfgSetComment(const std::string &comment) {
-  WorldPacket pkt(Opcode::CMSG_SET_LFG_COMMENT);
-  pkt.AppendString(comment.c_str());
-  Send(pkt);
+  Send(lfg::BuildSetCommentPacket(comment));
 }
 
 void InteractionSender::SendLfgGetStatus() {
@@ -3334,7 +3332,7 @@ void InteractionSender::SendLfgBootVote(bool accept) {
   if (!LFGSystem::Get().TryPrepareBootVoteSend(accept)) {
     return;
   }
-  auto pkt = PacketSender::BuildLfgSetBootVote(accept);
+  auto pkt = lfg::BuildSetBootVotePacket(accept);
   Send(pkt);
 }
 
@@ -3352,7 +3350,7 @@ void InteractionSender::SendLfgProposalResult(bool accept) {
     return;
   }
 
-  auto pkt = PacketSender::BuildLfgProposalResult(proposal->proposal_id, accept);
+  auto pkt = lfg::BuildProposalResultPacket(proposal->proposal_id, accept);
   Send(pkt);
 
   session_->lfg().ApplyProposalResponse(accept);
@@ -3361,9 +3359,7 @@ void InteractionSender::SendLfgProposalResult(bool accept) {
 }
 
 void InteractionSender::SendLfgTeleport(bool teleport_argument) {
-  WorldPacket pkt(Opcode::CMSG_LFG_TELEPORT);
-  pkt.AppendU8(teleport_argument ? 1 : 0);
-  Send(pkt);
+  Send(lfg::BuildTeleportPacket(teleport_argument));
 }
 
 void InteractionSender::SendBattlefieldPort(const std::uint64_t battlefield_instance_guid,

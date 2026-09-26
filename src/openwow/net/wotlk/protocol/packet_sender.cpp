@@ -1569,55 +1569,6 @@ WorldPacket PacketSender::BuildCalendarEventStatus(std::uint64_t target_invitee_
   return pkt;
 }
 
-WorldPacket PacketSender::BuildLfgSetRoles(std::uint8_t roles) {
-  WorldPacket pkt(Opcode::CMSG_LFG_SET_ROLES);
-  pkt.AppendU8(roles);
-  return pkt;
-}
-
-WorldPacket PacketSender::BuildLfgSetNeeds() {
-  return WorldPacket(Opcode::CMSG_LFG_SET_NEEDS);
-}
-
-WorldPacket PacketSender::BuildLfgJoin(std::uint32_t roles,
-                                       const std::vector<std::uint32_t> &dungeons,
-                                       std::string_view comment) {
-  WorldPacket pkt(Opcode::CMSG_LFG_JOIN);
-  pkt.AppendU32(roles);
-
-  pkt.AppendU8(0);
-  pkt.AppendU8(0);
-
-  auto count = static_cast<std::uint8_t>(dungeons.size() > 255 ? 255 : dungeons.size());
-  pkt.AppendU8(count);
-  for (std::uint8_t i = 0; i < count; ++i) {
-    pkt.AppendU32(dungeons[i]);
-  }
-  pkt.AppendU8(3);
-  pkt.AppendU8(0);
-  pkt.AppendU8(0);
-  pkt.AppendU8(0);
-  AppendNullString(pkt, comment);
-  return pkt;
-}
-
-WorldPacket PacketSender::BuildLfgLeave() {
-  return WorldPacket(Opcode::CMSG_LFG_LEAVE);
-}
-
-WorldPacket PacketSender::BuildLfgProposalResult(std::uint32_t proposal_id, bool accept) {
-  WorldPacket pkt(Opcode::CMSG_LFG_PROPOSAL_RESULT);
-  pkt.AppendU32(proposal_id);
-  pkt.AppendU8(accept ? 1 : 0);
-  return pkt;
-}
-
-WorldPacket PacketSender::BuildLfgSetBootVote(bool agree) {
-  WorldPacket pkt(Opcode::CMSG_LFG_SET_BOOT_VOTE);
-  pkt.AppendU8(agree ? 1 : 0);
-  return pkt;
-}
-
 WorldPacket PacketSender::BuildPetAction(std::uint64_t pet_guid, std::uint32_t action_data,
                                          std::uint64_t target_guid) {
   WorldPacket pkt(Opcode::CMSG_PET_ACTION);
