@@ -1,6 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
+#include <optional>
+#include <span>
+#include <vector>
 
 /// Dungeon Finder dungeon ids and selection rules.
 ///
@@ -29,5 +33,40 @@ namespace openwow::game::lfg {
 [[nodiscard]] bool CanKeepSelectedDungeon(std::uint8_t new_type,
                                           std::uint32_t tracked_party_member_count,
                                           std::uint32_t existing_packed_dungeon_id);
+
+/// An LFGDungeons row as the random-dungeon rules see it, with the
+/// LFGDungeonExpansion override for the account's expansion already applied
+/// to the level fields.
+struct RandomDungeonCandidate {
+  std::uint32_t dungeon_id = 0;
+  std::uint32_t type_id = 0;
+  std::uint32_t flags = 0;
+  std::uint32_t expansion_level = 0;
+  /// Midpoint of the recommended (or overridden target) level range.
+  std::uint32_t target_level_average = 0;
+  /// Minimum level (or the overridden hard minimum).
+  std::uint32_t min_level = 0;
+};
+
+/// Type id of the "random dungeon" LFGDungeons rows.
+inline constexpr std::uint32_t kRandomDungeonTypeId = 6u;
+/// LFGDungeons flag: a seasonal dungeon offered in the random list while
+/// unlocked.
+inline constexpr std::uint32_t kSeasonalDungeonFlag = 0x4u;
+
+/// Ids (unpacked) of the dungeons offered in the random-dungeon list, in
+/// table order: every random dungeon, plus seasonal dungeons for which
+/// `is_unlocked(packed id)` holds.
+[[nodiscard]] std::vector<std::uint32_t> AvailableRandomDungeonIds(
+    std::span<const RandomDungeonCandidate> candidates,
+    const std::function<bool(std::uint32_t)>& is_unlocked);
+
+/// The random dungeon to preselect: among joinable random dungeons
+/// (`is_joinable(packed id)`), the newest expansion, then the highest
+/// target level, then the highest minimum level; the first in table order
+/// wins ties.
+[[nodiscard]] std::optional<std::uint32_t> BestRandomDungeonId(
+    std::span<const RandomDungeonCandidate> candidates,
+    const std::function<bool(std::uint32_t)>& is_joinable);
 
 }  // namespace openwow::game::lfg

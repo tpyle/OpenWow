@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstdint>
+#include <vector>
 
 namespace lfg = openwow::game::lfg;
 
@@ -72,5 +73,59 @@ TEST_CASE("LFG selection: which existing dungeons survive an addition",
     CHECK_FALSE(lfg::CanKeepSelectedDungeon(6u, 0u, random));
     CHECK_FALSE(lfg::CanKeepSelectedDungeon(6u, 0u, dungeon));
     CHECK_FALSE(lfg::CanKeepSelectedDungeon(4u, 0u, lfg::PackDungeonId(14u, 4u)));
+  }
+}
+
+namespace {
+
+lfg::RandomDungeonCandidate Random(std::uint32_t id, std::uint32_t expansion,
+                                   std::uint32_t target_average, std::uint32_t min_level) {
+  return {.dungeon_id = id,
+          .type_id = lfg::kRandomDungeonTypeId,
+          .expansion_level = expansion,
+          .target_level_average = target_average,
+          .min_level = min_level};
+}
+
+}  // namespace
+
+TEST_CASE("LFG random dungeon list", "[lfg][rules]") {
+  const std::vector<lfg::RandomDungeonCandidate> candidates{
+      Random(258, 0, 20, 15),
+      {.dungeon_id = 36, .type_id = 1},                                          // plain dungeon
+      {.dungeon_id = 285, .type_id = 1, .flags = lfg::kSeasonalDungeonFlag},    // seasonal
+      {.dungeon_id = 286, .type_id = 1, .flags = lfg::kSeasonalDungeonFlag},    // seasonal, locked
+      Random(262, 2, 80, 80),
+  };
+  const auto unlocked = [](std::uint32_t packed) { return packed == lfg::PackDungeonId(285, 1); };
+  CHECK(lfg::AvailableRandomDungeonIds(candidates, unlocked) ==
+        std::vector<std::uint32_t>{258, 285, 262});
+  CHECK(lfg::AvailableRandomDungeonIds({}, unlocked).empty());
+}
+
+TEST_CASE("LFG best random dungeon", "[lfg][rules]") {
+  const auto all = [](std::uint32_t) { return true; };
+
+  SECTION("newest expansion wins") {
+    const std::vector<lfg::RandomDungeonCandidate> c{Random(1, 0, 70, 60), Random(2, 2, 75, 65),
+                                                     Random(3, 1, 80, 70)};
+    CHECK(lfg::BestRandomDungeonId(c, all) == 2u);
+  }
+  SECTION("then the highest target level") {
+    const std::vector<lfg::RandomDungeonCandidate> c{Random(1, 2, 75, 60), Random(2, 2, 80, 60)};
+    CHECK(lfg::BestRandomDungeonId(c, all) == 2u);
+  }
+  SECTION("then the highest minimum level; the first wins full ties") {
+    const std::vector<lfg::RandomDungeonCandidate> c{Random(1, 2, 80, 70), Random(2, 2, 80, 75),
+                                                     Random(3, 2, 80, 75)};
+    CHECK(lfg::BestRandomDungeonId(c, all) == 2u);
+  }
+  SECTION("only joinable random dungeons count") {
+    const std::vector<lfg::RandomDungeonCandidate> c{
+        Random(1, 0, 20, 15), Random(2, 2, 80, 80),
+        {.dungeon_id = 3, .type_id = 1, .expansion_level = 2, .target_level_average = 80}};
+    const auto not_two = [](std::uint32_t packed) { return packed != lfg::PackDungeonId(2, 6); };
+    CHECK(lfg::BestRandomDungeonId(c, not_two) == 1u);
+    CHECK_FALSE(lfg::BestRandomDungeonId(c, [](std::uint32_t) { return false; }));
   }
 }

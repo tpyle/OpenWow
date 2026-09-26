@@ -7,6 +7,7 @@
 #include "openwow/data/formats/dbc/dbc_table_registry.h"
 #include "openwow/game/chat_display.h"
 #include "openwow/game/group_system.h"
+#include "openwow/game/activities/lfg/adapters/data/lfg_dbc_dungeons.h"
 #include "openwow/game/activities/lfg/application/lfg_system.h"
 #include "openwow/game/localization.h"
 #include "openwow/net/client_services.h"
@@ -1588,7 +1589,9 @@ int LuaGetLFGRandomDungeonInfo(lua_State *L) {
     return 0;
   }
 
-  const auto dungeon_ids = session->lfg().GetAvailableRandomDungeonIds(*dbc);
+  const auto dungeon_ids = session->lfg().GetAvailableRandomDungeonIds(
+      ::openwow::game::lfg::BuildRandomDungeonCandidates(
+          *dbc, openwow::net::ClientServices::Instance().GetExpansionLevel()));
   const auto position = static_cast<std::size_t>(index - 1);
   if (position >= dungeon_ids.size()) {
     return 0;
@@ -1602,7 +1605,12 @@ int LuaGetNumRandomDungeons(lua_State *L) {
   auto *session = GetWorldSession(L);
   const auto *dbc = GetDbcLoaderLocal(L);
   const auto count = session != nullptr && dbc != nullptr
-                         ? session->lfg().GetAvailableRandomDungeonIds(*dbc).size()
+                         ? session->lfg()
+                               .GetAvailableRandomDungeonIds(
+                                   ::openwow::game::lfg::BuildRandomDungeonCandidates(
+                                       *dbc, openwow::net::ClientServices::Instance()
+                                                 .GetExpansionLevel()))
+                               .size()
                          : 0u;
   lua_pushnumber(L, static_cast<lua_Number>(count));
   return 1;

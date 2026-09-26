@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <span>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -13,6 +14,7 @@
 #include <vector>
 
 #include "openwow/game/activities/lfg/model/lfg_server_messages.h"
+#include "openwow/game/activities/lfg/rules/lfg_dungeon_rules.h"
 
 
 namespace openwow::data::dbc {
@@ -121,10 +123,13 @@ public:
   [[nodiscard]] std::vector<LfgLockEntry> GetChoiceLockEntries() const;
   [[nodiscard]] bool HasUnlockedPlayerDungeon(std::uint32_t packed_dungeon_id) const;
   [[nodiscard]] bool IsDungeonJoinable(std::uint32_t packed_dungeon_id) const;
+  /// See lfg::AvailableRandomDungeonIds; seasonal dungeons count when the
+  /// player's dungeon info lists them unlocked.
   [[nodiscard]] std::vector<std::uint32_t> GetAvailableRandomDungeonIds(
-      const openwow::data::dbc::DbcLoader &dbc) const;
+      std::span<const lfg::RandomDungeonCandidate> candidates) const;
+  /// See lfg::BestRandomDungeonId, with IsDungeonJoinable as the filter.
   [[nodiscard]] std::optional<std::uint32_t> GetBestRandomDungeonId(
-      const openwow::data::dbc::DbcLoader &dbc, std::uint8_t expansion_level) const;
+      std::span<const lfg::RandomDungeonCandidate> candidates) const;
   [[nodiscard]] std::uint8_t lfg_update_search() const {
     return lfg_update_search_;
   }

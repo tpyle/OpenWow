@@ -4,6 +4,7 @@
 #include "openwow/ui/game/api/game_lua_api_dungeon.h"
 #include "openwow/game/chat_display.h"
 #include "openwow/game/game_misc_utils.h"
+#include "openwow/game/activities/lfg/adapters/data/lfg_dbc_dungeons.h"
 #include "openwow/game/activities/lfg/application/lfg_system.h"
 #include "openwow/runtime/time/game_clock.h"
 #include "openwow/net/client_services.h"
@@ -108,8 +109,9 @@ int LuaGetRandomDungeonBestChoice(lua_State* L) {
     return 0;
   }
 
-  const auto best_dungeon_id = session->lfg().GetBestRandomDungeonId(
-      *dbc, openwow::net::ClientServices::Instance().GetExpansionLevel());
+  const auto best_dungeon_id =
+      session->lfg().GetBestRandomDungeonId(::openwow::game::lfg::BuildRandomDungeonCandidates(
+          *dbc, openwow::net::ClientServices::Instance().GetExpansionLevel()));
   if (!best_dungeon_id.has_value()) {
     return 0;
   }

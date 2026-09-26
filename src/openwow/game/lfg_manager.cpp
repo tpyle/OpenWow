@@ -6,7 +6,6 @@
 
 #include "openwow/core/storm_string.h"
 #include "openwow/data/formats/dbc/dbc_loader.h"
-#include "openwow/data/formats/dbc/dbc_table_registry.h"
 #include "openwow/game/unit_query_bridge.h"
 
 #include <algorithm>
@@ -29,22 +28,6 @@ bool MatchesDungeonId(const std::uint32_t packed_dungeon_id, const std::uint32_t
 bool HasWorkingSearchGroup(const std::unordered_map<std::uint64_t, LfgSearchGroupResult> &groups,
                            const std::uint64_t guid) {
   return guid != 0 && groups.contains(guid);
-}
-
-std::uint32_t PackDungeonId(const openwow::data::dbc::LfgDungeonsEntry &entry) {
-  return lfg::PackDungeonId(entry.id, entry.type_id);
-}
-
-std::uint32_t EffectiveTargetAverage(const openwow::data::dbc::LfgDungeonsEntry &entry,
-                                     const openwow::data::dbc::LfgDungeonExpansionEntry *override) {
-  const auto min_target = override != nullptr ? override->target_level_min : entry.rec_min_level;
-  const auto max_target = override != nullptr ? override->target_level_max : entry.rec_max_level;
-  return (min_target + max_target) / 2;
-}
-
-std::uint32_t EffectiveMinLevel(const openwow::data::dbc::LfgDungeonsEntry &entry,
-                                const openwow::data::dbc::LfgDungeonExpansionEntry *override) {
-  return override != nullptr ? override->hard_level_min : entry.min_level;
 }
 
 void EraseGuid(std::vector<std::uint64_t> &guids, const std::uint64_t guid) {
@@ -500,69 +483,18 @@ bool LfgManager::IsDungeonJoinable(const std::uint32_t packed_dungeon_id) const 
 }
 
 std::vector<std::uint32_t> LfgManager::GetAvailableRandomDungeonIds(
-    const openwow::data::dbc::DbcLoader &dbc) const {
-  std::vector<std::uint32_t> dungeon_ids;
-  for (const auto &entry : dbc.lfg_dungeons()) {
-    const auto packed_dungeon_id = PackDungeonId(entry);
-    if (entry.type_id == 6u ||
-        ((entry.flags & 0x4u) != 0 && HasUnlockedPlayerDungeon(packed_dungeon_id))) {
-      dungeon_ids.push_back(entry.id);
-    }
-  }
-  return dungeon_ids;
+    const std::span<const lfg::RandomDungeonCandidate> candidates) const {
+  return lfg::AvailableRandomDungeonIds(
+      candidates, [this](const std::uint32_t packed_dungeon_id) {
+        return HasUnlockedPlayerDungeon(packed_dungeon_id);
+      });
 }
 
 std::optional<std::uint32_t> LfgManager::GetBestRandomDungeonId(
-    const openwow::data::dbc::DbcLoader &dbc, const std::uint8_t expansion_level) const {
-  const openwow::data::dbc::LfgDungeonsEntry *best_entry = nullptr;
-  const openwow::data::dbc::LfgDungeonExpansionEntry *best_override = nullptr;
-
-  for (const auto &entry : dbc.lfg_dungeons()) {
-    if (entry.type_id != 6u) {
-      continue;
-    }
-
-    if (!IsDungeonJoinable(PackDungeonId(entry))) {
-      continue;
-    }
-
-    const auto *entry_override = openwow::data::DBClient_FindLfgDungeonExpansion(
-        &dbc, entry.id, expansion_level);
-    if (best_entry == nullptr) {
-      best_entry = &entry;
-      best_override = entry_override;
-      continue;
-    }
-
-    if (entry.expansion_level != best_entry->expansion_level) {
-      if (entry.expansion_level > best_entry->expansion_level) {
-        best_entry = &entry;
-        best_override = entry_override;
-      }
-      continue;
-    }
-
-    const auto entry_average = EffectiveTargetAverage(entry, entry_override);
-    const auto best_average = EffectiveTargetAverage(*best_entry, best_override);
-    if (entry_average != best_average) {
-      if (entry_average > best_average) {
-        best_entry = &entry;
-        best_override = entry_override;
-      }
-      continue;
-    }
-
-    if (EffectiveMinLevel(entry, entry_override) > EffectiveMinLevel(*best_entry, best_override)) {
-      best_entry = &entry;
-      best_override = entry_override;
-    }
-  }
-
-  if (best_entry == nullptr) {
-    return std::nullopt;
-  }
-
-  return best_entry->id;
+    const std::span<const lfg::RandomDungeonCandidate> candidates) const {
+  return lfg::BestRandomDungeonId(candidates, [this](const std::uint32_t packed_dungeon_id) {
+    return IsDungeonJoinable(packed_dungeon_id);
+  });
 }
 
 bool LfgManager::HandleLfgRoleChosen(const std::uint8_t *data, std::size_t len) {

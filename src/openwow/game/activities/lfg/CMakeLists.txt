@@ -49,3 +49,18 @@ target_link_libraries(openwow_game_lfg_protocol_adapter
     openwow_network_protocol
 )
 openwow_configure_target(openwow_game_lfg_protocol_adapter)
+
+# LFG data read from the DBC tables.
+add_library(openwow_game_lfg_dbc_adapter
+  adapters/data/lfg_dbc_dungeons.cpp
+)
+target_include_directories(openwow_game_lfg_dbc_adapter
+  PUBLIC ${PROJECT_SOURCE_DIR}/include
+)
+target_link_libraries(openwow_game_lfg_dbc_adapter
+  PUBLIC openwow_game_lfg_rules
+  PRIVATE
+    openwow_data_formats
+    openwow_data_runtime
+)
+openwow_configure_target(openwow_game_lfg_dbc_adapter)
