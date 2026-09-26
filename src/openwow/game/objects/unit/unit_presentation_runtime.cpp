@@ -1,4 +1,5 @@
 #include "openwow/game/objects/cgunit.h"
+#include "openwow/game/objects/unit/remote_ground_probe.h"
 
 #include "openwow/runtime/time/game_clock.h"
 #include "openwow/game/display_info_resolver.h"
@@ -78,10 +79,10 @@ constexpr float kWalkableNormalZ_Player = 0.64278764f;
 constexpr float kWalkableNormalZ_NPC = 0.17364818f;
 constexpr float kDefaultCollisionWidth = 0.66666669f;
 constexpr float kDefaultCollisionHeight = 2.027777671813965f;
-constexpr float kRemoteGroundSeedVerticalAllowance = 0.5f;
-constexpr float kRemoteGroundProbeVerticalSlack = 0.25f;
-constexpr float kRemoteGroundProbeRisePerPlanarUnit = 5.671282f;
-constexpr float kRemoteGroundProbeMaxVerticalAllowance = 8.0f;
+constexpr float kRemoteGroundSeedVerticalAllowance =
+    remote_ground_probe::kSeedVerticalAllowance;
+constexpr float kRemoteGroundProbeRisePerPlanarUnit =
+    remote_ground_probe::kRisePerPlanarUnit;
 constexpr std::uint32_t kAerialSplineFlags =
     SplineFlag::kFalling | SplineFlag::kParabolic | SplineFlag::kFlying |
     SplineFlag::kTransportEnter | SplineFlag::kTransportExit;
@@ -972,32 +973,17 @@ void UnitMovementRuntime::InterpolateShadowBlobPosition(float dt) {
     ground_projection_position_ = {};
     ground_projection_failed_ = false;
   } else {
-    float vertical_allowance = kRemoteGroundSeedVerticalAllowance;
-    float probe_origin_z = position.z + vertical_allowance;
-    if (ground_projection_seeded_) {
-      const float delta_x = position.x - ground_projection_anchor_[0];
-      const float delta_y = position.y - ground_projection_anchor_[1];
-      const float planar_distance =
-          std::sqrt(delta_x * delta_x + delta_y * delta_y);
-      vertical_allowance = std::clamp(
-          kRemoteGroundProbeVerticalSlack +
-              planar_distance * kRemoteGroundProbeRisePerPlanarUnit,
-          kRemoteGroundSeedVerticalAllowance,
-          kRemoteGroundProbeMaxVerticalAllowance);
-      if (planar_distance > kRemoteGroundProbeMaxVerticalAllowance ||
-          std::fabs(position.z - ground_projection_position_[2]) >
-              vertical_allowance) {
-        // A discontinuous authoritative relocation must choose support near
-        // its new height, not follow the previous floor of a stacked scene.
-        ground_projection_seeded_ = false;
-        vertical_allowance = kRemoteGroundSeedVerticalAllowance;
-      } else {
-        probe_origin_z = ground_projection_anchor_[2] + vertical_allowance;
-      }
-    }
+    // A relocation too far to follow starts over from the new server height
+    // rather than following the previous floor of a stacked scene.
+    const auto probe = remote_ground_probe::ComputeWindow(
+        {position.x, position.y, position.z}, ground_projection_seeded_,
+        ground_projection_anchor_, ground_projection_position_[2],
+        owner_.Presentation().CollisionHeight());
+    ground_projection_seeded_ = probe.seeded;
+    const float probe_origin_z = probe.origin_z;
 
     const auto surface = owner_.Presentation().QueryGroundSurface(
-        {position.x, position.y, probe_origin_z}, vertical_allowance * 2.0f);
+        {position.x, position.y, probe_origin_z}, probe.distance);
     const bool valid_surface =
         std::isfinite(surface.ground_z) && std::isfinite(surface.normal_x) &&
         std::isfinite(surface.normal_y) && std::isfinite(surface.normal_z);
@@ -1026,7 +1012,7 @@ void UnitMovementRuntime::InterpolateShadowBlobPosition(float dt) {
               std::to_string(position.x) + "," + std::to_string(position.y) +
               "," + std::to_string(position.z) + ") probeZ=" +
               std::to_string(probe_origin_z) + " distance=" +
-              std::to_string(vertical_allowance * 2.0f) + " reason=" +
+              std::to_string(probe.distance) + " reason=" +
               (g_calc_ground_pos_callback == nullptr ? "provider-unavailable"
                : !surface.hit ? "no-connected-surface"
                : !valid_surface ? "invalid-surface"
