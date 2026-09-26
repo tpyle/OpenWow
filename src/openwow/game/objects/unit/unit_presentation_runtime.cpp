@@ -50,7 +50,7 @@ render::RenderMatrix4x4 BuildUnitM2WorldTransform(const CGUnit_C &unit) {
 
   return render::BuildM2ModelInstanceTransform(
       position.x, position.y, position.z,
-      unit.Movement().SmoothBodyFacing(), unit.GetScale());
+      unit.Movement().WorldSmoothBodyFacing(), unit.GetScale());
 }
 
 CalcGroundPosCallback g_calc_ground_pos_callback = nullptr;
@@ -156,7 +156,7 @@ void InterpolatePlayerGroundContactNormal(const CGUnit_C &unit,
     const std::array<float, 3> &world_position) {
   return render::BuildM2AttachmentTransformMatrix(
       render::RenderVec3View{world_position},
-      unit.Movement().SmoothBodyFacing(), unit.GetScale(),
+      unit.Movement().WorldSmoothBodyFacing(), unit.GetScale(),
       render::RenderVec3View{surface_normal},
       static_cast<render::AttachmentOrientationMode>(
           unit.Movement().GroundOrientationMode() & 0x3u));
@@ -1043,7 +1043,7 @@ void UnitMovementRuntime::InterpolateShadowBlobPosition(float dt) {
     InterpolateRetailGroundContactNormal(owner_, ground_contact_normal_, dt);
   }
 
-  const float body_facing = SmoothBodyFacing();
+  const float body_facing = WorldSmoothBodyFacing();
   const float scale = owner_.GetScale();
   const std::uint8_t orientation_mode =
       static_cast<std::uint8_t>(ground_orientation_mode_ & 0x3u);
