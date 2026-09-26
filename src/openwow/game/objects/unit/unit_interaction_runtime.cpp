@@ -232,8 +232,11 @@ void StartUnitApproach(WorldSession &session, const CGUnit_C &unit,
       interaction_range_squared) {
     return true;
   }
+  // Walking to an out-of-range NPC is click-to-move ("autoInteract"); with
+  // it off, the original just doesn't interact.
   if (static_cast<std::int32_t>(active_player.State().GetHealth()) <= 0 ||
-      !active_player.IsActiveMover() || !session.click_to_move().IsEnabled()) {
+      !active_player.IsActiveMover() || !session.click_to_move().IsEnabled() ||
+      !active_player.AutoInteractSuppressesInteractionRange()) {
     return false;
   }
 
@@ -519,7 +522,8 @@ void UnitInteractionRuntime::RightClickInteract(
         loot_range_squared) {
       if (static_cast<std::int32_t>(player_obj->State().GetHealth()) > 0 &&
           player_obj->IsActiveMover() &&
-          session->click_to_move().IsEnabled()) {
+          session->click_to_move().IsEnabled() &&
+          player_obj->AutoInteractSuppressesInteractionRange()) {
         StartUnitApproach(*session, owner_, *player_obj);
         return;
       }
