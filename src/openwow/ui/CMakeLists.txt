@@ -377,6 +377,7 @@ target_link_libraries(openwow_ui_runtime PRIVATE
   openwow_debug_runtime
   openwow_game
   openwow_game_achievements_runtime
+  openwow_game_contacts_protocol_adapter
   openwow_game_held_cursor
   openwow_game_quests_runtime
   openwow_input

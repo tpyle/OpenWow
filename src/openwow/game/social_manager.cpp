@@ -312,52 +312,6 @@ bool SocialManager::HandleFriendStatus(const std::uint8_t *data, std::size_t len
   return true;
 }
 
-net::wotlk::WorldPacket SocialManager::BuildAddFriend(const std::string &name,
-                                                      const std::string &note) {
-  net::wotlk::WorldPacket pkt(net::wotlk::Opcode::CMSG_ADD_FRIEND);
-  pkt.AppendString(name.c_str());
-  pkt.AppendString(note.c_str());
-  return pkt;
-}
-
-net::wotlk::WorldPacket SocialManager::BuildDelFriend(const ObjectGuid &guid) {
-  net::wotlk::WorldPacket pkt(net::wotlk::Opcode::CMSG_DEL_FRIEND);
-  pkt.AppendU64(guid.GetRawValue());
-  return pkt;
-}
-
-net::wotlk::WorldPacket SocialManager::BuildAddIgnore(const std::string &name) {
-  net::wotlk::WorldPacket pkt(net::wotlk::Opcode::CMSG_ADD_IGNORE);
-  pkt.AppendString(name.c_str());
-  return pkt;
-}
-
-net::wotlk::WorldPacket SocialManager::BuildDelIgnore(const ObjectGuid &guid) {
-  net::wotlk::WorldPacket pkt(net::wotlk::Opcode::CMSG_DEL_IGNORE);
-  pkt.AppendU64(guid.GetRawValue());
-  return pkt;
-}
-
-net::wotlk::WorldPacket SocialManager::BuildAddMute(const std::string &name) {
-  net::wotlk::WorldPacket pkt(net::wotlk::Opcode::CMSG_ADD_VOICE_IGNORE);
-  pkt.AppendString(name.c_str());
-  return pkt;
-}
-
-net::wotlk::WorldPacket SocialManager::BuildDelMute(const ObjectGuid &guid) {
-  net::wotlk::WorldPacket pkt(net::wotlk::Opcode::CMSG_DEL_VOICE_IGNORE);
-  pkt.AppendU64(guid.GetRawValue());
-  return pkt;
-}
-
-net::wotlk::WorldPacket SocialManager::BuildSetContactNotes(const ObjectGuid &guid,
-                                                            const std::string &note) {
-  net::wotlk::WorldPacket pkt(net::wotlk::Opcode::CMSG_SET_CONTACT_NOTES);
-  pkt.AppendU64(guid.GetRawValue());
-  pkt.AppendString(note.c_str());
-  return pkt;
-}
-
 std::vector<const ContactInfo *> SocialManager::GetFriends() const {
   std::vector<const ContactInfo *> result;
   for (const auto &c : contacts_) {

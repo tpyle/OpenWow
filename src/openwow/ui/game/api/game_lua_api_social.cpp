@@ -18,6 +18,7 @@
 #include "openwow/game/actions/macros/application/macro_catalog.h"
 #include "openwow/game/player_pvp_info.h"
 #include "openwow/game/social_manager.h"
+#include "openwow/game/social/contacts/adapters/protocol/contact_client_packets.h"
 #include "openwow/game/spell_cast_runtime.h"
 #include "openwow/game/spell_text_formatter.h"
 #include "openwow/game/spellbook_system.h"
@@ -167,7 +168,7 @@ std::string CopyRetailCStringToBuffer(const char *value, const std::size_t buffe
 openwow::net::wotlk::WorldPacket BuildRetailAddFriendPacket(const char *name, const char *note) {
 
   openwow::game::TutorialSystem::Instance().FlagTutorial(0x15u);
-  return openwow::net::wotlk::PacketSender::BuildAddFriend(
+  return openwow::game::contacts::BuildAddFriendPacket(
       CopyRetailCStringToBuffer(name, kAddFriendNameBufferCapacity),
       CopyRetailCStringToBuffer(note, kAddFriendNoteBufferCapacity));
 }
@@ -1738,7 +1739,7 @@ int LuaAddIgnore(lua_State *L) {
     return 0;
   }
 
-  const auto packet = openwow::net::wotlk::PacketSender::BuildAddIgnore(
+  const auto packet = openwow::game::contacts::BuildAddIgnorePacket(
       CopyRetailCStringToBuffer(name, kAddIgnoreNameBufferCapacity));
   (void)openwow::net::ClientServices__SendPacket(packet);
   return 0;
@@ -2548,7 +2549,7 @@ int LuaAddMute(lua_State *L) {
     return 0;
   }
 
-  const auto packet = openwow::game::SocialManager::BuildAddMute(
+  const auto packet = openwow::game::contacts::BuildAddMutePacket(
       CopyRetailCStringToBuffer(name, kAddMuteNameBufferCapacity));
   (void)openwow::net::ClientServices__SendPacket(packet);
   return 0;
@@ -2570,9 +2571,9 @@ int LuaAddOrDelIgnore(lua_State *L) {
       FindRetailSocialContactByName(*session, session->social().GetIgnored(), name);
 
   const auto packet = contact != nullptr
-                          ? openwow::net::wotlk::PacketSender::BuildDelIgnore(
+                          ? openwow::game::contacts::BuildDelIgnorePacket(
                                 contact->guid.GetRawValue())
-                          : openwow::net::wotlk::PacketSender::BuildAddIgnore(name);
+                          : openwow::game::contacts::BuildAddIgnorePacket(name);
   (void)openwow::net::ClientServices__SendPacket(packet);
   return 0;
 }
@@ -2593,8 +2594,8 @@ int LuaApi_AddOrDelMute(lua_State *L) {
       FindRetailSocialContactByName(*session, session->social().GetMuted(), name);
 
   const auto packet = contact != nullptr
-                          ? openwow::game::SocialManager::BuildDelMute(contact->guid)
-                          : openwow::game::SocialManager::BuildAddMute(name);
+                          ? openwow::game::contacts::BuildDelMutePacket(contact->guid.GetRawValue())
+                          : openwow::game::contacts::BuildAddMutePacket(name);
   (void)openwow::net::ClientServices__SendPacket(packet);
   return 0;
 }
@@ -2614,7 +2615,7 @@ int LuaApi_AddOrRemoveFriend(lua_State *L) {
                             : nullptr;
 
   const auto packet = contact != nullptr
-                          ? openwow::game::SocialManager::BuildDelFriend(contact->guid)
+                          ? openwow::game::contacts::BuildDelFriendPacket(contact->guid.GetRawValue())
                           : BuildRetailAddFriendPacket(name, note);
   (void)openwow::net::ClientServices__SendPacket(packet);
   return 0;

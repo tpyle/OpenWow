@@ -962,31 +962,6 @@ WorldPacket PacketSender::BuildRequestPartyMemberStats(const std::uint64_t targe
   return pkt;
 }
 
-WorldPacket PacketSender::BuildAddFriend(std::string_view name, std::string_view note) {
-  WorldPacket pkt(Opcode::CMSG_ADD_FRIEND);
-  AppendNullString(pkt, name);
-  AppendNullString(pkt, note);
-  return pkt;
-}
-
-WorldPacket PacketSender::BuildDelFriend(std::uint64_t guid) {
-  WorldPacket pkt(Opcode::CMSG_DEL_FRIEND);
-  pkt.AppendU64(guid);
-  return pkt;
-}
-
-WorldPacket PacketSender::BuildAddIgnore(std::string_view name) {
-  WorldPacket pkt(Opcode::CMSG_ADD_IGNORE);
-  AppendNullString(pkt, name);
-  return pkt;
-}
-
-WorldPacket PacketSender::BuildDelIgnore(std::uint64_t guid) {
-  WorldPacket pkt(Opcode::CMSG_DEL_IGNORE);
-  pkt.AppendU64(guid);
-  return pkt;
-}
-
 WorldPacket PacketSender::BuildWho(const WhoQuery &query) {
   WorldPacket pkt(Opcode::CMSG_WHO);
   pkt.AppendU32(query.min_level);

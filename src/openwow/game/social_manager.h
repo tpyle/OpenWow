@@ -98,16 +98,6 @@ public:
 
   bool HandleFriendStatus(const std::uint8_t *data, std::size_t len);
 
-  static net::wotlk::WorldPacket BuildAddFriend(const std::string &name,
-                                                const std::string &note = "");
-  static net::wotlk::WorldPacket BuildDelFriend(const ObjectGuid &guid);
-  static net::wotlk::WorldPacket BuildAddIgnore(const std::string &name);
-  static net::wotlk::WorldPacket BuildDelIgnore(const ObjectGuid &guid);
-  static net::wotlk::WorldPacket BuildAddMute(const std::string &name);
-  static net::wotlk::WorldPacket BuildDelMute(const ObjectGuid &guid);
-  static net::wotlk::WorldPacket BuildSetContactNotes(const ObjectGuid &guid,
-                                                      const std::string &note);
-
   [[nodiscard]] const std::vector<ContactInfo> &contacts() const {
     return contacts_;
   }

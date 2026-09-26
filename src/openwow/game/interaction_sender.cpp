@@ -33,6 +33,7 @@
 #include "openwow/game/commerce/mail/adapters/protocol/mail_packet_codec.h"
 #include "openwow/game/inventory/operations/player_item_packet_location.h"
 #include "openwow/game/social_manager.h"
+#include "openwow/game/social/contacts/adapters/protocol/contact_client_packets.h"
 #include "openwow/game/commerce/trade/trade_interaction.h"
 #include "openwow/game/commerce/trade/adapters/protocol/trade_packet_codec.h"
 #include "openwow/game/tutorial_system.h"
@@ -1961,12 +1962,12 @@ void InteractionSender::SendStandStateChange(const std::uint8_t stand_state) {
 void InteractionSender::SendAddFriend(const std::string &name, const std::string &note) {
   TutorialSystem::Instance().FlagTutorial(0x15u);
 
-  auto pkt = PacketSender::BuildAddFriend(name, note);
+  auto pkt = contacts::BuildAddFriendPacket(name, note);
   Send(pkt);
 }
 
 void InteractionSender::SendDelFriend(std::uint64_t guid) {
-  auto pkt = PacketSender::BuildDelFriend(guid);
+  auto pkt = contacts::BuildDelFriendPacket(guid);
   Send(pkt);
 }
 
@@ -1997,22 +1998,22 @@ void InteractionSender::SendAddIgnore(const std::string &name) {
     }
   }
 
-  auto pkt = PacketSender::BuildAddIgnore(name);
+  auto pkt = contacts::BuildAddIgnorePacket(name);
   Send(pkt);
 }
 
 void InteractionSender::SendDelIgnore(std::uint64_t guid) {
-  auto pkt = PacketSender::BuildDelIgnore(guid);
+  auto pkt = contacts::BuildDelIgnorePacket(guid);
   Send(pkt);
 }
 
 void InteractionSender::SendAddMute(const std::string &name) {
-  auto pkt = SocialManager::BuildAddMute(name);
+  auto pkt = contacts::BuildAddMutePacket(name);
   Send(pkt);
 }
 
 void InteractionSender::SendDelMute(std::uint64_t guid) {
-  auto pkt = SocialManager::BuildDelMute(ObjectGuid(guid));
+  auto pkt = contacts::BuildDelMutePacket(guid);
   Send(pkt);
 }
 
@@ -2247,16 +2248,11 @@ void InteractionSender::SendReadyCheckFinished() {
 }
 
 void InteractionSender::SendContactList(std::uint32_t flags) {
-  WorldPacket pkt(Opcode::CMSG_CONTACT_LIST);
-  pkt.AppendU32(flags);
-  Send(pkt);
+  Send(contacts::BuildContactListRequestPacket(flags));
 }
 
 void InteractionSender::SendSetContactNotes(std::uint64_t guid, const std::string &note) {
-  WorldPacket pkt(Opcode::CMSG_SET_CONTACT_NOTES);
-  pkt.AppendU64(guid);
-  pkt.AppendString(note.c_str());
-  Send(pkt);
+  Send(contacts::BuildSetContactNotesPacket(guid, note));
 }
 
 void InteractionSender::SendSummonResponse(std::uint64_t summoner_guid, bool accept) {

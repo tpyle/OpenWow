@@ -380,14 +380,6 @@ public:
 
   static WorldPacket BuildRequestPartyMemberStats(std::uint64_t target_guid);
 
-  static WorldPacket BuildAddFriend(std::string_view name, std::string_view note = {});
-
-  static WorldPacket BuildDelFriend(std::uint64_t guid);
-
-  static WorldPacket BuildAddIgnore(std::string_view name);
-
-  static WorldPacket BuildDelIgnore(std::uint64_t guid);
-
   static WorldPacket BuildWho(const WhoQuery &query);
 
   static WorldPacket BuildLearnTalent(std::uint32_t talent_id, std::uint32_t talent_rank);
