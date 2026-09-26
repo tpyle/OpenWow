@@ -4,7 +4,8 @@
 #include "openwow/ui/game/api/game_lua_api_dungeon.h"
 #include "openwow/game/chat_display.h"
 #include "openwow/game/game_misc_utils.h"
-#include "openwow/game/lfg_system.h"
+#include "openwow/game/activities/lfg/application/lfg_system.h"
+#include "openwow/runtime/time/game_clock.h"
 #include "openwow/net/client_services.h"
 
 #include <optional>
@@ -132,7 +133,8 @@ int LuaLFGTeleport(lua_State* L) {
     return 0;
   }
 
-  if (!::openwow::game::LFGSystem::Get().TryPrepareTeleportSend()) {
+  if (!::openwow::game::LFGSystem::Get().TryPrepareTeleportSend(
+          ::openwow::core::GameClock::GetTickCountSeconds())) {
 
     return 0;
   }

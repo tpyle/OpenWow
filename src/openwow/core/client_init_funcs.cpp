@@ -17,7 +17,7 @@
 #include "openwow/game/chat_display.h"
 #include "openwow/game/currency_system.h"
 #include "openwow/game/game_misc_utils.h"
-#include "openwow/game/lfg_system.h"
+#include "openwow/game/activities/lfg/application/lfg_system.h"
 #include "openwow/game/objects/cgcorpse.h"
 #include "openwow/net/client_services.h"
 #include "openwow/net/realm_config_tables.h"

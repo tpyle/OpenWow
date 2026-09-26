@@ -7,7 +7,7 @@
 #include "openwow/data/formats/dbc/dbc_table_registry.h"
 #include "openwow/game/chat_display.h"
 #include "openwow/game/group_system.h"
-#include "openwow/game/lfg_system.h"
+#include "openwow/game/activities/lfg/application/lfg_system.h"
 #include "openwow/game/localization.h"
 #include "openwow/net/client_services.h"
 #include "openwow/net/client_services_packet_sender.h"

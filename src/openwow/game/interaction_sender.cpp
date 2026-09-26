@@ -25,7 +25,7 @@
 #include "openwow/game/inventory/items/item_definitions.h"
 #include "openwow/game/inventory/items/item_on_use_spell.h"
 #include "openwow/game/inventory/search/action_item_inventory_search.h"
-#include "openwow/game/lfg_system.h"
+#include "openwow/game/activities/lfg/application/lfg_system.h"
 #include "openwow/game/localization.h"
 #include "openwow/game/pet_manager.h"
 #include "openwow/game/commerce/mail/mail_interaction.h"

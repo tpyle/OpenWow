@@ -1,10 +1,9 @@
 
-#include "openwow/game/lfg_system.h"
+#include "openwow/game/activities/lfg/application/lfg_system.h"
 
 #include "openwow/game/activities/lfg/rules/lfg_dungeon_rules.h"
 #include "openwow/game/activities/lfg/rules/lfg_role_rules.h"
 
-#include "openwow/runtime/time/game_clock.h"
 
 #include <algorithm>
 #include <array>
@@ -291,10 +290,6 @@ bool LFGSystem::TryBeginJoinRequest(JoinThrottleClock::time_point now) {
     }
 
     return true;
-}
-
-bool LFGSystem::TryPrepareTeleportSend() {
-    return TryPrepareTeleportSend(core::GameClock::GetTickCountSeconds());
 }
 
 bool LFGSystem::TryPrepareTeleportSend(const double now_seconds) {

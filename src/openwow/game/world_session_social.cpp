@@ -41,7 +41,7 @@
 
 #include "openwow/game/group_system.h"
 #include "openwow/game/guild_system.h"
-#include "openwow/game/lfg_system.h"
+#include "openwow/game/activities/lfg/application/lfg_system.h"
 #include "openwow/game/inventory/loot/loot_state.h"
 
 namespace openwow::game {

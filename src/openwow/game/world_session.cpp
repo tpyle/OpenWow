@@ -44,7 +44,7 @@
 #include "openwow/game/guild_system.h"
 #include "openwow/game/inventory/replica_sync.h"
 #include "openwow/game/knowledge_base.h"
-#include "openwow/game/lfg_system.h"
+#include "openwow/game/activities/lfg/application/lfg_system.h"
 #include "openwow/game/inventory/loot/loot_state.h"
 #include "openwow/game/commerce/mail/mail_compose_state.h"
 #include "openwow/game/minigame_system.h"

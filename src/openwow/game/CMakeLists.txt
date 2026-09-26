@@ -228,7 +228,6 @@ openwow_add_component(openwow_game
   pvp_info.cpp
   vehicle_system.cpp
   group_system.cpp
-  lfg_system.cpp
   faction_system.cpp
   currency_system.cpp
   honor_system.cpp
@@ -401,6 +400,7 @@ target_link_libraries(openwow_game PRIVATE
   openwow_game_achievements_rules
   openwow_game_dance_application
   openwow_game_dance_protocol_adapter
+  openwow_game_lfg_application
   openwow_game_lfg_rules
   openwow_game_calendar_runtime
   openwow_debug_runtime

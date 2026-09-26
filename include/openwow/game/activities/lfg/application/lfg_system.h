@@ -81,6 +81,11 @@ struct LFGBootVote {
     bool my_vote = false;
 };
 
+/// Client-side Dungeon Finder state: queue status, the current proposal and
+/// boot vote, the player's role and dungeon selection, and the send
+/// throttles for join requests, comments, teleports and boot votes. All
+/// members are guarded by one mutex (the Lua API and packet handlers both
+/// use it).
 class LFGSystem {
  public:
     using CommentThrottleClock = std::chrono::steady_clock;
@@ -135,7 +140,7 @@ class LFGSystem {
     [[nodiscard]] bool HasActiveJoinRequest() const;
     [[nodiscard]] bool TryBeginJoinRequest();
     [[nodiscard]] bool TryBeginJoinRequest(JoinThrottleClock::time_point now);
-    [[nodiscard]] bool TryPrepareTeleportSend();
+    /// `now_seconds` is the client's tick clock in seconds.
     [[nodiscard]] bool TryPrepareTeleportSend(double now_seconds);
 
     void SetQueueInfo(const LFGQueueInfo& info);
