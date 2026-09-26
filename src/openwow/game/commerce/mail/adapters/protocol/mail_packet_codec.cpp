@@ -1,6 +1,6 @@
 #include "openwow/game/commerce/mail/adapters/protocol/mail_packet_codec.h"
 
-#include "openwow/core/storm_string.h"
+#include "openwow/foundation/text/leading_uint64.h"
 #include "openwow/game/packet_reader.h"
 #include "openwow/network/protocol/wotlk/opcodes.h"
 
@@ -107,7 +107,8 @@ std::optional<MailListSnapshot> DecodeMailList(const std::uint8_t* data,
       }
     }
     if (entry.message_type == MailType::kCalendar) {
-      entry.sender_guid = core::SStrToUInt64(entry.subject.c_str());
+      // Calendar mail carries the sender guid as its subject.
+      entry.sender_guid = openwow::text::ParseLeadingUInt64(entry.subject.c_str());
     }
     snapshot.entries.push_back(std::move(entry));
   }

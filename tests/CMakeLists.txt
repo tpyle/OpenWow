@@ -27,6 +27,7 @@ add_executable(openwow_tests
   foundation/hashing_tests.cpp
   foundation/text_ascii_tests.cpp
   foundation/text_utf8_tests.cpp
+  foundation/text_leading_uint64_tests.cpp
   foundation/container_flat_hash_map_tests.cpp
   network/byte_buffer_tests.cpp
   network/zlib_compression_tests.cpp

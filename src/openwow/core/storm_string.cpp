@@ -13,6 +13,8 @@
 #include <bit>
 #include <cctype>
 #include <cmath>
+
+#include "openwow/foundation/text/leading_uint64.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -1556,47 +1558,7 @@ uint64_t SStrToUInt64(const char *str) {
     SErrSetLastError(87);
     return 0;
   }
-
-  const char *p = str;
-  bool negative = false;
-
-  if (*p == '-') {
-    negative = true;
-    ++p;
-  }
-
-  uint32_t digit = static_cast<uint8_t>(*p) - 48;
-  if (digit >= 10)
-    return 0;
-
-  uint64_t accumHigh = 0;
-  uint32_t accumLow = digit;
-  const char *segStart = p;
-  ++p;
-
-  while (static_cast<uint32_t>(static_cast<uint8_t>(*p) - 48) < 10) {
-    accumLow = static_cast<uint32_t>(static_cast<uint8_t>(*p) - 48) + 10 * accumLow;
-    ++p;
-
-    if (accumLow >= 0x19999999) {
-      uint32_t dist = static_cast<uint32_t>(p - segStart);
-      double scale = std::pow(10.0, static_cast<double>(dist));
-      accumHigh = accumLow + static_cast<uint64_t>(scale + 0.5) * accumHigh;
-      accumLow = 0;
-      segStart = p;
-    }
-  }
-
-  uint64_t result;
-  if (accumHigh) {
-    uint32_t dist = static_cast<uint32_t>(p - segStart);
-    double scale = std::pow(10.0, static_cast<double>(dist));
-    result = accumLow + static_cast<uint64_t>(scale + 0.5) * accumHigh;
-  } else {
-    result = accumLow;
-  }
-
-  return negative ? static_cast<uint64_t>(-static_cast<int64_t>(result)) : result;
+  return openwow::text::ParseLeadingUInt64(str);
 }
 
 void ReadPackedGUID(const uint8_t **dataPtr, uint64_t *outGuid) {
