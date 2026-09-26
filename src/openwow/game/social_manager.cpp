@@ -2,6 +2,7 @@
 #include "openwow/game/social_manager.h"
 
 #include "openwow/core/storm_string.h"
+#include "openwow/game/social/contacts/adapters/protocol/contact_server_packets.h"
 
 #include <algorithm>
 #include <utility>
@@ -9,19 +10,11 @@
 namespace openwow::game {
 
 bool SocialManager::HandleContactList(const std::uint8_t *data, std::size_t len) {
-  PacketReader reader(data, len);
-
-  std::uint32_t flags;
-  if (!reader.ReadU32(flags))
+  auto message = contacts::DecodeContactList({data, len});
+  if (!message)
     return false;
-
-  std::uint32_t contact_count;
-  if (!reader.ReadU32(contact_count))
-    return false;
-  constexpr std::size_t kMinimumContactWireSize = 13;
-  if (contact_count > reader.Remaining() / kMinimumContactWireSize) {
-    return false;
-  }
+  const std::uint32_t flags = message->flags;
+  const auto contact_count = static_cast<std::uint32_t>(message->entries.size());
 
   SocialManager parsed = *this;
   parsed.last_friend_status_update_.reset();
@@ -35,19 +28,10 @@ bool SocialManager::HandleContactList(const std::uint8_t *data, std::size_t len)
   std::size_t ignore_count = parsed.GetIgnored().size();
   std::size_t mute_count = parsed.GetMuted().size();
 
-  for (std::uint32_t i = 0; i < contact_count; ++i) {
-    std::uint64_t guid_raw;
-    if (!reader.ReadU64(guid_raw))
-      return false;
-    const ObjectGuid guid(guid_raw);
-
-    std::uint32_t contact_flags;
-    if (!reader.ReadU32(contact_flags))
-      return false;
-
-    std::string note;
-    if (!reader.ReadCString(note))
-      return false;
+  for (auto &entry : message->entries) {
+    const ObjectGuid guid(entry.guid);
+    const std::uint32_t contact_flags = entry.flags;
+    std::string note = std::move(entry.note);
 
     const bool has_capacity =
         ((contact_flags & static_cast<std::uint32_t>(SocialFlag::kFriend)) != 0 &&
@@ -64,17 +48,10 @@ bool SocialManager::HandleContactList(const std::uint8_t *data, std::size_t len)
     ContactInfo &contact = contact_ptr != nullptr ? *contact_ptr : overflow_contact;
 
     if ((contact_flags & static_cast<std::uint32_t>(SocialFlag::kFriend)) != 0) {
-      std::uint8_t status_raw = 0;
-      std::uint32_t area = 0;
-      std::uint32_t level = 0;
-      std::uint32_t player_class = 0;
-      if (!reader.ReadU8(status_raw))
-        return false;
-      if (status_raw != 0) {
-        if (!reader.ReadU32(area) || !reader.ReadU32(level) ||
-            !reader.ReadU32(player_class))
-          return false;
-      }
+      const std::uint8_t status_raw = entry.presence.status;
+      const std::uint32_t area = entry.presence.area;
+      const std::uint32_t level = entry.presence.level;
+      const std::uint32_t player_class = entry.presence.player_class;
 
       const bool already_friend = HasSocialFlag(contact.flags, SocialFlag::kFriend);
       if (already_friend || friend_count < kFriendLimit) {
@@ -123,36 +100,24 @@ bool SocialManager::HandleContactList(const std::uint8_t *data, std::size_t len)
 }
 
 bool SocialManager::HandleFriendStatus(const std::uint8_t *data, std::size_t len) {
-  PacketReader reader(data, len);
-
-  std::uint8_t result_raw;
-  if (!reader.ReadU8(result_raw))
+  auto message = contacts::DecodeFriendStatus({data, len});
+  if (!message)
     return false;
-  auto result = static_cast<FriendsResult>(result_raw);
-
-  std::uint64_t guid_raw;
-  if (!reader.ReadU64(guid_raw))
-    return false;
-  ObjectGuid guid(guid_raw);
+  const std::uint8_t result_raw = message->result;
+  const auto result = static_cast<FriendsResult>(result_raw);
+  const ObjectGuid guid(message->guid);
+  const auto &presence = message->presence;
   SocialManager parsed = *this;
   parsed.last_friend_status_update_ = FriendStatusUpdate{result, guid};
 
   switch (result_raw) {
   case 0x02: {
-    std::uint8_t status_raw = 0;
-    std::uint32_t area = 0;
-    std::uint32_t level = 0;
-    std::uint32_t player_class = 0;
-    if (!reader.ReadU8(status_raw) || !reader.ReadU32(area) ||
-        !reader.ReadU32(level) || !reader.ReadU32(player_class)) {
-      return false;
-    }
     auto *contact = parsed.FindContactMut(guid);
     if (contact != nullptr) {
-      contact->status = static_cast<FriendStatus>(status_raw);
-      contact->area = area;
-      contact->level = level;
-      contact->player_class = player_class;
+      contact->status = static_cast<FriendStatus>(presence.status);
+      contact->area = presence.area;
+      contact->level = presence.level;
+      contact->player_class = presence.player_class;
       contact->friend_delete_pending = false;
     }
     break;
@@ -189,23 +154,11 @@ bool SocialManager::HandleFriendStatus(const std::uint8_t *data, std::size_t len
   }
   case 0x06:
   case 0x07: {
-    std::string note;
-    if (!reader.ReadCString(note)) {
-      return false;
-    }
-    std::uint8_t status_raw = 0;
-    std::uint32_t area = 0;
-    std::uint32_t level = 0;
-    std::uint32_t player_class = 0;
-    if (result_raw == 0x06) {
-      if (!reader.ReadU8(status_raw)) {
-        return false;
-      }
-      if (!reader.ReadU32(area) || !reader.ReadU32(level) ||
-          !reader.ReadU32(player_class)) {
-        return false;
-      }
-    }
+    std::string note = std::move(message->note);
+    const std::uint8_t status_raw = presence.status;
+    const std::uint32_t area = presence.area;
+    const std::uint32_t level = presence.level;
+    const std::uint32_t player_class = presence.player_class;
 
     ContactInfo *contact = parsed.FindContactMut(guid);
     const bool already_friend =
@@ -282,24 +235,16 @@ bool SocialManager::HandleFriendStatus(const std::uint8_t *data, std::size_t len
     break;
   }
   case 0x1A: {
-    std::uint8_t status_raw = 0;
-    if (!reader.ReadU8(status_raw)) {
-      return false;
-    }
     auto *contact = parsed.FindContactMut(guid);
     if (contact != nullptr) {
-      contact->status = static_cast<FriendStatus>(status_raw);
+      contact->status = static_cast<FriendStatus>(presence.status);
     }
     break;
   }
   case 0x1B: {
-    std::uint32_t area = 0;
-    if (!reader.ReadU32(area)) {
-      return false;
-    }
     auto *contact = parsed.FindContactMut(guid);
     if (contact != nullptr) {
-      contact->area = area;
+      contact->area = presence.area;
     }
     break;
   }

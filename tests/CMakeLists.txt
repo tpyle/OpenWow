@@ -58,6 +58,7 @@ add_executable(openwow_tests
   game/lfg_server_packets_tests.cpp
   game/lfg_manager_tests.cpp
   game/contact_client_packets_tests.cpp
+  game/contact_server_packets_tests.cpp
   # wdt_file.cpp/blp_info.cpp/faction_reaction.cpp are compiled directly
   # here (rather than by linking the full openwow_data_runtime target)
   # because they have no dependency beyond header-only siblings
