@@ -7,7 +7,6 @@
 #include "openwow/core/storm_string.h"
 #include "openwow/data/formats/dbc/dbc_loader.h"
 #include "openwow/data/formats/dbc/dbc_table_registry.h"
-#include "openwow/game/packet_reader.h"
 #include "openwow/game/unit_query_bridge.h"
 
 #include <algorithm>
@@ -23,116 +22,8 @@ namespace {
 
 constexpr std::uint32_t kPackedDungeonIdMask = 0x00FFFFFFu;
 constexpr std::size_t kSearchSortStringLimit = 0x7FFFFFFFu;
-constexpr std::size_t kLfgSearchCommentMaxBytesIncludingNul = 0x100;
-
-bool ReadBoundedCString(PacketReader &reader, std::string &out) {
-  return reader.ReadCString(out, kLfgSearchCommentMaxBytesIncludingNul);
-}
-
 bool MatchesDungeonId(const std::uint32_t packed_dungeon_id, const std::uint32_t dungeon_id) {
   return (packed_dungeon_id & kPackedDungeonIdMask) == dungeon_id;
-}
-
-bool ReadSearchGroupDelta(PacketReader &reader, LfgSearchGroupResult &group) {
-  std::uint32_t mask = 0;
-  if (!reader.ReadU32(mask))
-    return false;
-
-  if ((mask & 0x2u) != 0 && !ReadBoundedCString(reader, group.comment)) {
-    return false;
-  }
-
-  if ((mask & 0x10u) != 0) {
-    for (auto &value : group.raw_u8_292_294) {
-      if (!reader.ReadU8(value))
-        return false;
-    }
-  }
-
-  if ((mask & 0x80u) != 0) {
-    if (!reader.ReadU64(group.encounter_guid))
-      return false;
-    if (!reader.ReadU32(group.encounter_mask))
-      return false;
-  }
-
-  return true;
-}
-
-bool ReadSearchPlayerDelta(PacketReader &reader, LfgSearchPlayerResult &player,
-                           std::uint32_t &mask) {
-  if (!reader.ReadU32(mask))
-    return false;
-
-  if ((mask & 0x1u) != 0) {
-    if (!reader.ReadU8(player.level) || !reader.ReadU8(player.raw_u8_45) ||
-        !reader.ReadU8(player.raw_u8_46)) {
-      return false;
-    }
-
-    for (auto &value : player.raw_u8_47_49) {
-      if (!reader.ReadU8(value))
-        return false;
-    }
-    for (auto &value : player.raw_u32_52_72) {
-      if (!reader.ReadU32(value))
-        return false;
-    }
-    for (auto &value : player.raw_f32_76_80) {
-      if (!reader.ReadFloat(value))
-        return false;
-    }
-    for (auto &value : player.raw_u32_84_100) {
-      if (!reader.ReadU32(value))
-        return false;
-    }
-    if (!reader.ReadFloat(player.raw_f32_104))
-      return false;
-    for (auto &value : player.raw_u32_108_128) {
-      if (!reader.ReadU32(value))
-        return false;
-    }
-  }
-
-  if ((mask & 0x2u) != 0 && !ReadBoundedCString(reader, player.comment)) {
-    return false;
-  }
-
-  if ((mask & 0x4u) != 0) {
-    std::uint8_t joined = 0;
-    if (!reader.ReadU8(joined))
-      return false;
-    player.joined_group = joined != 0;
-  }
-
-  if ((mask & 0x8u) != 0) {
-    if (!reader.ReadU64(player.resolved_group_guid))
-      return false;
-  }
-
-  if ((mask & 0x10u) != 0) {
-    if (!reader.ReadU8(player.search_flags))
-      return false;
-  }
-
-  if ((mask & 0x20u) != 0) {
-    if (!reader.ReadU32(player.area_id))
-      return false;
-  }
-
-  if ((mask & 0x40u) != 0) {
-    if (!reader.ReadU8(player.role_byte))
-      return false;
-  }
-
-  if ((mask & 0x80u) != 0) {
-    if (!reader.ReadU64(player.secondary_guid))
-      return false;
-    if (!reader.ReadU32(player.secondary_mask))
-      return false;
-  }
-
-  return true;
 }
 
 bool HasWorkingSearchGroup(const std::unordered_map<std::uint64_t, LfgSearchGroupResult> &groups,
@@ -712,15 +603,14 @@ bool LfgManager::HandleOpenLfgDungeonFinder(const std::uint8_t *data, std::size_
 }
 
 bool LfgManager::HandleUpdateLfgList(const std::uint8_t *data, std::size_t len) {
-  PacketReader reader(data, len);
+  using lfg::SearchListStage;
   pending_search_player_name_query_requests_.clear();
 
-  std::uint32_t type_id = 0;
-  std::uint32_t dungeon_id = 0;
-  if (!reader.ReadU32(type_id) || !reader.ReadU32(dungeon_id))
+  const auto update = lfg::DecodeSearchListUpdate({data, len});
+  if (update.stage < SearchListStage::kSearchId)
     return false;
 
-  const auto packed_search_id = (type_id << 24) | (dungeon_id & 0x00FFFFFFu);
+  const auto packed_search_id = update.packed_search_id;
   if (packed_search_id != joined_search_id_) {
     return true;
   }
@@ -728,62 +618,49 @@ bool LfgManager::HandleUpdateLfgList(const std::uint8_t *data, std::size_t len) 
   update_lfg_list_blob_.assign(data, data + len);
   const bool should_publish = working_search_id_ != packed_search_id;
 
-  std::uint8_t has_delete_list = 0;
-  if (!reader.ReadU8(has_delete_list))
+  // A short payload applies the sections it completed, then fails.
+  if (update.stage < SearchListStage::kDeleteFlag)
     return false;
 
-  if (has_delete_list == 0) {
+  if (update.replaces_all) {
     ResetWorkingSearchResults();
   } else {
-    std::uint32_t delete_count = 0;
-    if (!reader.ReadU32(delete_count))
-      return false;
-    for (std::uint32_t i = 0; i < delete_count; ++i) {
-      std::uint64_t guid = 0;
-      if (!reader.ReadU64(guid))
-        return false;
+    for (const auto guid : update.deleted_guids) {
       RemoveWorkingSearchResult(guid);
     }
   }
+  if (update.stage < SearchListStage::kDeletes)
+    return false;
 
   working_search_id_ = packed_search_id;
 
-  std::uint32_t group_count = 0;
-  if (!reader.ReadU32(group_count) || !reader.ReadU32(working_reported_group_total_)) {
+  if (update.stage < SearchListStage::kGroupHeader)
     return false;
-  }
-  for (std::uint32_t i = 0; i < group_count; ++i) {
-    std::uint64_t guid = 0;
-    if (!reader.ReadU64(guid))
-      return false;
-
-    const auto [it, inserted] = working_search_groups_.try_emplace(guid);
+  working_reported_group_total_ = update.reported_group_total;
+  for (const auto &delta : update.groups) {
+    const auto [it, inserted] = working_search_groups_.try_emplace(delta.guid);
     auto &group = it->second;
-    group.guid = guid;
+    group.guid = delta.guid;
     if (inserted) {
-      working_group_order_.push_back(guid);
+      working_group_order_.push_back(delta.guid);
     }
-    if (!ReadSearchGroupDelta(reader, group))
-      return false;
+    lfg::ApplySearchGroupDelta(delta, group);
   }
-
-  std::uint32_t player_count = 0;
-  if (!reader.ReadU32(player_count) || !reader.ReadU32(working_reported_player_total_)) {
+  if (update.stage < SearchListStage::kGroups)
     return false;
-  }
-  for (std::uint32_t i = 0; i < player_count; ++i) {
-    std::uint64_t guid = 0;
-    if (!reader.ReadU64(guid))
-      return false;
 
+  if (update.stage < SearchListStage::kPlayerHeader)
+    return false;
+  working_reported_player_total_ = update.reported_player_total;
+  for (const auto &delta : update.players) {
+    const auto guid = delta.guid;
     const auto [it, inserted] = working_search_players_.try_emplace(guid);
     auto &player = it->second;
     const auto old_resolved_group_guid = player.resolved_group_guid;
     const bool old_joined_group = player.joined_group;
-    std::uint32_t mask = 0;
+    const std::uint32_t mask = delta.mask;
     player.guid = guid;
-    if (!ReadSearchPlayerDelta(reader, player, mask))
-      return false;
+    lfg::ApplySearchPlayerDelta(delta, player);
     if (inserted) {
       pending_search_player_name_query_requests_.push_back(guid);
     }
@@ -829,12 +706,14 @@ bool LfgManager::HandleUpdateLfgList(const std::uint8_t *data, std::size_t len) 
       }
     }
   }
+  if (update.stage < SearchListStage::kComplete)
+    return false;
 
   if (should_publish) {
     PublishSearchResults();
   }
 
-  return reader.Good();
+  return true;
 }
 
 void LfgManager::QueueMissingSearchPlayerNameQueries(

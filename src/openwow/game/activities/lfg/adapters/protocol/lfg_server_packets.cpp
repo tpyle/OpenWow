@@ -148,6 +148,111 @@ bool ReadPartyLockInfo(PacketReader& reader, std::vector<LfgPartyLockInfo>& out,
   return true;
 }
 
+constexpr std::size_t kSearchCommentMaxBytesIncludingNul = 0x100;
+
+bool ReadBoundedCString(PacketReader& reader, std::string& out) {
+  return reader.ReadCString(out, kSearchCommentMaxBytesIncludingNul);
+}
+
+bool ReadSearchGroupDeltaFields(PacketReader& reader, const std::uint32_t mask,
+                                LfgSearchGroupResult& group) {
+  if ((mask & 0x2u) != 0 && !ReadBoundedCString(reader, group.comment)) {
+    return false;
+  }
+
+  if ((mask & 0x10u) != 0) {
+    for (auto& value : group.raw_u8_292_294) {
+      if (!reader.ReadU8(value))
+        return false;
+    }
+  }
+
+  if ((mask & 0x80u) != 0) {
+    if (!reader.ReadU64(group.encounter_guid))
+      return false;
+    if (!reader.ReadU32(group.encounter_mask))
+      return false;
+  }
+
+  return true;
+}
+
+bool ReadSearchPlayerDelta(PacketReader& reader, LfgSearchPlayerResult& player,
+                           std::uint32_t& mask) {
+  if (!reader.ReadU32(mask))
+    return false;
+
+  if ((mask & 0x1u) != 0) {
+    if (!reader.ReadU8(player.level) || !reader.ReadU8(player.raw_u8_45) ||
+        !reader.ReadU8(player.raw_u8_46)) {
+      return false;
+    }
+
+    for (auto& value : player.raw_u8_47_49) {
+      if (!reader.ReadU8(value))
+        return false;
+    }
+    for (auto& value : player.raw_u32_52_72) {
+      if (!reader.ReadU32(value))
+        return false;
+    }
+    for (auto& value : player.raw_f32_76_80) {
+      if (!reader.ReadFloat(value))
+        return false;
+    }
+    for (auto& value : player.raw_u32_84_100) {
+      if (!reader.ReadU32(value))
+        return false;
+    }
+    if (!reader.ReadFloat(player.raw_f32_104))
+      return false;
+    for (auto& value : player.raw_u32_108_128) {
+      if (!reader.ReadU32(value))
+        return false;
+    }
+  }
+
+  if ((mask & 0x2u) != 0 && !ReadBoundedCString(reader, player.comment)) {
+    return false;
+  }
+
+  if ((mask & 0x4u) != 0) {
+    std::uint8_t joined = 0;
+    if (!reader.ReadU8(joined))
+      return false;
+    player.joined_group = joined != 0;
+  }
+
+  if ((mask & 0x8u) != 0) {
+    if (!reader.ReadU64(player.resolved_group_guid))
+      return false;
+  }
+
+  if ((mask & 0x10u) != 0) {
+    if (!reader.ReadU8(player.search_flags))
+      return false;
+  }
+
+  if ((mask & 0x20u) != 0) {
+    if (!reader.ReadU32(player.area_id))
+      return false;
+  }
+
+  if ((mask & 0x40u) != 0) {
+    if (!reader.ReadU8(player.role_byte))
+      return false;
+  }
+
+  if ((mask & 0x80u) != 0) {
+    if (!reader.ReadU64(player.secondary_guid))
+      return false;
+    if (!reader.ReadU32(player.secondary_mask))
+      return false;
+  }
+
+  return true;
+}
+
 std::optional<std::uint32_t> DecodeSingleU32(const Payload payload) {
   PacketReader r(payload);
   std::uint32_t value = 0;
@@ -474,6 +579,123 @@ std::optional<std::uint8_t> DecodeUpdateSearch(const Payload payload) {
 
 std::optional<std::uint32_t> DecodeOpenDungeonFinder(const Payload payload) {
   return DecodeSingleU32(payload);
+}
+
+SearchListUpdate DecodeSearchListUpdate(const Payload payload) {
+  PacketReader reader(payload);
+  SearchListUpdate update;
+
+  std::uint32_t type_id = 0;
+  std::uint32_t dungeon_id = 0;
+  if (!reader.ReadU32(type_id) || !reader.ReadU32(dungeon_id))
+    return update;
+  update.packed_search_id = (type_id << 24) | (dungeon_id & 0x00FFFFFFu);
+  update.stage = SearchListStage::kSearchId;
+
+  std::uint8_t has_delete_list = 0;
+  if (!reader.ReadU8(has_delete_list))
+    return update;
+  update.replaces_all = has_delete_list == 0;
+  update.stage = SearchListStage::kDeleteFlag;
+
+  if (!update.replaces_all) {
+    std::uint32_t delete_count = 0;
+    if (!reader.ReadU32(delete_count))
+      return update;
+    for (std::uint32_t i = 0; i < delete_count; ++i) {
+      std::uint64_t guid = 0;
+      if (!reader.ReadU64(guid))
+        return update;
+      update.deleted_guids.push_back(guid);
+    }
+  }
+  update.stage = SearchListStage::kDeletes;
+
+  std::uint32_t group_count = 0;
+  std::uint32_t group_total = 0;
+  if (!reader.ReadU32(group_count) || !reader.ReadU32(group_total))
+    return update;
+  update.reported_group_total = group_total;
+  update.stage = SearchListStage::kGroupHeader;
+  for (std::uint32_t i = 0; i < group_count; ++i) {
+    SearchGroupDelta delta;
+    if (!reader.ReadU64(delta.guid) || !reader.ReadU32(delta.mask))
+      return update;
+    delta.fields.guid = delta.guid;
+    if (!ReadSearchGroupDeltaFields(reader, delta.mask, delta.fields))
+      return update;
+    update.groups.push_back(std::move(delta));
+  }
+  update.stage = SearchListStage::kGroups;
+
+  std::uint32_t player_count = 0;
+  std::uint32_t player_total = 0;
+  if (!reader.ReadU32(player_count) || !reader.ReadU32(player_total))
+    return update;
+  update.reported_player_total = player_total;
+  update.stage = SearchListStage::kPlayerHeader;
+  for (std::uint32_t i = 0; i < player_count; ++i) {
+    SearchPlayerDelta delta;
+    if (!reader.ReadU64(delta.guid))
+      return update;
+    delta.fields.guid = delta.guid;
+    if (!ReadSearchPlayerDelta(reader, delta.fields, delta.mask))
+      return update;
+    update.players.push_back(std::move(delta));
+  }
+  update.stage = SearchListStage::kComplete;
+  return update;
+}
+
+void ApplySearchGroupDelta(const SearchGroupDelta& delta, LfgSearchGroupResult& group) {
+  const auto& from = delta.fields;
+  if ((delta.mask & 0x2u) != 0) {
+    group.comment = from.comment;
+  }
+  if ((delta.mask & 0x10u) != 0) {
+    group.raw_u8_292_294 = from.raw_u8_292_294;
+  }
+  if ((delta.mask & 0x80u) != 0) {
+    group.encounter_guid = from.encounter_guid;
+    group.encounter_mask = from.encounter_mask;
+  }
+}
+
+void ApplySearchPlayerDelta(const SearchPlayerDelta& delta, LfgSearchPlayerResult& player) {
+  const auto& from = delta.fields;
+  if ((delta.mask & 0x1u) != 0) {
+    player.level = from.level;
+    player.raw_u8_45 = from.raw_u8_45;
+    player.raw_u8_46 = from.raw_u8_46;
+    player.raw_u8_47_49 = from.raw_u8_47_49;
+    player.raw_u32_52_72 = from.raw_u32_52_72;
+    player.raw_f32_76_80 = from.raw_f32_76_80;
+    player.raw_u32_84_100 = from.raw_u32_84_100;
+    player.raw_f32_104 = from.raw_f32_104;
+    player.raw_u32_108_128 = from.raw_u32_108_128;
+  }
+  if ((delta.mask & 0x2u) != 0) {
+    player.comment = from.comment;
+  }
+  if ((delta.mask & 0x4u) != 0) {
+    player.joined_group = from.joined_group;
+  }
+  if ((delta.mask & 0x8u) != 0) {
+    player.resolved_group_guid = from.resolved_group_guid;
+  }
+  if ((delta.mask & 0x10u) != 0) {
+    player.search_flags = from.search_flags;
+  }
+  if ((delta.mask & 0x20u) != 0) {
+    player.area_id = from.area_id;
+  }
+  if ((delta.mask & 0x40u) != 0) {
+    player.role_byte = from.role_byte;
+  }
+  if ((delta.mask & 0x80u) != 0) {
+    player.secondary_guid = from.secondary_guid;
+    player.secondary_mask = from.secondary_mask;
+  }
 }
 
 }  // namespace openwow::game::lfg

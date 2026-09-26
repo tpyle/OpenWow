@@ -38,38 +38,6 @@ enum class LfgSearchSortKey : std::uint8_t {
   kDamage = 6,
 };
 
-struct LfgSearchPlayerResult {
-  std::uint64_t guid = 0;
-
-  std::uint64_t resolved_group_guid = 0;
-  std::uint64_t secondary_guid = 0;
-  std::uint32_t secondary_mask = 0;
-  std::string comment;
-  std::uint8_t level = 0;
-  std::uint8_t raw_u8_45 = 0;
-  std::uint8_t raw_u8_46 = 0;
-  std::array<std::uint8_t, 3> raw_u8_47_49{};
-  std::array<std::uint32_t, 6> raw_u32_52_72{};
-  std::array<float, 2> raw_f32_76_80{};
-  std::array<std::uint32_t, 5> raw_u32_84_100{};
-  float raw_f32_104 = 0.0f;
-  std::array<std::uint32_t, 6> raw_u32_108_128{};
-  std::uint32_t area_id = 0;
-  std::uint8_t role_byte = 0;
-  bool joined_group = false;
-  std::uint8_t search_flags = 0;
-  std::uint64_t update_sequence = 0;
-};
-
-struct LfgSearchGroupResult {
-  std::uint64_t guid = 0;
-  std::string comment;
-  std::array<std::uint8_t, 3> raw_u8_292_294{};
-  std::uint64_t encounter_guid = 0;
-  std::uint32_t encounter_mask = 0;
-  std::vector<std::uint64_t> member_guids;
-};
-
 class LfgManager {
 public:
 

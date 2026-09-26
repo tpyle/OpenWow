@@ -307,3 +307,121 @@ TEST_CASE("LFG party info", "[lfg][protocol]") {
   REQUIRE(none);
   CHECK(none->empty());
 }
+
+namespace {
+
+Bytes FullSearchList() {
+  Bytes b;
+  b.u32(2).u32(0x0000A1);                    // type 2 (raid), dungeon 0xA1
+  b.u8(1).u32(1).u64(0x99);                  // delete list: one guid
+  b.u32(1).u32(10);                          // one group of 10 reported
+  b.u64(0x100).u32(0x2 | 0x80).str("LF1M").u64(0x200).u32(0x7);
+  b.u32(1).u32(20);                          // one player of 20 reported
+  b.u64(0x300).u32(0x4 | 0x8 | 0x20).u8(1).u64(0x100).u32(1519);
+  return b;
+}
+
+}  // namespace
+
+TEST_CASE("LFG search list update decodes every section", "[lfg][protocol]") {
+  const auto u = lfg::DecodeSearchListUpdate(FullSearchList().span());
+  CHECK(u.stage == lfg::SearchListStage::kComplete);
+  CHECK(u.packed_search_id == 0x020000A1u);
+  CHECK_FALSE(u.replaces_all);
+  CHECK(u.deleted_guids == std::vector<std::uint64_t>{0x99u});
+  CHECK(u.reported_group_total == 10u);
+  REQUIRE(u.groups.size() == 1u);
+  CHECK(u.groups[0].guid == 0x100u);
+  CHECK(u.groups[0].mask == 0x82u);
+  CHECK(u.groups[0].fields.comment == "LF1M");
+  CHECK(u.groups[0].fields.encounter_guid == 0x200u);
+  CHECK(u.groups[0].fields.encounter_mask == 7u);
+  CHECK(u.reported_player_total == 20u);
+  REQUIRE(u.players.size() == 1u);
+  CHECK(u.players[0].guid == 0x300u);
+  CHECK(u.players[0].fields.joined_group);
+  CHECK(u.players[0].fields.resolved_group_guid == 0x100u);
+  CHECK(u.players[0].fields.area_id == 1519u);
+}
+
+TEST_CASE("LFG search list update without a delete list replaces everything",
+          "[lfg][protocol]") {
+  const auto u = lfg::DecodeSearchListUpdate(
+      Bytes().u32(1).u32(5).u8(0).u32(0).u32(0).u32(0).u32(0).span());
+  CHECK(u.stage == lfg::SearchListStage::kComplete);
+  CHECK(u.replaces_all);
+  CHECK(u.deleted_guids.empty());
+}
+
+TEST_CASE("LFG search list update reports how far a short payload got",
+          "[lfg][protocol]") {
+  using Stage = lfg::SearchListStage;
+  const Bytes full = FullSearchList();
+  const auto stage_at = [&](std::size_t length) {
+    return lfg::DecodeSearchListUpdate(full.span().first(length));
+  };
+  CHECK(stage_at(0).stage == Stage::kNothing);
+  CHECK(stage_at(7).stage == Stage::kNothing);
+  CHECK(stage_at(8).stage == Stage::kSearchId);
+  CHECK(stage_at(9).stage == Stage::kDeleteFlag);
+  CHECK(stage_at(20).stage == Stage::kDeleteFlag);  // delete guid cut short
+  CHECK(stage_at(21).stage == Stage::kDeletes);
+  CHECK(stage_at(29).stage == Stage::kGroupHeader);
+
+  // Cut inside the group entry: the header counts, the entry doesn't.
+  const auto mid_group = stage_at(40);
+  CHECK(mid_group.stage == Stage::kGroupHeader);
+  CHECK(mid_group.reported_group_total == 10u);
+  CHECK(mid_group.groups.empty());
+
+  const std::size_t groups_end = 29 + 8 + 4 + 5 + 8 + 4;
+  CHECK(stage_at(groups_end).stage == Stage::kGroups);
+  CHECK(stage_at(groups_end).groups.size() == 1u);
+  CHECK(stage_at(groups_end + 8).stage == Stage::kPlayerHeader);
+  const auto mid_player = stage_at(full.size() - 1);
+  CHECK(mid_player.stage == Stage::kPlayerHeader);
+  CHECK(mid_player.players.empty());
+}
+
+TEST_CASE("LFG search deltas copy only the fields their mask carries",
+          "[lfg][protocol]") {
+  openwow::game::LfgSearchGroupResult group;
+  group.comment = "old";
+  group.encounter_mask = 1u;
+  group.raw_u8_292_294 = {1, 2, 3};
+
+  lfg::SearchGroupDelta group_delta;
+  group_delta.mask = 0x2u;
+  group_delta.fields.comment = "new";
+  group_delta.fields.encounter_mask = 99u;
+  lfg::ApplySearchGroupDelta(group_delta, group);
+  CHECK(group.comment == "new");
+  CHECK(group.encounter_mask == 1u);
+  CHECK(group.raw_u8_292_294 == std::array<std::uint8_t, 3>{1, 2, 3});
+
+  group_delta.mask = 0x10u | 0x80u;
+  group_delta.fields.raw_u8_292_294 = {7, 8, 9};
+  lfg::ApplySearchGroupDelta(group_delta, group);
+  CHECK(group.encounter_mask == 99u);
+  CHECK(group.raw_u8_292_294 == std::array<std::uint8_t, 3>{7, 8, 9});
+  CHECK(group.comment == "new");
+
+  openwow::game::LfgSearchPlayerResult player;
+  player.level = 70u;
+  player.area_id = 12u;
+  player.role_byte = 4u;
+  lfg::SearchPlayerDelta player_delta;
+  player_delta.mask = 0x20u;
+  player_delta.fields.area_id = 1519u;
+  player_delta.fields.level = 80u;
+  lfg::ApplySearchPlayerDelta(player_delta, player);
+  CHECK(player.area_id == 1519u);
+  CHECK(player.level == 70u);
+  CHECK(player.role_byte == 4u);
+
+  player_delta.mask = 0x1u | 0x40u;
+  player_delta.fields.role_byte = 8u;
+  lfg::ApplySearchPlayerDelta(player_delta, player);
+  CHECK(player.level == 80u);
+  CHECK(player.role_byte == 8u);
+}

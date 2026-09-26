@@ -68,4 +68,59 @@ struct JoinResultMessage {
 /// SMSG_OPEN_LFG_DUNGEON_FINDER: the dungeon id to show.
 [[nodiscard]] std::optional<std::uint32_t> DecodeOpenDungeonFinder(Payload payload);
 
+/// One group entry of SMSG_UPDATE_LFG_LIST. Only the fields selected by
+/// `mask` are carried: 0x02 comment, 0x10 the three raw bytes, 0x80 the
+/// encounter guid and mask.
+struct SearchGroupDelta {
+  std::uint64_t guid = 0;
+  std::uint32_t mask = 0;
+  LfgSearchGroupResult fields;
+};
+
+/// One player entry of SMSG_UPDATE_LFG_LIST. Only the fields selected by
+/// `mask` are carried: 0x01 level and the raw stat block, 0x02 comment,
+/// 0x04 joined-group flag, 0x08 group guid, 0x10 search flags, 0x20 area,
+/// 0x40 role byte, 0x80 secondary guid and mask.
+struct SearchPlayerDelta {
+  std::uint64_t guid = 0;
+  std::uint32_t mask = 0;
+  LfgSearchPlayerResult fields;
+};
+
+/// How far an SMSG_UPDATE_LFG_LIST payload decoded. The sections are
+/// applied in this order, so a short payload applies everything before the
+/// section it ends in.
+enum class SearchListStage : std::uint8_t {
+  kNothing,         ///< not even the search id
+  kSearchId,        ///< search id only
+  kDeleteFlag,      ///< and the delete-list flag
+  kDeletes,         ///< and the whole delete list
+  kGroupHeader,     ///< and the group count and total
+  kGroups,          ///< and every group
+  kPlayerHeader,    ///< and the player count and total
+  kComplete,        ///< and every player
+};
+
+/// SMSG_UPDATE_LFG_LIST: a delta against the client's current browse list.
+/// With `replaces_all`, the list is rebuilt from this packet; otherwise
+/// `deleted_guids` are removed first. The vectors hold the entries decoded
+/// before the payload ran out (a partly read entry is dropped).
+struct SearchListUpdate {
+  SearchListStage stage = SearchListStage::kNothing;
+  std::uint32_t packed_search_id = 0;
+  bool replaces_all = false;
+  std::vector<std::uint64_t> deleted_guids;
+  std::uint32_t reported_group_total = 0;
+  std::vector<SearchGroupDelta> groups;
+  std::uint32_t reported_player_total = 0;
+  std::vector<SearchPlayerDelta> players;
+};
+[[nodiscard]] SearchListUpdate DecodeSearchListUpdate(Payload payload);
+
+/// Copies the fields `delta` carries into `group` (not the guid).
+void ApplySearchGroupDelta(const SearchGroupDelta& delta, LfgSearchGroupResult& group);
+
+/// Copies the fields `delta` carries into `player` (not the guid).
+void ApplySearchPlayerDelta(const SearchPlayerDelta& delta, LfgSearchPlayerResult& player);
+
 }  // namespace openwow::game::lfg
