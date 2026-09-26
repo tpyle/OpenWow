@@ -565,7 +565,6 @@ private:
   };
   std::vector<ActiveCameraShake> camera_shakes_;
 
-  static constexpr float kTargetSmoothSpeed = 10.0f;
 };
 
 }

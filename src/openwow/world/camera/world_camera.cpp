@@ -43,15 +43,6 @@ constexpr float kCameraShakeNearRadius = 9.0f;
 constexpr float kCameraShakeMaxRadiusSquared = 6400.0f;
 constexpr float kCameraShakeAttenuationBase = 0.69999998807907104f;
 
-float SmoothFactor(float speed, float dt) {
-
-  return 1.0f - std::exp(-speed * dt);
-}
-
-float Lerp(float a, float b, float t) {
-  return a + (b - a) * t;
-}
-
 constexpr float kCameraInterpolationEpsilon = 0.001f;
 
 constexpr float kCameraSmoothingDelayMilliseconds = 1000.0f;
@@ -975,17 +966,16 @@ void WorldCamera::Update(float dt_seconds, const std::uint32_t timestamp_ms) {
   if (dt_seconds <= 0.0f)
     return;
 
-  if (smoothing_) {
-    const float tf = SmoothFactor(kTargetSmoothSpeed, dt_seconds);
-    smooth_x_ = Lerp(smooth_x_, target_x_, tf);
-    smooth_y_ = Lerp(smooth_y_, target_y_, tf);
-    smooth_z_ = Lerp(smooth_z_, target_z_, tf);
+  // The pivot follows the bound unit rigidly. Easing it in world space left
+  // it trailing a unit carried at speed (boats, zeppelins) by a
+  // frame-rate-dependent distance, which read as a jerking camera.
+  smooth_x_ = target_x_;
+  smooth_y_ = target_y_;
+  smooth_z_ = target_z_;
 
+  if (smoothing_) {
     AdvanceSmoothingInterpolations(timestamp_ms);
   } else {
-    smooth_x_ = target_x_;
-    smooth_y_ = target_y_;
-    smooth_z_ = target_z_;
     distance_ = target_distance_;
     orbit_yaw_ = target_orbit_yaw_;
     pitch_ = target_pitch_;
