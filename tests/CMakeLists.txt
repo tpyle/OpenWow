@@ -51,6 +51,7 @@ add_executable(openwow_tests
   game/account_data_sync_rules_tests.cpp
   game/ground_walk_sweep_filter_tests.cpp
   game/remote_ground_probe_tests.cpp
+  game/mouse_steer_start_tests.cpp
   # wdt_file.cpp/blp_info.cpp/faction_reaction.cpp are compiled directly
   # here (rather than by linking the full openwow_data_runtime target)
   # because they have no dependency beyond header-only siblings

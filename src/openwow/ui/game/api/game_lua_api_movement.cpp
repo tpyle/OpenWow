@@ -470,6 +470,12 @@ void ApplyLuaControlFlagSideEffects(
     active_camera->PopYawOffset();
   }
 
+  if (effects.sync_facing_to_camera && active_camera != nullptr &&
+      g_process_movement_session != nullptr) {
+    (void)GetLuaInputControl().ApplyCameraFacing(
+        *g_process_movement_session, effects.timestamp, active_camera->yaw());
+  }
+
   if (effects.mouse_button_set) {
     openwow::input::OnMouseButtonSet();
   }

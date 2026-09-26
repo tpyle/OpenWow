@@ -434,6 +434,9 @@ bool CInputControl::SetControlFlag(std::uint32_t flag, std::uint32_t timestamp) 
         !was_idle && AreCollisionDirectionalControlsIdle(control_flags_);
   }
 
+  side_effects.sync_facing_to_camera =
+      StartsMouseSteer(old_flags, control_flags_) &&
+      QueryCanMouseSteerUnitForControlFlagsImpl(*this);
   side_effects.control_flags = control_flags_;
   side_effects.timestamp = timestamp;
   EmitControlFlagSideEffects(side_effects);

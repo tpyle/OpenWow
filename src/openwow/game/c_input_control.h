@@ -65,6 +65,15 @@ inline constexpr std::uint32_t kMaskAutoRun            = 0x00001000;
 
 inline constexpr std::uint32_t kMaskClickToMove        = 0x01E00000;
 inline constexpr std::uint32_t kMaskMoveAndSteer       = 0x02000001;
+
+/// True when a control-flag change starts mouse steering (the right button
+/// or mouselook newly held): the mover then takes the camera's yaw at once,
+/// not only when the mouse next moves.
+[[nodiscard]] constexpr bool StartsMouseSteer(const std::uint32_t old_flags,
+                                              const std::uint32_t new_flags) {
+  return (old_flags & kMaskMoveAndSteer) == 0u &&
+         (new_flags & kMaskMoveAndSteer) != 0u;
+}
 inline constexpr std::uint32_t kMaskCameraOrVehicle    = 0x04000002;
 inline constexpr std::uint32_t kMaskAllMouseModes      = 0x06000003;
 inline constexpr std::uint32_t kMaskFwdBwdAutoRun      = 0x00001030;
@@ -154,6 +163,8 @@ struct ControlFlagSideEffects {
   bool update_bobbing{false};
   bool bobbing_enabled{false};
   bool pop_yaw_offset{false};
+  /// Face the mover along the camera now (mouse steering just started).
+  bool sync_facing_to_camera{false};
 
   bool evaluate_camera_smoothing{false};
 
