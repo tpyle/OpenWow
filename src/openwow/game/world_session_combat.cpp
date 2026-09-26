@@ -2149,15 +2149,10 @@ void WorldSession::HandleEnvironmentalDamageLog(const net::wotlk::WorldPacket& p
     return;
   }
 
-  // SoundEntries 3542 "DamageFalling" (the PlayerDamage FallingDamage*.wav
-  // set): the fall-damage thud. EnvironmentalDamage.dbc's fall row only
-  // carries a dust visual, so it is played here for the local player.
+  // Fall damage makes the character cry out (CreatureSoundData injury
+  // sound); the original client plays no separate impact sound.
   constexpr std::uint8_t kEnvironmentalDamageFalling = 2u;
-  constexpr std::uint32_t kDamageFallingSoundKitId = 3542u;
   if (environmental_damage->type == kEnvironmentalDamageFalling) {
-    (void)sound_runtime().PlaySoundKit(kDamageFallingSoundKitId, nullptr);
-    // The character also cries out (CreatureSoundData injury sound), as in
-    // the original client.
     if (environmental_damage->damage > 0u) {
       if (auto *const unit = objects().GetMutableUnit(environmental_damage->guid);
           unit != nullptr) {
