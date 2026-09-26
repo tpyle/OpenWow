@@ -144,7 +144,6 @@ openwow_add_component(openwow_game
   commerce/mail/mail_compose_state.cpp
   commerce/auctions/adapters/protocol/auction_packet_codec.cpp
   commerce/auctions/auction_interaction.cpp
-  lfg_manager.cpp
   lfg_search_context.cpp
   aura_manager.cpp
   aura_tracker.cpp

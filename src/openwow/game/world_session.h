@@ -48,7 +48,7 @@
 #include "openwow/game/inventory/equipment/equipment_sets.h"
 #include "openwow/game/inventory/equipment_presentation.h"
 #include "openwow/game/inventory/operations/inventory_commands.h"
-#include "openwow/game/lfg_manager.h"
+#include "openwow/game/activities/lfg/application/lfg_manager.h"
 #include "openwow/game/inventory/loot/loot_interaction.h"
 #include "openwow/game/commerce/mail/mail_interaction.h"
 #include "openwow/game/commerce/merchants/merchant_requirements.h"

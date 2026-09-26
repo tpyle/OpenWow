@@ -1,6 +1,6 @@
 #pragma once
 
-#include "openwow/game/lfg_manager.h"
+#include "openwow/game/activities/lfg/application/lfg_manager.h"
 
 #include <cstdint>
 

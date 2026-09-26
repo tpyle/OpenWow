@@ -1,5 +1,7 @@
 #include "openwow/game/activities/lfg/adapters/protocol/lfg_server_packets.h"
 
+#include "payload_builder.h"
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstdint>
@@ -12,33 +14,7 @@ using openwow::game::LfgUpdateType;
 
 namespace {
 
-// Little-endian payload builder.
-class Bytes {
- public:
-  Bytes& u8(std::uint8_t v) { data_.push_back(v); return *this; }
-  Bytes& u32(std::uint32_t v) { return raw(&v, 4); }
-  Bytes& i32(std::int32_t v) { return raw(&v, 4); }
-  Bytes& u64(std::uint64_t v) { return raw(&v, 8); }
-  Bytes& str(std::string_view s) {
-    data_.insert(data_.end(), s.begin(), s.end());
-    data_.push_back(0);
-    return *this;
-  }
-  [[nodiscard]] lfg::Payload span() const { return data_; }
-  // The payload with its last `n` bytes cut off.
-  [[nodiscard]] lfg::Payload truncated(std::size_t n = 1) const {
-    return lfg::Payload(data_).first(data_.size() - n);
-  }
-  [[nodiscard]] std::size_t size() const { return data_.size(); }
-
- private:
-  Bytes& raw(const void* p, std::size_t n) {
-    const auto* b = static_cast<const std::uint8_t*>(p);
-    data_.insert(data_.end(), b, b + n);
-    return *this;
-  }
-  std::vector<std::uint8_t> data_;
-};
+using Bytes = openwow::test::PayloadBuilder;
 
 // Every strict prefix of `bytes` must fail to decode.
 template <typename Decode>

@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <array>
@@ -61,6 +60,10 @@ enum class LfgSearchSortKey : std::uint8_t {
   kDamage = 6,
 };
 
+/// Dungeon Finder state as the server reports it: join result, queue
+/// status, player/party updates, proposal, role check, boot vote, reward,
+/// dungeon locks, and the Looking-For-Raid browse list. Each Handle*
+/// method takes an SMSG payload and returns false when it doesn't decode.
 class LfgManager {
 public:
 
@@ -134,6 +137,8 @@ public:
   [[nodiscard]] bool has_party_lock_info() const {
     return has_party_lock_info_;
   }
+  /// Players in the lock list: the player (once their dungeon info is known)
+  /// plus each party member with lock info.
   [[nodiscard]] std::size_t GetLfdLockPlayerCount() const;
   [[nodiscard]] std::optional<std::uint32_t> FindPlayerLockReason(
       std::uint32_t dungeon_id) const;
@@ -203,6 +208,7 @@ public:
   void ClearProposal();
   void ResetProposalEventGateForPlayerEnterWorld();
   [[nodiscard]] bool ConsumeProposalShowPending();
+  /// Marks a name query answered; true when it was the last outstanding one.
   [[nodiscard]] bool ResolvePendingSearchPlayerNameQuery(std::uint64_t guid);
   [[nodiscard]] std::uint64_t published_search_generation() const {
     return published_search_generation_;

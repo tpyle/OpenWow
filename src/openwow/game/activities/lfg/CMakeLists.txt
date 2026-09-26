@@ -21,15 +21,23 @@ target_include_directories(openwow_game_lfg_rules
 )
 openwow_configure_target(openwow_game_lfg_rules)
 
-# Client-side LFG state (queue, proposal, boot vote, selection, throttles).
+# Client-side LFG state: LFGSystem (queue, proposal, boot vote, selection,
+# throttles) and LfgManager (server-reported state, locks, browse list).
+# LfgManager's handlers take raw SMSG payloads, so it uses the protocol
+# adapter's decoders; the targets below it stay free of the session.
 add_library(openwow_game_lfg_application
+  application/lfg_manager.cpp
   application/lfg_system.cpp
 )
 target_include_directories(openwow_game_lfg_application
   PUBLIC ${PROJECT_SOURCE_DIR}/include
 )
 target_link_libraries(openwow_game_lfg_application
-  PRIVATE openwow_game_lfg_rules
+  PUBLIC
+    openwow_game_lfg_model
+    openwow_game_lfg_rules
+  PRIVATE
+    openwow_game_lfg_protocol_adapter
 )
 openwow_configure_target(openwow_game_lfg_application)
 
