@@ -1,6 +1,9 @@
 
 #include "openwow/game/lfg_system.h"
 
+#include "openwow/game/activities/lfg/rules/lfg_dungeon_rules.h"
+#include "openwow/game/activities/lfg/rules/lfg_role_rules.h"
+
 #include "openwow/runtime/time/game_clock.h"
 
 #include <algorithm>
@@ -8,34 +11,6 @@
 #include <chrono>
 
 namespace openwow::game {
-
-namespace {
-
-constexpr std::array<std::uint8_t, 13> kRoleAvailabilityMaskByClassId = {
-    0x00, 0x0B, 0x0F, 0x09, 0x09, 0x0D, 0x0B,
-    0x0D, 0x09, 0x09, 0x00, 0x0F, 0x00,
-};
-
-std::uint8_t LfgSelectionType(const std::uint32_t packed_dungeon_id) {
-    return static_cast<std::uint8_t>(packed_dungeon_id >> 24);
-}
-
-bool CanPreserveSelectionType(const std::uint8_t new_type,
-                              const std::uint32_t tracked_party_member_count,
-                              const std::uint32_t existing_packed_dungeon_id) {
-    const auto existing_type = LfgSelectionType(existing_packed_dungeon_id);
-    if (new_type == 1u || new_type == 5u) {
-        return existing_type == 1u || existing_type == 5u;
-    }
-
-    if (new_type == 2u && tracked_party_member_count == 0u) {
-        return existing_type == 2u;
-    }
-
-    return false;
-}
-
-}
 
 LFGSystem& LFGSystem::Get() {
     static LFGSystem instance;
@@ -131,14 +106,11 @@ uint8_t LFGSystem::GetRoles() const {
 }
 
 uint8_t LFGSystem::GetRoleAvailabilityMaskForClass(uint8_t class_id) {
-    if (class_id >= kRoleAvailabilityMaskByClassId.size()) {
-        return 0;
-    }
-    return kRoleAvailabilityMaskByClassId[class_id];
+    return lfg::RoleAvailabilityMaskForClass(class_id);
 }
 
 uint8_t LFGSystem::FilterRolesForClass(uint8_t class_id, uint8_t roles) {
-    return static_cast<uint8_t>(roles & GetRoleAvailabilityMaskForClass(class_id));
+    return lfg::FilterRolesForClass(class_id, roles);
 }
 
 void LFGSystem::SetSelectedDungeons(const std::vector<uint32_t>& dungeons) {
@@ -158,12 +130,12 @@ void LFGSystem::AddSelectedDungeon(const std::uint32_t packed_dungeon_id,
                                    const std::uint32_t tracked_party_member_count) {
     std::lock_guard lock(mutex_);
 
-    const auto new_type = LfgSelectionType(packed_dungeon_id);
+    const auto new_type = lfg::DungeonSelectionType(packed_dungeon_id);
     const bool can_preserve_existing = std::all_of(
         selected_dungeons_.begin(), selected_dungeons_.end(),
         [new_type, tracked_party_member_count](const std::uint32_t existing_packed_dungeon_id) {
-            return CanPreserveSelectionType(new_type, tracked_party_member_count,
-                                            existing_packed_dungeon_id);
+            return lfg::CanKeepSelectedDungeon(new_type, tracked_party_member_count,
+                                               existing_packed_dungeon_id);
         });
 
     if (!can_preserve_existing && !selected_dungeons_.empty()) {

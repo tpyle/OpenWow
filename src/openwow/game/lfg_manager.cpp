@@ -1,6 +1,8 @@
 
 #include "openwow/game/lfg_manager.h"
 
+#include "openwow/game/activities/lfg/rules/lfg_dungeon_rules.h"
+
 #include "openwow/core/storm_string.h"
 #include "openwow/data/formats/dbc/dbc_loader.h"
 #include "openwow/data/formats/dbc/dbc_table_registry.h"
@@ -281,7 +283,7 @@ bool HasWorkingSearchGroup(const std::unordered_map<std::uint64_t, LfgSearchGrou
 }
 
 std::uint32_t PackDungeonId(const openwow::data::dbc::LfgDungeonsEntry &entry) {
-  return (entry.id & 0x00FFFFFFu) | (entry.type_id << 24);
+  return lfg::PackDungeonId(entry.id, entry.type_id);
 }
 
 std::uint32_t EffectiveTargetAverage(const openwow::data::dbc::LfgDungeonsEntry &entry,

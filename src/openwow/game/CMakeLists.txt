@@ -401,6 +401,7 @@ target_link_libraries(openwow_game PRIVATE
   openwow_game_achievements_rules
   openwow_game_dance_application
   openwow_game_dance_protocol_adapter
+  openwow_game_lfg_rules
   openwow_game_calendar_runtime
   openwow_debug_runtime
   openwow_input
