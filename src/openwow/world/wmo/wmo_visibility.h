@@ -168,6 +168,15 @@ void ComputeVisibleWmoGroups(
 [[nodiscard]] float NearClipCornerRadius(const Matrix4& projection,
                                          float near_clip);
 
+/// Whether a group may be drawn directly (unclipped) from an open-air camera
+/// room. Interior groups may. An exterior group may only when its
+/// model-space `bounds` (min xyz, max xyz) enclose the camera, e.g. the
+/// rooftops around a street; otherwise it needs an outdoor portal on screen,
+/// as Stormwind's gatehouse top is hidden from the Valley of Heroes.
+[[nodiscard]] bool IsDirectlyVisibleFromOpenAirRoom(
+    std::uint32_t group_flags, const std::array<float, 6>& bounds,
+    float model_camera_x, float model_camera_y, float model_camera_z) noexcept;
+
 [[nodiscard]] bool IsWmoBoundsVisibleInPortalClip(
     std::span<const float, 3> bounds_min,
     std::span<const float, 3> bounds_max,

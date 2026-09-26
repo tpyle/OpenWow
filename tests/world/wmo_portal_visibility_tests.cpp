@@ -175,3 +175,21 @@ TEST_CASE("Near-clip tolerance does not reach a portal far from the eye",
   const auto result = Visible({12.0f, -0.003f, 0.6f}, {1.0f, 0.0f, 0.3f}, radius);
   CHECK_FALSE(GroupVisible(result, 1));
 }
+
+TEST_CASE("Exterior groups are drawn directly from open air only around the camera",
+          "[world][wmo_portal]") {
+  using openwow::world::IsDirectlyVisibleFromOpenAirRoom;
+  constexpr std::uint32_t kExterior = 0x8u;
+  // Rooftops around the street enclose the camera; the gatehouse top beyond
+  // the gate doesn't.
+  const std::array<float, 6> rooftops{-60, -60, -5, 60, 60, 60};
+  const std::array<float, 6> gatehouse{50, -20, -5, 120, 20, 60};
+
+  CHECK(IsDirectlyVisibleFromOpenAirRoom(kExterior, rooftops, 0.0f, 0.0f, 2.0f));
+  CHECK_FALSE(IsDirectlyVisibleFromOpenAirRoom(kExterior, gatehouse, 0.0f, 0.0f, 2.0f));
+  // Bounds are inclusive.
+  CHECK(IsDirectlyVisibleFromOpenAirRoom(kExterior, gatehouse, 50.0f, 20.0f, 60.0f));
+  CHECK_FALSE(IsDirectlyVisibleFromOpenAirRoom(kExterior, gatehouse, 85.0f, 0.0f, 61.0f));
+  // Interior groups aren't restricted by this rule.
+  CHECK(IsDirectlyVisibleFromOpenAirRoom(kStreetFlags, gatehouse, 0.0f, 0.0f, 2.0f));
+}

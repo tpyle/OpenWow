@@ -603,13 +603,17 @@ void ComputeVisibleWmoGroups(
     if (camera_lane || !append) {
       visit_group(seed_group, {});
     } else if (out_sky_visibility != nullptr &&
-               out_sky_visibility->camera_room_open_air) {
+               out_sky_visibility->camera_room_open_air &&
+               IsDirectlyVisibleFromOpenAirRoom(
+                   groups[seed_group].flags, groups[seed_group].bounds,
+                   model_camera_position[0], model_camera_position[1],
+                   model_camera_position[2])) {
       // From an open-air room (Stormwind's streets are interior groups lit
-      // as exterior), the surrounding exterior walls and roofs are in direct
-      // view, not only through a portal. Their portals are often at street
-      // level, so gating on one being on screen dropped every rooftop as
-      // soon as the camera pitched up. The frustum test in IsExteriorSeed
-      // and the depth buffer handle the rest.
+      // as exterior), the exterior walls and roofs around the camera are in
+      // direct view, not only through a portal. Their portals are often at
+      // street level, so gating on one being on screen dropped every rooftop
+      // as soon as the camera pitched up. Exterior groups that don't enclose
+      // the camera still need an outdoor portal (the next branch).
       visit_group(seed_group, {});
     } else if (out_sky_visibility != nullptr &&
                out_sky_visibility->terrain_visible) {
@@ -814,6 +818,19 @@ float NearClipCornerRadius(const Matrix4& projection, const float near_clip) {
   const float tan_half_y = 1.0f / projection[5];
   return near_clip *
          std::sqrt(1.0f + tan_half_x * tan_half_x + tan_half_y * tan_half_y);
+}
+
+bool IsDirectlyVisibleFromOpenAirRoom(const std::uint32_t group_flags,
+                                      const std::array<float, 6>& bounds,
+                                      const float model_camera_x,
+                                      const float model_camera_y,
+                                      const float model_camera_z) noexcept {
+  if ((group_flags & data::wmo::kMogpExterior) == 0u) {
+    return true;
+  }
+  return bounds[0] <= model_camera_x && model_camera_x <= bounds[3] &&
+         bounds[1] <= model_camera_y && model_camera_y <= bounds[4] &&
+         bounds[2] <= model_camera_z && model_camera_z <= bounds[5];
 }
 
 bool IsWmoBoundsVisibleInPortalClip(
