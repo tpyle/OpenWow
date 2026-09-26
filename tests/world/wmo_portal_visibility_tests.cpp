@@ -175,3 +175,23 @@ TEST_CASE("Near-clip tolerance does not reach a portal far from the eye",
   const auto result = Visible({12.0f, -0.003f, 0.6f}, {1.0f, 0.0f, 0.3f}, radius);
   CHECK_FALSE(GroupVisible(result, 1));
 }
+
+TEST_CASE("Exterior-lane seeds include open-air groups seen from open air",
+          "[world][wmo_portal]") {
+  using openwow::world::IsExteriorLaneSeedGroup;
+  constexpr std::uint32_t kExterior = 0x8u;
+  constexpr std::uint32_t kAlwaysDraw = 0x10000u;
+  // Stormwind's gryphon-roost wall tops: indoor, lit as exterior.
+  constexpr std::uint32_t kOpenAirIndoor = 0x2000u | 0x40u;
+  constexpr std::uint32_t kPlainIndoor = 0x2000u;
+
+  CHECK(IsExteriorLaneSeedGroup(kExterior, false));
+  CHECK(IsExteriorLaneSeedGroup(kExterior, true));
+  CHECK_FALSE(IsExteriorLaneSeedGroup(kOpenAirIndoor, false));
+  CHECK(IsExteriorLaneSeedGroup(kOpenAirIndoor, true));
+  CHECK(IsExteriorLaneSeedGroup(kPlainIndoor | 0x100u, true));    // exterior sky
+  CHECK(IsExteriorLaneSeedGroup(kPlainIndoor | 0x40000u, true));  // skybox
+  CHECK_FALSE(IsExteriorLaneSeedGroup(kPlainIndoor, true));
+  CHECK_FALSE(IsExteriorLaneSeedGroup(kExterior | kAlwaysDraw, false));
+  CHECK_FALSE(IsExteriorLaneSeedGroup(kOpenAirIndoor | kAlwaysDraw, true));
+}

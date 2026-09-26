@@ -287,6 +287,11 @@ bool IsExteriorSeed(std::uint32_t flags) {
   return (flags & data::wmo::kMogpExterior) != 0u;
 }
 
+constexpr std::uint32_t kRetailCameraRoomFullSkyFlags =
+    data::wmo::kMogpShowSkybox | data::wmo::kMogpShowExteriorSky |
+    data::wmo::kMogpExteriorLit;
+static_assert(kRetailCameraRoomFullSkyFlags == 0x00040140u);
+
 }
 
 WmoVisibilityData WmoVisibilityData::Build(
@@ -429,11 +434,13 @@ void ComputeVisibleWmoGroups(
   }
   const auto world_bounds = retained_world_bounds.first(groups.size());
 
+  const bool camera_room_open_air =
+      append && out_sky_visibility != nullptr &&
+      out_sky_visibility->camera_room_open_air;
   workspace.exterior_seed_groups.reserve(groups.size());
   for (std::size_t group_index = 0; group_index < groups.size(); ++group_index) {
     const auto& group = groups[group_index];
-    if ((group.flags & data::wmo::kMogpAlwaysDraw) != 0u ||
-        !IsExteriorSeed(group.flags)) {
+    if (!IsExteriorLaneSeedGroup(group.flags, camera_room_open_air)) {
       continue;
     }
 
@@ -608,8 +615,9 @@ void ComputeVisibleWmoGroups(
       // as exterior), the surrounding exterior walls and roofs are in direct
       // view, not only through a portal. Their portals are often at street
       // level, so gating on one being on screen dropped every rooftop as
-      // soon as the camera pitched up. The frustum test in IsExteriorSeed
-      // and the depth buffer handle the rest.
+      // soon as the camera pitched up; the same holds for open-air groups
+      // flagged indoor (see IsExteriorLaneSeedGroup). The frustum test on
+      // the seed and the depth buffer handle the rest.
       visit_group(seed_group, {});
     } else if (out_sky_visibility != nullptr &&
                out_sky_visibility->terrain_visible) {
@@ -773,10 +781,6 @@ void ComputeVisibleWmoGroups(
     }
   };
 
-  constexpr std::uint32_t kRetailCameraRoomFullSkyFlags =
-      data::wmo::kMogpShowSkybox | data::wmo::kMogpShowExteriorSky |
-      data::wmo::kMogpExteriorLit;
-  static_assert(kRetailCameraRoomFullSkyFlags == 0x00040140u);
   if (lanes == WmoTraversalLanes::kCamera) {
     for (const std::uint16_t seed_group : seed_groups) {
       if (seed_group < groups.size() &&
@@ -814,6 +818,16 @@ float NearClipCornerRadius(const Matrix4& projection, const float near_clip) {
   const float tan_half_y = 1.0f / projection[5];
   return near_clip *
          std::sqrt(1.0f + tan_half_x * tan_half_x + tan_half_y * tan_half_y);
+}
+
+bool IsExteriorLaneSeedGroup(const std::uint32_t group_flags,
+                             const bool camera_room_open_air) noexcept {
+  if ((group_flags & data::wmo::kMogpAlwaysDraw) != 0u) {
+    return false;
+  }
+  return IsExteriorSeed(group_flags) ||
+         (camera_room_open_air &&
+          (group_flags & kRetailCameraRoomFullSkyFlags) != 0u);
 }
 
 bool IsWmoBoundsVisibleInPortalClip(

@@ -168,6 +168,14 @@ void ComputeVisibleWmoGroups(
 [[nodiscard]] float NearClipCornerRadius(const Matrix4& projection,
                                          float near_clip);
 
+/// Whether a group may seed the exterior lane (drawn when its bounds are in
+/// the frustum, not only through an on-screen portal). Exterior groups
+/// always may. From an open-air camera room, so may other open-air groups
+/// (sky-lit, e.g. Stormwind's wall tops, flagged indoor): they are in direct
+/// view over the street, and their portals are often off screen.
+[[nodiscard]] bool IsExteriorLaneSeedGroup(std::uint32_t group_flags,
+                                           bool camera_room_open_air) noexcept;
+
 [[nodiscard]] bool IsWmoBoundsVisibleInPortalClip(
     std::span<const float, 3> bounds_min,
     std::span<const float, 3> bounds_max,
