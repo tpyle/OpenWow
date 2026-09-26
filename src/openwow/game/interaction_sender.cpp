@@ -32,7 +32,7 @@
 #include "openwow/game/commerce/mail/mail_interaction.h"
 #include "openwow/game/commerce/mail/adapters/protocol/mail_packet_codec.h"
 #include "openwow/game/inventory/operations/player_item_packet_location.h"
-#include "openwow/game/social_manager.h"
+#include "openwow/game/social/contacts/application/social_manager.h"
 #include "openwow/game/social/contacts/adapters/protocol/contact_client_packets.h"
 #include "openwow/game/commerce/trade/trade_interaction.h"
 #include "openwow/game/commerce/trade/adapters/protocol/trade_packet_codec.h"

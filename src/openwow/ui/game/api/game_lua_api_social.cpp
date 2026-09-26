@@ -17,7 +17,7 @@
 #include "openwow/game/localization.h"
 #include "openwow/game/actions/macros/application/macro_catalog.h"
 #include "openwow/game/player_pvp_info.h"
-#include "openwow/game/social_manager.h"
+#include "openwow/game/social/contacts/application/social_manager.h"
 #include "openwow/game/social/contacts/adapters/protocol/contact_client_packets.h"
 #include "openwow/game/spell_cast_runtime.h"
 #include "openwow/game/spell_text_formatter.h"

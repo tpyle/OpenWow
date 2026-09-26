@@ -1,13 +1,13 @@
+#include "openwow/game/social/contacts/application/social_manager.h"
 
-#include "openwow/game/social_manager.h"
-
-#include "openwow/core/storm_string.h"
 #include "openwow/game/social/contacts/adapters/protocol/contact_server_packets.h"
 
 #include <algorithm>
 #include <utility>
 
 namespace openwow::game {
+
+SocialManager::SocialManager(NameOrder name_order) : name_order_(std::move(name_order)) {}
 
 bool SocialManager::HandleContactList(const std::uint8_t *data, std::size_t len) {
   auto message = contacts::DecodeContactList({data, len});
@@ -265,7 +265,7 @@ std::vector<const ContactInfo *> SocialManager::GetFriends() const {
     }
   }
   std::stable_sort(result.begin(), result.end(),
-                   [](const ContactInfo *lhs, const ContactInfo *rhs) {
+                   [this](const ContactInfo *lhs, const ContactInfo *rhs) {
                      if (lhs == nullptr || rhs == nullptr) {
                        return lhs != nullptr;
                      }
@@ -289,7 +289,7 @@ std::vector<const ContactInfo *> SocialManager::GetIgnored() const {
     }
   }
   std::stable_sort(result.begin(), result.end(),
-                   [](const ContactInfo *lhs, const ContactInfo *rhs) {
+                   [this](const ContactInfo *lhs, const ContactInfo *rhs) {
                      if (lhs == nullptr || rhs == nullptr) {
                        return lhs != nullptr;
                      }
@@ -307,7 +307,7 @@ std::vector<const ContactInfo *> SocialManager::GetMuted() const {
     }
   }
   std::stable_sort(result.begin(), result.end(),
-                   [](const ContactInfo *lhs, const ContactInfo *rhs) {
+                   [this](const ContactInfo *lhs, const ContactInfo *rhs) {
                      if (lhs == nullptr || rhs == nullptr) {
                        return lhs != nullptr;
                      }
@@ -587,7 +587,7 @@ bool SocialManager::IsVisible(const ContactInfo &contact, const SocialFlag flag)
   return false;
 }
 
-bool SocialManager::NameComesBefore(const std::string &lhs, const std::string &rhs) {
+bool SocialManager::NameComesBefore(const std::string &lhs, const std::string &rhs) const {
   if (lhs.empty() || rhs.empty()) {
     if (lhs.empty() == rhs.empty()) {
       return false;
@@ -595,7 +595,7 @@ bool SocialManager::NameComesBefore(const std::string &lhs, const std::string &r
     return !lhs.empty();
   }
 
-  return openwow::core::SStrCmpUTF8NoCase(lhs.c_str(), rhs.c_str(), 0x7FFFFFFF) < 0;
+  return name_order_(lhs.c_str(), rhs.c_str()) < 0;
 }
 
 }

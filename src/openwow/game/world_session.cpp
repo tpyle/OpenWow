@@ -651,6 +651,9 @@ WorldSession::WorldSession(openwow::data::DBCacheRuntime& db_cache_runtime,
             return ResolveItemUseSpellWithEquippedFallback(
                 inventory_replica_, item_definitions_, item_id);
           }),
+      social_([](const char *left, const char *right) {
+        return core::SStrCmpUTF8NoCase(left, right, 0x7FFFFFFF);
+      }),
       quests_(
           db_cache_runtime_, dbc_loader,
           [this](const std::string_view text, const bool empty_as_space) {

@@ -4,12 +4,17 @@
 #include "openwow/game/social/contacts/model/contact_types.h"
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace openwow::game {
 
+/// The client's friends, ignore and mute lists as the server reports them,
+/// plus the UI's selection in each list and recently reported players.
+/// Lists are ordered for display: friends online first, then by name;
+/// ignored and muted players by name; unnamed contacts last.
 class SocialManager {
 public:
   static constexpr std::size_t kFriendLimit = 100;
@@ -19,7 +24,10 @@ public:
   static constexpr std::size_t kRecentComplaintLimit = 32;
   static constexpr std::uint8_t kComplaintStatusEnabled = 2;
 
-  SocialManager() = default;
+  /// Orders contact names (strcmp-style result); the lists sort by it.
+  using NameOrder = std::function<int(const char *, const char *)>;
+
+  explicit SocialManager(NameOrder name_order);
 
   bool HandleContactList(const std::uint8_t *data, std::size_t len);
 
@@ -74,12 +82,13 @@ private:
   ObjectGuid selected_ignored_;
   ObjectGuid selected_muted_;
   bool who_results_to_ui_{false};
+  NameOrder name_order_;
 
   ContactInfo *FindContactMut(const ObjectGuid &guid);
   ContactInfo &GetOrCreateContact(const ObjectGuid &guid);
   void ClearRequestedFlags(std::uint32_t requested_flags);
   static bool IsVisible(const ContactInfo &contact, SocialFlag flag);
-  static bool NameComesBefore(const std::string &lhs, const std::string &rhs);
+  bool NameComesBefore(const std::string &lhs, const std::string &rhs) const;
   static ObjectGuid GuidAtLuaIndex(
       const std::vector<const ContactInfo *> &contacts, std::uint32_t index);
   static std::int32_t LuaIndexOfGuid(

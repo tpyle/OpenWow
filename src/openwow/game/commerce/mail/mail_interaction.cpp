@@ -7,7 +7,7 @@
 #include <string_view>
 
 #include "openwow/game/query_cache.h"
-#include "openwow/game/social_manager.h"
+#include "openwow/game/social/contacts/application/social_manager.h"
 
 namespace openwow::game {
 

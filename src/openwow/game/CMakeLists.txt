@@ -111,7 +111,6 @@ openwow_add_component(openwow_game
   commerce/adapters/ui/money_cursor_controller.cpp
   spells/adapters/lua/spell_name_dispatch.cpp
   inventory/replica_sync.cpp
-  social_manager.cpp
   battlenet_api.cpp
   battlenet_login.cpp
   realm_runtime.cpp
@@ -400,6 +399,7 @@ target_link_libraries(openwow_game PRIVATE
   openwow_game_achievements_rules
   openwow_game_dance_application
   openwow_game_dance_protocol_adapter
+  openwow_game_contacts_application
   openwow_game_contacts_protocol_adapter
   openwow_game_lfg_application
   openwow_game_lfg_dbc_adapter

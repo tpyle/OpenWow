@@ -71,7 +71,7 @@
 #include "openwow/game/session/reputation_runtime.h"
 #include "openwow/game/session/session_observations.h"
 #include "openwow/game/calendar/calendar_runtime.h"
-#include "openwow/game/social_manager.h"
+#include "openwow/game/social/contacts/application/social_manager.h"
 #include "openwow/game/spell_book.h"
 #include "openwow/game/spellbook_private_usability.h"
 #include "openwow/game/spell_log.h"

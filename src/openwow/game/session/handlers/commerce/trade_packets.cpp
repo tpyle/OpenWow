@@ -8,7 +8,7 @@
 #include "openwow/game/inventory/player_inventory_replica.h"
 #include "openwow/game/object_manager.h"
 #include "openwow/game/query_cache.h"
-#include "openwow/game/social_manager.h"
+#include "openwow/game/social/contacts/application/social_manager.h"
 #include "openwow/network/protocol/wotlk/world_packet.h"
 #include "openwow/ui/game/cvar_system.h"
 #include "openwow/ui/game/game_ui_core.h"
