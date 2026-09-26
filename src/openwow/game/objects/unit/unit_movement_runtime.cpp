@@ -4438,6 +4438,8 @@ bool UnitMovementRuntime::ApplyTransportMotionCollision(
     body.step_height = 0.0f;
     body.mode = MovementCollisionMode::kSpecial;
     body.collision_mask = collision_mask;
+    body.ignored_owner_guid =
+        owner_.GetMovementInfo().transport.guid.GetRawValue();
 
     const C3Vector displacement{ sweep_direction[0] * sweep_distance,
                                  sweep_direction[1] * sweep_distance,

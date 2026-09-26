@@ -1424,6 +1424,7 @@ MovementCollisionTrace MovementCollisionSolver::SweepPrepared(
     float pass_earliest = requested_distance;
     for (const MovementCollisionFacet& facet : cache_.facets) {
       if (facet.secondary != secondary_layer ||
+          IsFacetIgnoredBySweep(body, facet) ||
           !AabbOverlaps(local_sweep, FacetBounds(facet))) {
         continue;
       }

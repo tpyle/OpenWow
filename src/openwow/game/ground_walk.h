@@ -121,7 +121,18 @@ struct MovementCollisionBody {
   bool stepping{false};
   float step_reference_z{0.0f};
   std::optional<MovementParentTransform> parent;
+  /// Facets owned by this object are ignored by sweeps; a passenger carried
+  /// by a transport cannot collide with the transport itself. Zero ignores
+  /// nothing.
+  std::uint64_t ignored_owner_guid{0};
 };
+
+/// True when `body`'s sweeps must skip `facet` (see ignored_owner_guid).
+[[nodiscard]] inline bool IsFacetIgnoredBySweep(
+    const MovementCollisionBody& body, const MovementCollisionFacet& facet) {
+  return body.ignored_owner_guid != 0u &&
+         facet.owner_guid == body.ignored_owner_guid;
+}
 
 struct MovementCollisionStep {
   C3Vector displacement{};
