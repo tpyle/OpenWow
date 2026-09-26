@@ -7,6 +7,7 @@
 #include <functional>
 #include <optional>
 #include <span>
+#include <string_view>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -17,13 +18,33 @@
 #include "openwow/game/activities/lfg/rules/lfg_dungeon_rules.h"
 
 
-namespace openwow::data::dbc {
-class DbcLoader;
-}
 
 namespace openwow::game {
 
-class WorldSession;
+namespace lfg {
+
+/// What the client knows about a player in the browse list.
+struct SearchPlayerIdentity {
+  std::string name;
+  std::uint8_t class_id = 0;
+};
+
+/// Lookups the browse-list sort needs from the rest of the client. A lookup
+/// that finds nothing makes that sort key treat the pair as equal.
+struct SearchSortContext {
+  std::function<std::optional<SearchPlayerIdentity>(std::uint64_t guid)> find_player;
+  /// AreaTable name; the view must stay valid for the sort and be followed by
+  /// a NUL.
+  std::function<std::optional<std::string_view>(std::uint32_t area_id)> area_name;
+  /// ChrClasses name, same lifetime rule.
+  std::function<std::optional<std::string_view>(std::uint8_t class_id)> class_name;
+  /// Orders zone and class names (strcmp-style result).
+  std::function<int(const char *, const char *)> compare_labels;
+  /// Orders player names (strcmp-style result).
+  std::function<int(const char *, const char *)> compare_player_names;
+};
+
+}  // namespace lfg
 
 inline constexpr std::uint8_t kLfgRoleLeader = 1;
 inline constexpr std::uint8_t kLfgRoleTank = 2;
@@ -171,9 +192,13 @@ public:
   void RefreshPublishedSearchResults();
   void ToggleSearchGroupOrdering();
   void PromoteSearchSortKey(LfgSearchSortKey key);
-  void ResortSearchResults(WorldSession *session, const openwow::data::dbc::DbcLoader *dbc);
+  /// Re-sorts the working browse list by `search_sort_order()`.
+  void ResortSearchResults(const lfg::SearchSortContext &context);
+  /// Sends a name query for each newly listed player the client doesn't
+  /// know yet (at most one outstanding query per player).
   void QueueMissingSearchPlayerNameQueries(
-      WorldSession *session, const std::function<void(std::uint64_t)> &send_name_query);
+      const std::function<bool(std::uint64_t)> &is_player_known,
+      const std::function<void(std::uint64_t)> &send_name_query);
   void ApplyProposalResponse(bool accept);
   void ClearProposal();
   void ResetProposalEventGateForPlayerEnterWorld();

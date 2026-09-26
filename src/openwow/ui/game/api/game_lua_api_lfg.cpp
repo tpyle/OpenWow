@@ -9,6 +9,7 @@
 #include "openwow/game/group_system.h"
 #include "openwow/game/activities/lfg/adapters/data/lfg_dbc_dungeons.h"
 #include "openwow/game/activities/lfg/application/lfg_system.h"
+#include "openwow/game/lfg_search_context.h"
 #include "openwow/game/localization.h"
 #include "openwow/net/client_services.h"
 #include "openwow/net/client_services_packet_sender.h"
@@ -2386,7 +2387,8 @@ int LuaSearchLFGSort(lua_State *L) {
   }
 
   session->lfg().PromoteSearchSortKey(key);
-  session->lfg().ResortSearchResults(session, GetDbcLoaderLocal(L));
+  session->lfg().ResortSearchResults(
+      ::openwow::game::MakeLfgSearchSortContext(session, GetDbcLoaderLocal(L)));
   FireLfgUpdateEvent(L);
   return 0;
 }

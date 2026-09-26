@@ -42,6 +42,7 @@
 #include "openwow/game/group_system.h"
 #include "openwow/game/guild_system.h"
 #include "openwow/game/activities/lfg/application/lfg_system.h"
+#include "openwow/game/lfg_search_context.h"
 #include "openwow/game/inventory/loot/loot_state.h"
 
 namespace openwow::game {
@@ -3500,7 +3501,8 @@ void WorldSession::HandleUpdateLfgList(const net::wotlk::WorldPacket &pkt) {
     return;
   }
   lfg_.QueueMissingSearchPlayerNameQueries(
-      this, [this](const std::uint64_t raw_guid) {
+      [this](const std::uint64_t raw_guid) { return IsLfgSearchPlayerKnown(this, raw_guid); },
+      [this](const std::uint64_t raw_guid) {
         (void)query_cache_.RequestNameQuery(raw_guid);
       });
   if (lfg_.published_search_generation() != previous_generation) {

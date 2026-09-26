@@ -4,9 +4,6 @@
 #include "openwow/game/activities/lfg/adapters/protocol/lfg_server_packets.h"
 #include "openwow/game/activities/lfg/rules/lfg_dungeon_rules.h"
 
-#include "openwow/core/storm_string.h"
-#include "openwow/data/formats/dbc/dbc_loader.h"
-#include "openwow/game/unit_query_bridge.h"
 
 #include <algorithm>
 #include <array>
@@ -20,7 +17,6 @@ namespace openwow::game {
 namespace {
 
 constexpr std::uint32_t kPackedDungeonIdMask = 0x00FFFFFFu;
-constexpr std::size_t kSearchSortStringLimit = 0x7FFFFFFFu;
 bool MatchesDungeonId(const std::uint32_t packed_dungeon_id, const std::uint32_t dungeon_id) {
   return (packed_dungeon_id & kPackedDungeonIdMask) == dungeon_id;
 }
@@ -34,16 +30,12 @@ void EraseGuid(std::vector<std::uint64_t> &guids, const std::uint64_t guid) {
   guids.erase(std::remove(guids.begin(), guids.end(), guid), guids.end());
 }
 
-std::optional<UnitQuerySnapshot> ResolveSearchSnapshot(WorldSession *session,
-                                                       const std::uint64_t guid);
-
 const char *StormStringOrEmpty(const std::string_view value) {
   return value.empty() ? "" : value.data();
 }
 
 struct SearchSortResolver {
-  SearchSortResolver(WorldSession *session, const openwow::data::dbc::DbcLoader *dbc)
-      : session_(session), dbc_(dbc) {}
+  explicit SearchSortResolver(const lfg::SearchSortContext &context) : context_(context) {}
 
   int Compare(const LfgSearchPlayerResult &left, const LfgSearchPlayerResult &right,
               const LfgSearchSortKey key, const bool include_role_flags) {
@@ -54,9 +46,8 @@ struct SearchSortResolver {
       if (!left_name.has_value() || !right_name.has_value()) {
         return 0;
       }
-      return openwow::core::SStrCmpNoCaseCollate(
-          StormStringOrEmpty(left_name.value()), StormStringOrEmpty(right_name.value()),
-          kSearchSortStringLimit);
+      return context_.compare_labels(StormStringOrEmpty(left_name.value()),
+                                     StormStringOrEmpty(right_name.value()));
     }
     case LfgSearchSortKey::kLevel:
       if (left.level == right.level) {
@@ -64,29 +55,27 @@ struct SearchSortResolver {
       }
       return left.level < right.level ? -1 : 1;
     case LfgSearchSortKey::kClass: {
-      const auto *left_snapshot = LookupSnapshot(left.guid);
-      const auto *right_snapshot = LookupSnapshot(right.guid);
-      if (left_snapshot == nullptr || right_snapshot == nullptr) {
+      const auto *left_player = LookupPlayer(left.guid);
+      const auto *right_player = LookupPlayer(right.guid);
+      if (left_player == nullptr || right_player == nullptr) {
         return 0;
       }
 
-      const auto left_name = LookupClassName(left_snapshot->classId);
-      const auto right_name = LookupClassName(right_snapshot->classId);
+      const auto left_name = LookupClassName(left_player->class_id);
+      const auto right_name = LookupClassName(right_player->class_id);
       if (!left_name.has_value() || !right_name.has_value()) {
         return 0;
       }
-      return openwow::core::SStrCmpNoCaseCollate(
-          StormStringOrEmpty(left_name.value()), StormStringOrEmpty(right_name.value()),
-          kSearchSortStringLimit);
+      return context_.compare_labels(StormStringOrEmpty(left_name.value()),
+                                     StormStringOrEmpty(right_name.value()));
     }
     case LfgSearchSortKey::kName: {
-      const auto *left_snapshot = LookupSnapshot(left.guid);
-      const auto *right_snapshot = LookupSnapshot(right.guid);
-      if (left_snapshot == nullptr || right_snapshot == nullptr) {
+      const auto *left_player = LookupPlayer(left.guid);
+      const auto *right_player = LookupPlayer(right.guid);
+      if (left_player == nullptr || right_player == nullptr) {
         return 0;
       }
-      return openwow::core::SStrCmpI(left_snapshot->name.c_str(), right_snapshot->name.c_str(),
-                                     kSearchSortStringLimit);
+      return context_.compare_player_names(left_player->name.c_str(), right_player->name.c_str());
     }
     case LfgSearchSortKey::kTank:
       if (!include_role_flags) {
@@ -111,48 +100,26 @@ struct SearchSortResolver {
   }
 
 private:
-  const UnitQuerySnapshot *LookupSnapshot(const std::uint64_t guid) {
-    const auto [it, inserted] = snapshot_cache_.try_emplace(guid);
-    if (inserted) {
-      it->second = ResolveSearchSnapshot(session_, guid);
+  // Each player is looked up once per sort.
+  const lfg::SearchPlayerIdentity *LookupPlayer(const std::uint64_t guid) {
+    const auto [it, inserted] = player_cache_.try_emplace(guid);
+    if (inserted && guid != 0 && context_.find_player) {
+      it->second = context_.find_player(guid);
     }
     return it->second.has_value() ? &it->second.value() : nullptr;
   }
 
   std::optional<std::string_view> LookupAreaName(const std::uint32_t area_id) const {
-    if (dbc_ == nullptr) {
-      return std::nullopt;
-    }
-
-    const auto *area = dbc_->area_table().LookupEntry(area_id);
-    if (area == nullptr) {
-      return std::nullopt;
-    }
-    return area->name;
+    return context_.area_name ? context_.area_name(area_id) : std::nullopt;
   }
 
   std::optional<std::string_view> LookupClassName(const std::uint8_t class_id) const {
-    if (dbc_ == nullptr) {
-      return std::nullopt;
-    }
-
-    const auto *chr_class = dbc_->chr_classes().LookupEntry(class_id);
-    if (chr_class == nullptr) {
-      return std::nullopt;
-    }
-    return chr_class->name;
+    return context_.class_name ? context_.class_name(class_id) : std::nullopt;
   }
 
-  WorldSession *session_;
-  const openwow::data::dbc::DbcLoader *dbc_;
-  std::unordered_map<std::uint64_t, std::optional<UnitQuerySnapshot>> snapshot_cache_{};
+  const lfg::SearchSortContext &context_;
+  std::unordered_map<std::uint64_t, std::optional<lfg::SearchPlayerIdentity>> player_cache_{};
 };
-
-std::optional<UnitQuerySnapshot> ResolveSearchSnapshot(WorldSession *session, const std::uint64_t guid) {
-  if (session == nullptr || guid == 0)
-    return std::nullopt;
-  return UnitQueryBridge::Get().GetPlayerInfoByGUID(session, guid);
-}
 
 }
 
@@ -649,7 +616,8 @@ bool LfgManager::HandleUpdateLfgList(const std::uint8_t *data, std::size_t len) 
 }
 
 void LfgManager::QueueMissingSearchPlayerNameQueries(
-    WorldSession *session, const std::function<void(std::uint64_t)> &send_name_query) {
+    const std::function<bool(std::uint64_t)> &is_player_known,
+    const std::function<void(std::uint64_t)> &send_name_query) {
   if (pending_search_player_name_query_requests_.empty()) {
     return;
   }
@@ -658,7 +626,7 @@ void LfgManager::QueueMissingSearchPlayerNameQueries(
     if (guid == 0 || pending_search_player_name_guids_.contains(guid)) {
       continue;
     }
-    if (ResolveSearchSnapshot(session, guid).has_value()) {
+    if (is_player_known(guid)) {
       continue;
     }
 
@@ -776,9 +744,8 @@ void LfgManager::PromoteSearchSortKey(LfgSearchSortKey key) {
   search_sort_order_.front() = entry;
 }
 
-void LfgManager::ResortSearchResults(WorldSession *session,
-                                     const openwow::data::dbc::DbcLoader *dbc) {
-  SearchSortResolver resolver(session, dbc);
+void LfgManager::ResortSearchResults(const lfg::SearchSortContext &context) {
+  SearchSortResolver resolver(context);
 
   const auto compare_search_players = [&](const std::uint64_t left_guid,
                                           const std::uint64_t right_guid) {
