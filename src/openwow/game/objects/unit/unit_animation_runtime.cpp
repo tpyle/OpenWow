@@ -1720,8 +1720,13 @@ void UnitAnimationRuntime::CommitPlaybackRequest(
   // Entering or leaving the rider pose (mount/dismount) snaps straight to the
   // new pose, as in the original client; blending visibly eased the rider
   // into or out of the seated pose while the mount appeared or had gone.
+  // Compared on the base pose, so an upper-body gesture over the seated
+  // rider still blends.
+  const std::uint16_t next_base_row =
+      static_cast<std::uint16_t>(upper_body_only ? previous_base_row : animation_id);
   const bool switching_rider_pose =
-      (previous_row == kRiderMountAnimationId) != (animation_id == kRiderMountAnimationId);
+      (previous_base_row == kRiderMountAnimationId) !=
+      (next_base_row == kRiderMountAnimationId);
 
   playback_request_.animation_id = animation_id;
   playback_request_.looping = looping;
@@ -3940,9 +3945,9 @@ bool UnitAnimationRuntime::IsUpperBodyOnlyAnimation(
         GetStandState() == 0u;
     if (!standing_still) {
       upper_only = true;
-    } else if (IsReadyStanceBehavior(incoming_behavior) &&
-               owner_.GetUInt32(UNIT_FIELD_MOUNTDISPLAYID) != 0u) {
-
+    } else if (owner_.GetUInt32(UNIT_FIELD_MOUNTDISPLAYID) != 0u) {
+      // A mounted rider keeps the seated pose; gestures such as talking play
+      // on the upper body (AnimationData marks these as upper-body capable).
       upper_only = true;
     } else {
 
