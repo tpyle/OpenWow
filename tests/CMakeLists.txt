@@ -55,6 +55,7 @@ add_executable(openwow_tests
   game/lfg_rules_tests.cpp
   game/lfg_system_tests.cpp
   game/lfg_client_packets_tests.cpp
+  game/lfg_server_packets_tests.cpp
   # wdt_file.cpp/blp_info.cpp/faction_reaction.cpp are compiled directly
   # here (rather than by linking the full openwow_data_runtime target)
   # because they have no dependency beyond header-only siblings
@@ -87,6 +88,7 @@ target_link_libraries(openwow_tests PRIVATE
   openwow_data_formats
   # Carved-out game domains: link their pure rules/model targets here.
   openwow_game_lfg_application
+  openwow_game_lfg_model
   openwow_game_lfg_protocol_adapter
   openwow_game_lfg_rules
   Threads::Threads

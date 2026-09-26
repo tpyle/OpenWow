@@ -3,6 +3,15 @@
 # later steps. Nothing here may link openwow_game, openwow_engine_core or
 # openwow_ui_runtime.
 
+# Decoded server messages (SMSG_LFG_*).
+add_library(openwow_game_lfg_model
+  model/lfg_server_messages.cpp
+)
+target_include_directories(openwow_game_lfg_model
+  PUBLIC ${PROJECT_SOURCE_DIR}/include
+)
+openwow_configure_target(openwow_game_lfg_model)
+
 add_library(openwow_game_lfg_rules
   rules/lfg_dungeon_rules.cpp
   rules/lfg_role_rules.cpp
@@ -27,11 +36,16 @@ openwow_configure_target(openwow_game_lfg_application)
 # Wire format of the LFG packets.
 add_library(openwow_game_lfg_protocol_adapter
   adapters/protocol/lfg_client_packets.cpp
+  adapters/protocol/lfg_server_packets.cpp
 )
+# src/ is private: only for the header-only game/packet_reader.h.
 target_include_directories(openwow_game_lfg_protocol_adapter
   PUBLIC ${PROJECT_SOURCE_DIR}/include
+  PRIVATE ${PROJECT_SOURCE_DIR}/src
 )
 target_link_libraries(openwow_game_lfg_protocol_adapter
-  PUBLIC openwow_network_protocol
+  PUBLIC
+    openwow_game_lfg_model
+    openwow_network_protocol
 )
 openwow_configure_target(openwow_game_lfg_protocol_adapter)

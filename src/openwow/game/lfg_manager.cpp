@@ -1,6 +1,7 @@
 
 #include "openwow/game/lfg_manager.h"
 
+#include "openwow/game/activities/lfg/adapters/protocol/lfg_server_packets.h"
 #include "openwow/game/activities/lfg/rules/lfg_dungeon_rules.h"
 
 #include "openwow/core/storm_string.h"
@@ -24,152 +25,12 @@ constexpr std::uint32_t kPackedDungeonIdMask = 0x00FFFFFFu;
 constexpr std::size_t kSearchSortStringLimit = 0x7FFFFFFFu;
 constexpr std::size_t kLfgSearchCommentMaxBytesIncludingNul = 0x100;
 
-constexpr std::size_t kLfgBootReasonWireBytesIncludingNul = 0x100;
-
-constexpr std::uint8_t kLfgProposalMaximumPlayerCount = 5;
-
 bool ReadBoundedCString(PacketReader &reader, std::string &out) {
   return reader.ReadCString(out, kLfgSearchCommentMaxBytesIncludingNul);
 }
 
-template <typename T>
-void ReadRetailPermissiveScalar(const std::uint8_t *data, const std::size_t len,
-                                std::size_t &cursor, T &out) {
-  out = {};
-  if (cursor > len || len - cursor < sizeof(T)) {
-
-    cursor = len + 1;
-    return;
-  }
-
-  std::memcpy(&out, data + cursor, sizeof(T));
-  cursor += sizeof(T);
-}
-
-void ReadRetailPermissiveBootReason(const std::uint8_t *data, const std::size_t len,
-                                    std::size_t &cursor, std::string &out) {
-  out.clear();
-  for (std::size_t byte_count = 0;
-       byte_count < kLfgBootReasonWireBytesIncludingNul && cursor <= len; ++byte_count) {
-    if (cursor == len) {
-      cursor = len + 1;
-      return;
-    }
-
-    const char character = static_cast<char>(data[cursor++]);
-    if (character == '\0') {
-      return;
-    }
-    out += character;
-  }
-}
-
 bool MatchesDungeonId(const std::uint32_t packed_dungeon_id, const std::uint32_t dungeon_id) {
   return (packed_dungeon_id & kPackedDungeonIdMask) == dungeon_id;
-}
-
-LfgPlayerDungeonState &GetOrAppendPlayerDungeonState(
-    std::vector<LfgPlayerDungeonState> &states, const std::uint32_t packed_dungeon_id) {
-  const auto it = std::find_if(states.begin(), states.end(),
-                               [packed_dungeon_id](const LfgPlayerDungeonState &state) {
-                                 return state.packed_dungeon_id == packed_dungeon_id;
-                               });
-  if (it != states.end()) {
-    return *it;
-  }
-
-  states.push_back(LfgPlayerDungeonState{.packed_dungeon_id = packed_dungeon_id});
-  return states.back();
-}
-
-LfgPartyLockInfo &GetOrAppendPartyLockInfo(std::vector<LfgPartyLockInfo> &party_locks,
-                                           const std::uint64_t guid) {
-  const auto it = std::find_if(party_locks.begin(), party_locks.end(),
-                               [guid](const LfgPartyLockInfo &entry) {
-                                 return entry.guid == guid;
-                               });
-  if (it != party_locks.end()) {
-    return *it;
-  }
-
-  party_locks.push_back({});
-  party_locks.back().guid = guid;
-  return party_locks.back();
-}
-
-LfgPlayerLock &GetOrAppendJoinResultLock(std::vector<LfgPlayerLock> &player_locks,
-                                         const std::uint64_t guid) {
-  const auto it = std::find_if(player_locks.begin(), player_locks.end(),
-                               [guid](const LfgPlayerLock &entry) {
-                                 return entry.player_guid == guid;
-                               });
-  if (it != player_locks.end()) {
-    return *it;
-  }
-
-  player_locks.push_back({});
-  player_locks.back().player_guid = guid;
-  return player_locks.back();
-}
-
-void UpsertLockEntry(std::vector<LfgLockEntry> &locks, const std::uint32_t packed_dungeon_id,
-                     const std::uint32_t lock_reason) {
-  const auto it = std::find_if(locks.begin(), locks.end(),
-                               [packed_dungeon_id](const LfgLockEntry &entry) {
-                                 return entry.dungeon_entry == packed_dungeon_id;
-                               });
-  if (it != locks.end()) {
-    it->lock_status = lock_reason;
-    return;
-  }
-
-  locks.push_back({packed_dungeon_id, lock_reason});
-}
-
-bool ReadPartyLockInfo(PacketReader &reader, std::vector<LfgPartyLockInfo> &out,
-                       std::vector<LfgPlayerLock> *join_result_locks = nullptr) {
-  std::uint8_t member_count = 0;
-  if (!reader.ReadU8(member_count))
-    return false;
-
-  std::vector<LfgPartyLockInfo> parsed_party_locks;
-  parsed_party_locks.reserve(member_count);
-  if (join_result_locks != nullptr) {
-    join_result_locks->clear();
-    join_result_locks->reserve(member_count);
-  }
-  for (std::uint8_t i = 0; i < member_count; ++i) {
-    std::uint64_t player_guid = 0;
-    std::uint32_t lock_count = 0;
-    if (!reader.ReadU64(player_guid) || !reader.ReadU32(lock_count))
-      return false;
-
-    auto &member_locks = GetOrAppendPartyLockInfo(parsed_party_locks, player_guid);
-    member_locks.locks.clear();
-    member_locks.locks.reserve(lock_count);
-
-    LfgPlayerLock *player_lock = nullptr;
-    if (join_result_locks != nullptr) {
-      player_lock = &GetOrAppendJoinResultLock(*join_result_locks, player_guid);
-      player_lock->locks.clear();
-      player_lock->locks.reserve(lock_count);
-    }
-
-    for (std::uint32_t lock_index = 0; lock_index < lock_count; ++lock_index) {
-      std::uint32_t packed_dungeon_id = 0;
-      std::uint32_t lock_reason = 0;
-      if (!reader.ReadU32(packed_dungeon_id) || !reader.ReadU32(lock_reason))
-        return false;
-
-      UpsertLockEntry(member_locks.locks, packed_dungeon_id, lock_reason);
-      if (player_lock != nullptr) {
-        UpsertLockEntry(player_lock->locks, packed_dungeon_id, lock_reason);
-      }
-    }
-  }
-
-  out = std::move(parsed_party_locks);
-  return true;
 }
 
 bool ReadSearchGroupDelta(PacketReader &reader, LfgSearchGroupResult &group) {
@@ -422,47 +283,22 @@ std::optional<UnitQuerySnapshot> ResolveSearchSnapshot(WorldSession *session, co
 }
 
 bool LfgManager::HandleLfgJoinResult(const std::uint8_t *data, std::size_t len) {
-  PacketReader r(data, len);
-  LfgJoinResult res;
-  if (!r.ReadU32(res.result) || !r.ReadU32(res.state))
+  auto message = lfg::DecodeJoinResult({data, len});
+  if (!message)
     return false;
-
-  if (res.result == 6) {
-    std::vector<LfgPartyLockInfo> parsed_party_locks;
-    if (!r.HasBytes(1) || !ReadPartyLockInfo(r, parsed_party_locks, &res.player_locks))
-      return false;
-    party_lock_info_ = std::move(parsed_party_locks);
+  if (message->party_locks) {
+    party_lock_info_ = std::move(*message->party_locks);
     has_party_lock_info_ = true;
   }
-
-  join_result_ = std::move(res);
+  join_result_ = std::move(message->result);
   return true;
 }
 
 bool LfgManager::HandleLfgQueueStatus(const std::uint8_t *data, std::size_t len) {
-  PacketReader r(data, len);
-  LfgQueueStatus qs;
-  if (!r.ReadU32(qs.dungeon_id))
+  auto qs = lfg::DecodeQueueStatus({data, len});
+  if (!qs)
     return false;
-  if (!r.ReadI32(qs.wait_time_avg))
-    return false;
-  if (!r.ReadI32(qs.wait_time))
-    return false;
-  if (!r.ReadI32(qs.wait_time_tank))
-    return false;
-  if (!r.ReadI32(qs.wait_time_healer))
-    return false;
-  if (!r.ReadI32(qs.wait_time_dps))
-    return false;
-  if (!r.ReadU8(qs.tanks_needed))
-    return false;
-  if (!r.ReadU8(qs.healers_needed))
-    return false;
-  if (!r.ReadU8(qs.dps_needed))
-    return false;
-  if (!r.ReadU32(qs.queued_time))
-    return false;
-  queue_status_ = qs;
+  queue_status_ = *qs;
   return true;
 }
 
@@ -470,279 +306,75 @@ void LfgManager::ClearQueueStatus() {
   queue_status_.reset();
 }
 
-void LfgUpdateInfo::AddDungeonSelection(const std::uint32_t packed_dungeon_id) {
-  if (ContainsDungeonSelection(packed_dungeon_id)) {
-    return;
-  }
-
-  dungeons.push_back(packed_dungeon_id);
-}
-
-bool LfgUpdateInfo::ContainsDungeonSelection(const std::uint32_t packed_dungeon_id) const {
-  return std::find(dungeons.begin(), dungeons.end(), packed_dungeon_id) != dungeons.end();
-}
-
-void LfgUpdateInfo::SyncFrom(const LfgUpdateInfo& src) {
-
-  has_extra = src.has_extra;
-  joined = src.joined;
-  queued = src.queued;
-  raw_flag_4 = src.raw_flag_4;
-  raw_flag_5 = src.raw_flag_5;
-  raw_tail_bytes = src.raw_tail_bytes;
-
-  comment = src.comment;
-
-  dungeons.erase(
-      std::remove_if(dungeons.begin(), dungeons.end(),
-                     [&src](const std::uint32_t id) {
-                       return !src.ContainsDungeonSelection(id);
-                     }),
-      dungeons.end());
-
-  for (const std::uint32_t id : src.dungeons) {
-    AddDungeonSelection(id);
-  }
-}
-
-bool LfgUpdateInfo::MatchesServerSnapshot(const LfgUpdateInfo& other) const {
-  if (has_extra != other.has_extra || joined != other.joined || queued != other.queued ||
-      raw_flag_4 != other.raw_flag_4 || raw_flag_5 != other.raw_flag_5 ||
-      raw_tail_bytes != other.raw_tail_bytes || dungeons.size() != other.dungeons.size()) {
-    return false;
-  }
-
-  if (openwow::core::SStrCmpI(comment.c_str(), other.comment.c_str(), 0x7FFFFFFFu) != 0) {
-    return false;
-  }
-
-  return std::all_of(
-      dungeons.begin(), dungeons.end(),
-      [&other](const std::uint32_t packed_dungeon_id) {
-        return other.ContainsDungeonSelection(packed_dungeon_id);
-      });
-}
-
 bool LfgManager::HandleLfgUpdatePlayer(const std::uint8_t *data, std::size_t len) {
-  PacketReader r(data, len);
-  LfgUpdateInfo u;
-  std::uint8_t utype, has_extra;
-  if (!r.ReadU8(utype) || !r.ReadU8(has_extra))
+  auto u = lfg::DecodeUpdatePlayer({data, len});
+  if (!u)
     return false;
-  u.update_type = static_cast<LfgUpdateType>(utype);
-  u.has_extra = (has_extra != 0);
-  u.joined = u.has_extra;
-
-  if (u.has_extra) {
-    std::uint8_t queued = 0;
-    std::uint8_t raw_flag_4 = 0;
-    std::uint8_t raw_flag_5 = 0;
-    std::uint8_t dungeon_count = 0;
-    if (!r.ReadU8(queued) || !r.ReadU8(raw_flag_4) || !r.ReadU8(raw_flag_5))
-      return false;
-    u.queued = (queued != 0);
-    u.raw_flag_4 = (raw_flag_4 != 0);
-    u.raw_flag_5 = (raw_flag_5 != 0);
-    if (!r.ReadU8(dungeon_count))
-      return false;
-    u.dungeons.clear();
-    u.dungeons.reserve(dungeon_count);
-    for (std::uint8_t i = 0; i < dungeon_count; ++i) {
-      std::uint32_t packed_dungeon_id = 0;
-      if (!r.ReadU32(packed_dungeon_id))
-        return false;
-      u.AddDungeonSelection(packed_dungeon_id);
-    }
-    if (!r.ReadCString(u.comment))
-      return false;
-  }
-
-  player_update_ = std::move(u);
+  player_update_ = std::move(*u);
   return true;
 }
 
 bool LfgManager::HandleLfgUpdateParty(const std::uint8_t *data, std::size_t len) {
-  PacketReader r(data, len);
-  LfgUpdateInfo u;
-  std::uint8_t utype, has_extra;
-  if (!r.ReadU8(utype) || !r.ReadU8(has_extra))
+  auto u = lfg::DecodeUpdateParty({data, len});
+  if (!u)
     return false;
-  u.update_type = static_cast<LfgUpdateType>(utype);
-  u.has_extra = (has_extra != 0);
-
-  if (u.has_extra) {
-    std::uint8_t joined = 0;
-    std::uint8_t queued = 0;
-    std::uint8_t raw_flag_4 = 0;
-    std::uint8_t raw_flag_5 = 0;
-    if (!r.ReadU8(joined) || !r.ReadU8(queued) ||
-        !r.ReadU8(raw_flag_4) || !r.ReadU8(raw_flag_5))
-      return false;
-    u.joined = (joined != 0);
-    u.queued = (queued != 0);
-    u.raw_flag_4 = (raw_flag_4 != 0);
-    u.raw_flag_5 = (raw_flag_5 != 0);
-    for (auto &tail_byte : u.raw_tail_bytes) {
-      if (!r.ReadU8(tail_byte))
-        return false;
-    }
-    std::uint8_t dungeon_count;
-    if (!r.ReadU8(dungeon_count))
-      return false;
-    u.dungeons.clear();
-    u.dungeons.reserve(dungeon_count);
-    for (std::uint8_t i = 0; i < dungeon_count; ++i) {
-      std::uint32_t packed_dungeon_id = 0;
-      if (!r.ReadU32(packed_dungeon_id))
-        return false;
-      u.AddDungeonSelection(packed_dungeon_id);
-    }
-    if (!r.ReadCString(u.comment))
-      return false;
-  }
-
-  party_update_ = std::move(u);
+  party_update_ = std::move(*u);
   return true;
 }
 
 bool LfgManager::HandleLfgProposalUpdate(const std::uint8_t *data, std::size_t len) {
-  PacketReader r(data, len);
-  LfgProposal p;
-  if (!r.ReadU32(p.dungeon_entry))
-    return false;
-  if (!r.ReadU8(p.state))
-    return false;
-  if (!r.ReadU32(p.proposal_id))
-    return false;
-  if (!r.ReadU32(p.encounter_mask))
+  auto p = lfg::DecodeProposalUpdate({data, len});
+  if (!p)
     return false;
 
-  std::uint8_t silent, player_count;
-  if (!r.ReadU8(silent) || !r.ReadU8(player_count))
-    return false;
-  p.silent = (silent != 0);
-
-  const auto parsed_player_count = std::min(player_count, kLfgProposalMaximumPlayerCount);
-  p.players.resize(parsed_player_count);
-  for (std::uint8_t i = 0; i < parsed_player_count; ++i) {
-    auto &pl = p.players[i];
-    if (!r.ReadU32(pl.role))
-      return false;
-    std::uint8_t cur, dun, sg, ans, acc;
-    if (!r.ReadU8(cur) || !r.ReadU8(dun) || !r.ReadU8(sg) || !r.ReadU8(ans) || !r.ReadU8(acc))
-      return false;
-    pl.is_current_player = (cur != 0);
-    pl.in_dungeon = (dun != 0);
-    pl.same_group = (sg != 0);
-    pl.has_answered = (ans != 0);
-    pl.has_accepted = (acc != 0);
-  }
-
+  // A new proposal id shows the proposal once, unless the server marks it
+  // silent; repeated updates for the same proposal don't.
   proposal_show_pending_ = false;
-  if (last_proposal_event_id_ != p.proposal_id) {
-    last_proposal_event_id_ = p.proposal_id;
-    proposal_show_pending_ = !p.silent;
+  if (last_proposal_event_id_ != p->proposal_id) {
+    last_proposal_event_id_ = p->proposal_id;
+    proposal_show_pending_ = !p->silent;
   }
-  proposal_ = std::move(p);
+  proposal_ = std::move(*p);
   return true;
 }
 
 bool LfgManager::HandleLfgRoleCheckUpdate(const std::uint8_t *data, std::size_t len) {
-  PacketReader r(data, len);
-  LfgRoleCheckUpdate rc;
-  std::uint8_t beginning, dungeon_count;
-  if (!r.ReadU32(rc.state) || !r.ReadU8(beginning) || !r.ReadU8(dungeon_count))
+  auto rc = lfg::DecodeRoleCheckUpdate({data, len});
+  if (!rc)
     return false;
-  rc.is_beginning = (beginning != 0);
-
-  rc.dungeons.resize(dungeon_count);
-  for (std::uint8_t i = 0; i < dungeon_count; ++i)
-    if (!r.ReadU32(rc.dungeons[i]))
-      return false;
-
-  std::uint8_t player_count;
-  if (!r.ReadU8(player_count))
-    return false;
-  rc.players.resize(player_count);
-  for (std::uint8_t i = 0; i < player_count; ++i) {
-    auto &p = rc.players[i];
-    std::uint8_t ready;
-    if (!r.ReadU64(p.guid) || !r.ReadU8(ready) || !r.ReadU32(p.roles) || !r.ReadU8(p.level))
-      return false;
-    p.ready = (ready != 0);
-  }
-
-  role_check_ = std::move(rc);
+  role_check_ = std::move(*rc);
   return true;
 }
 
 bool LfgManager::HandleLfgBootProposalUpdate(const std::uint8_t *data, std::size_t len) {
-
-  LfgBootProposal bp;
-  std::size_t cursor = 0;
-  std::uint8_t in_prog = 0;
-  std::uint8_t did_vote = 0;
-  std::uint8_t agree = 0;
-  ReadRetailPermissiveScalar(data, len, cursor, in_prog);
-  ReadRetailPermissiveScalar(data, len, cursor, did_vote);
-  ReadRetailPermissiveScalar(data, len, cursor, agree);
-  bp.in_progress = (in_prog != 0);
-  bp.did_vote = (did_vote != 0);
-  bp.agree = (agree != 0);
-  ReadRetailPermissiveScalar(data, len, cursor, bp.victim_guid);
-  ReadRetailPermissiveScalar(data, len, cursor, bp.total_votes);
-  ReadRetailPermissiveScalar(data, len, cursor, bp.agree_count);
-  ReadRetailPermissiveScalar(data, len, cursor, bp.time_left);
-  ReadRetailPermissiveScalar(data, len, cursor, bp.needed_votes);
-  ReadRetailPermissiveBootReason(data, len, cursor, bp.reason);
-  boot_proposal_ = std::move(bp);
+  boot_proposal_ = lfg::DecodeBootProposalUpdate({data, len});
   return true;
 }
 
 bool LfgManager::HandleLfgPlayerReward(const std::uint8_t *data, std::size_t len) {
+  // Any reward packet, even a malformed one, drops the previous reward.
   ClearPlayerReward();
-
-  PacketReader r(data, len);
-  LfgPlayerReward rew;
-  if (!r.ReadU32(rew.random_dungeon_entry))
+  auto reward = lfg::DecodePlayerReward({data, len});
+  if (!reward)
     return false;
-  if (!r.ReadU32(rew.completed_dungeon_entry))
-    return false;
-  std::uint8_t is_first_reward = 0;
-  if (!r.ReadU8(is_first_reward))
-    return false;
-  rew.is_first_reward = (is_first_reward != 0);
-  if (!r.ReadU32(rew.strangers_count))
-    return false;
-  if (!r.ReadU32(rew.base_money_reward))
-    return false;
-  if (!r.ReadU32(rew.base_xp_reward))
-    return false;
-  if (!r.ReadU32(rew.variable_money_reward) || !r.ReadU32(rew.variable_xp_reward))
-    return false;
-
-  std::uint8_t item_count;
-  if (!r.ReadU8(item_count))
-    return false;
-  rew.items.resize(item_count);
-  for (std::uint8_t i = 0; i < item_count; ++i) {
-    auto &it = rew.items[i];
-    if (!r.ReadU32(it.item_id) || !r.ReadU32(it.display_info_id) || !r.ReadU32(it.item_count))
-      return false;
-  }
-
-  player_reward_ = std::move(rew);
+  player_reward_ = std::move(*reward);
   return true;
 }
 
 bool LfgManager::HandleLfgTeleportDenied(const std::uint8_t *data, std::size_t len) {
-  PacketReader r(data, len);
-  return r.ReadU32(teleport_error_);
+  const auto reason = lfg::DecodeTeleportDenied({data, len});
+  if (!reason)
+    return false;
+  teleport_error_ = *reason;
+  return true;
 }
 
 bool LfgManager::HandleLfgOfferContinue(const std::uint8_t *data, std::size_t len) {
-  PacketReader r(data, len);
-  return r.ReadU32(offer_continue_dungeon_);
+  const auto dungeon = lfg::DecodeOfferContinue({data, len});
+  if (!dungeon)
+    return false;
+  offer_continue_dungeon_ = *dungeon;
+  return true;
 }
 
 void LfgManager::ApplyProposalResponse(bool accept) {
@@ -818,89 +450,23 @@ void LfgManager::Clear() {
 }
 
 bool LfgManager::HandleLfgPlayerInfo(const std::uint8_t *data, std::size_t len) {
+  // The raw payload is kept even when it doesn't decode.
   lfg_player_info_blob_.assign(data, data + len);
-
-  PacketReader reader(data, len);
-  std::vector<LfgPlayerDungeonState> parsed_states;
-
-  std::uint8_t dungeon_count = 0;
-  if (!reader.ReadU8(dungeon_count)) {
+  auto states = lfg::DecodePlayerInfo({data, len});
+  if (!states)
     return false;
-  }
-  parsed_states.reserve(dungeon_count);
-
-  for (std::uint8_t i = 0; i < dungeon_count; ++i) {
-    std::uint32_t packed_dungeon_id = 0;
-    std::uint8_t reward_done = 0;
-    std::uint32_t reward_money = 0;
-    std::uint32_t reward_xp = 0;
-    std::uint32_t reward_money_var = 0;
-    std::uint32_t reward_xp_var = 0;
-    std::uint8_t reward_count = 0;
-    if (!reader.ReadU32(packed_dungeon_id) || !reader.ReadU8(reward_done) ||
-        !reader.ReadU32(reward_money) || !reader.ReadU32(reward_xp) ||
-        !reader.ReadU32(reward_money_var) || !reader.ReadU32(reward_xp_var) ||
-        !reader.ReadU8(reward_count)) {
-      return false;
-    }
-
-    auto &state = GetOrAppendPlayerDungeonState(parsed_states, packed_dungeon_id);
-    state.reward_done = reward_done != 0;
-    state.reward_money = reward_money;
-    state.reward_xp = reward_xp;
-    state.reward_money_var = reward_money_var;
-    state.reward_xp_var = reward_xp_var;
-
-    state.rewards.reserve(state.rewards.size() + reward_count);
-    for (std::uint8_t reward_index = 0; reward_index < reward_count; ++reward_index) {
-      LfgRewardItem reward{};
-      if (!reader.ReadU32(reward.item_id) || !reader.ReadU32(reward.display_info_id) ||
-          !reader.ReadU32(reward.item_count)) {
-        return false;
-      }
-      state.rewards.push_back(reward);
-    }
-  }
-
-  std::uint32_t locked_count = 0;
-  if (!reader.ReadU32(locked_count)) {
-    return false;
-  }
-
-  for (std::uint32_t i = 0; i < locked_count; ++i) {
-    std::uint32_t packed_dungeon_id = 0;
-    std::uint32_t lock_reason = 0;
-    if (!reader.ReadU32(packed_dungeon_id) || !reader.ReadU32(lock_reason)) {
-      return false;
-    }
-
-    auto &state = GetOrAppendPlayerDungeonState(parsed_states, packed_dungeon_id);
-    state.locked = true;
-    state.lock_reason = lock_reason;
-  }
-
-  if (!reader.Good()) {
-    return false;
-  }
-
-  player_dungeon_states_ = std::move(parsed_states);
+  player_dungeon_states_ = std::move(*states);
   has_player_dungeon_info_ = true;
   return true;
 }
 
 bool LfgManager::HandleLfgPartyInfo(const std::uint8_t *data, std::size_t len) {
+  // The raw payload is kept even when it doesn't decode.
   lfg_party_info_blob_.assign(data, data + len);
-
-  PacketReader reader(data, len);
-  std::vector<LfgPartyLockInfo> parsed_party_locks;
-  if (!ReadPartyLockInfo(reader, parsed_party_locks))
+  auto locks = lfg::DecodePartyInfo({data, len});
+  if (!locks)
     return false;
-
-  if (!reader.Good()) {
-    return false;
-  }
-
-  party_lock_info_ = std::move(parsed_party_locks);
+  party_lock_info_ = std::move(*locks);
   has_party_lock_info_ = true;
   return true;
 }
@@ -1109,22 +675,18 @@ std::optional<std::uint32_t> LfgManager::GetBestRandomDungeonId(
 }
 
 bool LfgManager::HandleLfgRoleChosen(const std::uint8_t *data, std::size_t len) {
-  PacketReader r(data, len);
-  LfgRoleChosen rc{};
-  if (!r.ReadU64(rc.guid))
+  const auto rc = lfg::DecodeRoleChosen({data, len});
+  if (!rc)
     return false;
-  if (!r.ReadU8(rc.ready))
-    return false;
-  if (!r.ReadU32(rc.roles))
-    return false;
-  last_role_chosen_ = rc;
+  last_role_chosen_ = *rc;
   return true;
 }
 
 bool LfgManager::HandleLfgUpdateSearch(const std::uint8_t *data, std::size_t len) {
-  PacketReader r(data, len);
-  if (!r.ReadU8(lfg_update_search_))
+  const auto state = lfg::DecodeUpdateSearch({data, len});
+  if (!state)
     return false;
+  lfg_update_search_ = *state;
 
   if (lfg_update_search_ == 0 && joined_search_id_ != 0) {
     update_lfg_list_blob_.clear();
@@ -1142,9 +704,10 @@ bool LfgManager::HandleLfgDisabled(const std::uint8_t * , std::size_t ) {
 }
 
 bool LfgManager::HandleOpenLfgDungeonFinder(const std::uint8_t *data, std::size_t len) {
-  PacketReader r(data, len);
-  if (!r.ReadU32(open_lfg_dungeon_id_))
+  const auto dungeon = lfg::DecodeOpenDungeonFinder({data, len});
+  if (!dungeon)
     return false;
+  open_lfg_dungeon_id_ = *dungeon;
   return true;
 }
 
